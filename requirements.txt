@@ -66,5 +66,5 @@ jupyterlab>=4.0.0  # For data analysis and model development
 # google-api-python-client>=2.108.0
 
 # Logging and monitoring
-loguru>=0.7.2
-rich>=13.7.0  # 美化終端輸出
+loguru>=0.7.2,<1.0.0  # Keep within major version
+rich>=13.5.0,<14.0.0  # Allow broader range for compatibility with dependencies
