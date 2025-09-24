@@ -299,10 +299,8 @@ class TestAppealManager:
         appeal2 = appeal_manager.create_appeal("user2", "hash2", "測試2")
         appeal_manager.create_appeal("user3", "hash3", "測試3")
 
-        appeal_manager.review_appeal(appeal1.appeal_id, "ad"
-            "min", AppealStatus.APPROVED, 
-        appeal_manager.review_appeal(appeal2.appeal_id, "ad"
-            "min", AppealStatus.REJECTED, 
+        appeal_manager.review_appeal(appeal1.appeal_id, "admin", AppealStatus.APPROVED, "Approved")
+        appeal_manager.review_appeal(appeal2.appeal_id, "admin", AppealStatus.REJECTED, "Rejected") 
 
         stats = appeal_manager.get_appeal_stats()
 
@@ -324,8 +322,9 @@ class TestHumanReviewInterface:
     def test_create_review_task(self, review_interface):
         """測試建立審核任務"""
         # 先建立申訴
-        appeal = review_interface.appeal_manager.create_appeal("us"
-            "er1", 
+        appeal = review_interface.appeal_manager.create_appeal(
+            "user1", "hash1", "測試申訴"
+        )
 
         # 建立審核任務
         task = review_interface.create_review_task(
@@ -338,8 +337,9 @@ class TestHumanReviewInterface:
 
     def test_process_review_approve(self, review_interface):
         """測試處理審核 - 批准"""
-        appeal = review_interface.appeal_manager.create_appeal("us"
-            "er1", 
+        appeal = review_interface.appeal_manager.create_appeal(
+            "user1", "hash1", "測試申訴"
+        )
         task = review_interface.create_review_task(appeal.appeal_id)
 
         success, message = review_interface.process_review(
@@ -397,13 +397,15 @@ class TestHumanReviewInterface:
     def test_export_review_report(self, review_interface):
         """測試匯出審核報告"""
         # 建立並處理一些申訴
-        appeal1 = review_interface.appeal_manager.create_appeal("us"
-            "er1", 
+        appeal1 = review_interface.appeal_manager.create_appeal(
+            "user1", "hash1", "測試1"
+        )
         review_interface.appeal_manager.create_appeal("user2", "hash2", "測試2")
 
         task1 = review_interface.create_review_task(appeal1.appeal_id)
-        review_interface.process_review(task1.task_id, "revi"
-            "ewer1", ReviewAction.APPROVE, 
+        review_interface.process_review(
+            task1.task_id, "reviewer1", ReviewAction.APPROVE, "批准申訴"
+        )
 
         # 匯出報告
         report = review_interface.export_review_report(

@@ -18,7 +18,8 @@ tokenizers>=0.15.0
 
 # Data processing
 pandas>=2.1.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0; python_version < "3.12"  # Compatible with older compilers
+numpy>=1.26.0; python_version >= "3.12"  # Latest for Python 3.12+
 opencc-python-reimplemented>=0.1.7  # 繁簡轉換
 jieba>=0.42.1  # 中文分詞（備用）
 

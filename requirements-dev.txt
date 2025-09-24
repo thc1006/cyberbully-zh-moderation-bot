@@ -2,15 +2,18 @@
 # 開發環境所需的額外套件
 
 # 測試框架
-pytest==7.4.3
-pytest-cov==4.1.0
-pytest-asyncio==0.21.1
-pytest-benchmark==4.0.0
-pytest-watch==4.2.0
-pytest-mock==3.12.0
-pytest-timeout==2.2.0
-pytest-xdist==3.5.0  # 平行測試
-hypothesis==6.92.1   # 屬性基礎測試
+pytest>=7.4.0,<8.0.0  # Flexible range for compatibility
+pytest-cov>=4.1.0,<5.0.0
+pytest-asyncio>=0.21.0,<1.0.0
+pytest-benchmark>=4.0.0,<5.0.0
+pytest-watch>=4.2.0,<5.0.0
+pytest-mock>=3.12.0,<4.0.0
+pytest-timeout>=2.2.0,<3.0.0
+pytest-xdist>=3.5.0,<4.0.0  # 平行測試
+hypothesis>=6.92.0,<7.0.0   # 屬性基礎測試
+
+# 解決依賴衝突的明確約束 (2025年9月最新兼容版本)
+urllib3>=2.0.0,<3.0.0  # Latest urllib3 2.5.0 compatible with modern packages
 
 # 程式碼品質
 black==23.12.1       # 程式碼格式化
@@ -22,16 +25,16 @@ pylint==3.0.3        # 程式碼分析
 isort==5.13.2        # import 排序
 autopep8==2.0.4      # PEP8 自動修正
 
-# 型別檢查
-mypy==1.8.0
-types-requests==2.31.0.10
-types-PyYAML==6.0.12.12
-types-python-dateutil==2.8.19.14
+# 型別檢查 (2025年9月最新版本)
+mypy==1.18.2  # Latest stable version (Sep 19, 2025)
+types-requests>=2.31.0.20  # Latest Sep 2025, requires urllib3>=2
+types-PyYAML==6.0.12.20250822  # Latest (Aug 22, 2025)
+types-python-dateutil==2.9.0.20250822  # Latest (Aug 22, 2025)
 
-# 安全掃描
+# 安全掃描 (2025年9月最新兼容版本)
 bandit[toml]==1.7.6
-safety==3.0.1
-semgrep==1.52.0
+safety>=3.3.0  # Latest CLI 3 with Pydantic V2 support
+semgrep>=1.137.0  # Latest version (Sep 24, 2025) with urllib3 2.x support
 
 # 文檔工具
 pydocstyle==6.3.0    # Docstring 檢查
