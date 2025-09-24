@@ -128,7 +128,7 @@ jobs:
       continue-on-error: true
 
     - name: 📤 Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -183,7 +183,7 @@ jobs:
         fail_ci_if_error: false
 
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
@@ -297,7 +297,7 @@ jobs:
       continue-on-error: true
 
     - name: 📤 Upload documentation
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: documentation
@@ -330,7 +330,7 @@ jobs:
       continue-on-error: true
 
     - name: 📤 Upload license report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: license-report
@@ -365,7 +365,7 @@ jobs:
       continue-on-error: true
 
     - name: 📤 Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results
@@ -380,7 +380,7 @@ jobs:
 
     steps:
     - name: 📥 Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: 📊 Generate summary report
       run: |
