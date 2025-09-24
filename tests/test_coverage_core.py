@@ -14,7 +14,7 @@ from datetime import datetime
 
 # Import core modules that should work
 from cyberpuppy.config import Settings, get_config
-from cyberpuppy.labeling.label_map import LabelMapper, TaskLabelConfig
+from cyberpuppy.labeling.label_map import LabelMapper
 from cyberpuppy.models.result import DetectionResult, ModelOutput
 
 
