@@ -35,7 +35,7 @@ jobs:
       - name: Install deps (ALWAYS via the same Python)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install --use-deprecated=legacy-resolver -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests
         run: |
@@ -60,7 +60,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
 
     - name: 🎨 Format check with Black
       run: |
@@ -106,7 +106,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
         pip install mypy types-requests types-PyYAML
 
     - name: 🔍 Type check with mypy
@@ -185,7 +185,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
 
     - name: 🧪 Run unit tests
       run: |
@@ -246,7 +246,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
 
     - name: 🔧 Set up environment
       run: |
@@ -399,7 +399,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
         pip install locust pytest-benchmark
 
     - name: 🏃 Run performance benchmarks
