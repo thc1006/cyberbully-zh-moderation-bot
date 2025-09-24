@@ -260,8 +260,7 @@ class TestChnciConversion:
 
     def test_chnci_severe_bullying(self):
         """測試嚴重霸凌事件"""
-        chnci_data = {"bullyi"
-            "ng_type": 
+        chnci_data = {"bullying_type": "threat", "severity": "high"}
 
         result = from_chnci_to_unified(chnci_data)
 
@@ -272,8 +271,7 @@ class TestChnciConversion:
 
     def test_chnci_no_bullying(self):
         """測試無霸凌事件"""
-        chnci_data = {"bullyi"
-            "ng_type": 
+        chnci_data = {"bullying_type": "none", "severity": "low"}
 
         result = from_chnci_to_unified(chnci_data)
 
@@ -296,8 +294,7 @@ class TestChnciConversion:
         # 正常
         label1 = UnifiedLabel()
         result1 = to_chnci_label(label1)
-        expected1 = {"bullyi"
-            "ng_type": 
+        expected1 = {"bullying_type": "none", "severity": "low", "role": "none"}
         assert result1 == expected1
 
         # 霸凌事件
@@ -320,8 +317,7 @@ class TestChnciConversion:
                 toxicity=ToxicityLevel.SEVERE
         )
         result3 = to_chnci_label(label3)
-        expected3 = {"bullyi"
-            "ng_type": 
+        expected3 = {"bullying_type": "threat", "severity": "high", "role": "victim"}
         assert result3 == expected3
 
 

@@ -151,8 +151,7 @@ class TestLabels:
 
         assert settings.TOXICITY_LABELS == ["none", "toxic", "severe"]
         assert settings.BULLYING_LABELS == ["none", "harassment", "threat"]
-        assert settings.ROLE_LABELS == ["no"
-            "ne", 
+        assert settings.ROLE_LABELS == ["none", "perpetrator", "victim", "bystander"]
         assert settings.EMOTION_LABELS == ["positive", "neutral", "negative"]
 
     def test_custom_labels(self, monkeypatch):

@@ -291,12 +291,9 @@ class MockTokenizer:
 
     def __call__(self, text, **kwargs):
         return {
-            "inpu"
-                "t_ids": torch.randint(1, 1000, (1, kwargs.get(
-            "attenti"
-                "on_mask": torch.ones(1, kwargs.get(
-            "token_t"
-                "ype_ids": torch.zeros(1, kwargs.get(
+            "input_ids": torch.randint(1, 1000, (1, kwargs.get("max_length", 128))),
+            "attention_mask": torch.ones(1, kwargs.get("max_length", 128)),
+            "token_type_ids": torch.zeros(1, kwargs.get("max_length", 128))
         }
 
     def save_pretrained(self, path):
@@ -337,7 +334,7 @@ class TestBaselineModel:
             1,
             1000,
             (batch_size,
-            seq_len),
+             seq_len),
             dtype=torch.long
         )
         attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long)
@@ -414,7 +411,7 @@ class TestBaselineModel:
             1,
             1000,
             (batch_size,
-            seq_len),
+             seq_len),
             dtype=torch.long
         )
         attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long)
@@ -462,8 +459,8 @@ class TestModelEvaluator:
 
     def setup_method(self):
         """設置測試環境"""
-        with patch("transformer"
-            "s.AutoModel") as mock_model, patch(
+        with patch("transformers.AutoModel") as mock_model, patch(
+            "transformers.AutoTokenizer") as mock_tokenizer:
             mock_model.from_pretrained.return_value = MockTransformer()
             mock_tokenizer.from_pretrained.return_value = MockTokenizer()
 
