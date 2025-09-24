@@ -98,8 +98,7 @@ class TestDockerServices:
             "up", "-d", "cyberpuppy-api-test", "cyberpuppy-bot-test"
         ], capture_output=True, text=True)
 
-        assert result.returncode == 0, f"Failed to start conta"
-            "iners: {result.stderr}"
+        assert result.returncode == 0, f"Failed to start containers: {result.stderr}"
 
         # 等待 Bot 服務啟動
         max_wait = 90  # 90秒超時
@@ -134,8 +133,7 @@ class TestDockerServices:
                 "p", 
         ], capture_output=True, text=True)
 
-        assert result.returncode == 0, f"Failed to start serv"
-            "ices: {result.stderr}"
+        assert result.returncode == 0, f"Failed to start services: {result.stderr}"
 
         # 等待所有服務就緒
         await asyncio.sleep(30)
@@ -177,8 +175,7 @@ class TestDockerServices:
             logs = result.stdout
 
             # 檢查關鍵日誌訊息
-            assert "CyberPu"
-                "ppy API" in logs or 
+            assert "CyberPuppy API" in logs
             print("API container logs contain expected content")
         else:
             print(f"Warning: Could not retrieve API logs: {result.stderr}")
@@ -239,8 +236,7 @@ class TestDockerServices:
                         # 假設不超過 500MB
                         if "GiB" not in used_mem:
                             mem_value = float(used_mem.replace("MiB", ""))
-                            assert mem_value < 500, f"Memory usage too h"
-                                "igh: {mem_value}MB"
+                            assert mem_value < 500, f"Memory usage too high: {mem_value}MB"
 
     def test_environment_variables(self, docker_compose_project):
         """測試環境變數配置"""
@@ -257,13 +253,11 @@ class TestDockerServices:
             env_vars = result.stdout
 
             # 檢查關鍵環境變數
-            expected_vars = ["TEST"
-                "ING=1", 
+            expected_vars = ["TESTING=1"]
 
             for var in expected_vars:
                 if var not in env_vars:
-                    print(f"Warning: Expected environme"
-                        "nt variable not found: {var}")
+                    print(f"Warning: Expected environment variable not found: {var}")
                 else:
                     print(f"Environment variable found: {var}")
 

@@ -354,8 +354,7 @@ except Exception as e:
                     print(f"模型載入記憶體增長: {total_increase:.2f}MB")
 
                     # 模型載入記憶體要求（根據模型大小調整）
-                    assert total_increase < 1000, f"模型載入記憶體過多: {tota"
-                        "l_increase:.2f}MB"
+                    assert total_increase < 1000, f"模型載入記憶體過多: {total_increase:.2f}MB"
                 else:
                     print("無法解析記憶體資訊")
             else:
@@ -445,13 +444,10 @@ class TestThroughput:
         successful_requests = sum(1 for r in results if r.get("success"))
 
         throughput_rps = successful_requests / total_time
-        success_rate = successful_requests /
-            total_requests if total_requests > 0 else 0
+        success_rate = successful_requests / total_requests if total_requests > 0 else 0
 
-        response_times = [r["respon"
-            "se_time"] for r in results if r.get(
-        avg_response_time = statistics.mean(response_times) if response_times
-            else 0
+        response_times = [r["response_time"] for r in results if r.get("response_time")]
+        avg_response_time = statistics.mean(response_times) if response_times else 0
 
         print("吞吐量測試結果:")
         print(f"  測試時長: {total_time:.2f}s")
