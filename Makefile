@@ -39,26 +39,121 @@ venv: ## 建立虛擬環境
 	@echo "$(GREEN)建立虛擬環境...$(NC)"
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
+	$(PIP) install pip-tools
 
-install: venv ## 安裝所有依賴
-	@echo "$(GREEN)安裝專案依賴...$(NC)"
+install: venv deps-sync ## 安裝所有依賴（使用 pip-tools）
+	@echo "$(BLUE)依賴安裝完成！$(NC)"
+
+install-dev: venv deps-dev-sync ## 僅安裝開發依賴（使用 pip-tools）
+	@echo "$(BLUE)開發依賴安裝完成！$(NC)"
+
+install-legacy: venv ## 舊版安裝方式（向後相容）
+	@echo "$(GREEN)安裝專案依賴 (舊版方式)...$(NC)"
 	$(PIP) install -r requirements.txt
-	@echo "$(GREEN)安裝開發依賴...$(NC)"
+	@echo "$(GREEN)安裝開發依賴 (舊版方式)...$(NC)"
 	$(PIP) install -r requirements-dev.txt
 	@echo "$(BLUE)安裝完成！$(NC)"
 
-install-dev: venv ## 僅安裝開發依賴
-	@echo "$(GREEN)安裝開發依賴...$(NC)"
-	$(PIP) install -r requirements-dev.txt
+#################################
+# pip-tools 依賴管理
+#################################
+deps-compile: ## 編譯生產依賴 (requirements.in -> requirements.txt)
+	@echo "$(GREEN)編譯生產依賴...$(NC)"
+	$(VENV)/bin/pip-compile --constraint constraints.txt \
+		--output-file requirements.txt \
+		--resolver=backtracking \
+		--strip-extras \
+		--annotation-style=line \
+		requirements.in
+	@echo "$(BLUE)requirements.txt 已更新$(NC)"
 
-update: ## 更新所有依賴
-	@echo "$(GREEN)更新依賴套件...$(NC)"
-	$(PIP) install --upgrade -r requirements.txt
-	$(PIP) install --upgrade -r requirements-dev.txt
+deps-dev-compile: ## 編譯開發依賴 (requirements-dev.in -> requirements-dev.txt)
+	@echo "$(GREEN)編譯開發依賴...$(NC)"
+	$(VENV)/bin/pip-compile --constraint constraints.txt \
+		--output-file requirements-dev.txt \
+		--resolver=backtracking \
+		--strip-extras \
+		--annotation-style=line \
+		requirements-dev.in
+	@echo "$(BLUE)requirements-dev.txt 已更新$(NC)"
 
-freeze: ## 凍結當前依賴版本
+deps-compile-all: deps-compile deps-dev-compile ## 編譯所有依賴文件
+
+deps-upgrade: ## 升級所有依賴到最新相容版本
+	@echo "$(GREEN)升級所有依賴...$(NC)"
+	$(VENV)/bin/pip-compile --constraint constraints.txt \
+		--upgrade \
+		--output-file requirements.txt \
+		--resolver=backtracking \
+		--strip-extras \
+		--annotation-style=line \
+		requirements.in
+	$(VENV)/bin/pip-compile --constraint constraints.txt \
+		--upgrade \
+		--output-file requirements-dev.txt \
+		--resolver=backtracking \
+		--strip-extras \
+		--annotation-style=line \
+		requirements-dev.in
+	@echo "$(BLUE)依賴升級完成！檢查 git diff 確認變更$(NC)"
+
+deps-upgrade-package: ## 升級特定套件 (使用: make deps-upgrade-package PACKAGE=torch)
+	@if [ -z "$(PACKAGE)" ]; then \
+		echo "$(RED)錯誤：請指定套件名稱，例：make deps-upgrade-package PACKAGE=torch$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)升級套件：$(PACKAGE)...$(NC)"
+	$(VENV)/bin/pip-compile --constraint constraints.txt \
+		--upgrade-package $(PACKAGE) \
+		--output-file requirements.txt \
+		--resolver=backtracking \
+		--strip-extras \
+		--annotation-style=line \
+		requirements.in
+	@echo "$(BLUE)套件 $(PACKAGE) 升級完成$(NC)"
+
+deps-sync: venv ## 同步安裝已編譯的生產依賴
+	@echo "$(GREEN)同步安裝生產依賴...$(NC)"
+	$(VENV)/bin/pip-sync requirements.txt
+
+deps-dev-sync: venv ## 同步安裝已編譯的開發依賴
+	@echo "$(GREEN)同步安裝開發依賴...$(NC)"
+	$(VENV)/bin/pip-sync requirements-dev.txt
+
+deps-check: ## 檢查依賴衝突和安全問題
+	@echo "$(GREEN)檢查依賴衝突...$(NC)"
+	$(VENV)/bin/pip check
+	@echo "$(GREEN)檢查安全漏洞...$(NC)"
+	-$(VENV)/bin/safety check
+	@echo "$(GREEN)檢查授權相容性...$(NC)"
+	-$(VENV)/bin/pip-licenses --format=table --order=license
+	@echo "$(BLUE)依賴檢查完成$(NC)"
+
+deps-tree: ## 顯示依賴樹
+	@echo "$(GREEN)依賴樹結構：$(NC)"
+	$(VENV)/bin/pipdeptree --warn silence
+
+deps-outdated: ## 檢查過時的依賴
+	@echo "$(GREEN)檢查過時依賴...$(NC)"
+	$(VENV)/bin/pip list --outdated --format=table
+
+deps-constraints-update: ## 更新 constraints.txt（謹慎使用）
+	@echo "$(YELLOW)警告：這將更新全域約束！$(NC)"
+	@echo "$(GREEN)生成新的 constraints.txt...$(NC)"
+	@echo "# CyberPuppy Global Constraints" > constraints.txt
+	@echo "# Generated on: $$(date '+%Y-%m-%d %H:%M:%S')" >> constraints.txt
+	@echo "# Critical constraints for reproducible builds" >> constraints.txt
+	@echo "" >> constraints.txt
+	$(VENV)/bin/pip freeze | grep -E "(urllib3|certifi|cryptography|PyJWT|setuptools|wheel|pip)" >> constraints.txt
+	@echo "$(BLUE)constraints.txt 已更新！請檢查並提交變更$(NC)"
+
+freeze: deps-sync ## 凍結當前依賴版本（舊版相容）
 	@echo "$(GREEN)凍結依賴版本...$(NC)"
 	$(PIP) freeze > requirements-freeze.txt
+	@echo "$(YELLOW)建議使用 pip-tools 工作流：make deps-compile-all$(NC)"
+
+update: deps-upgrade deps-sync ## 更新所有依賴（使用 pip-tools）
+	@echo "$(BLUE)依賴更新完成！$(NC)"
 
 #################################
 # 程式碼品質
@@ -216,6 +311,7 @@ notebook: ## 啟動 Jupyter Notebook
 #################################
 deploy-check: ## 部署前檢查
 	@echo "$(GREEN)執行部署前檢查...$(NC)"
+	make deps-check
 	make lint
 	make type-check
 	make security
@@ -271,8 +367,9 @@ install-hooks: ## 安裝 Git hooks
 	$(VENV)/bin/pre-commit install
 	@echo "$(BLUE)Git hooks 已安裝$(NC)"
 
-install-tools: ## 安裝開發工具
+install-tools: ## 安裝開發工具（包含 pip-tools）
 	@echo "$(GREEN)安裝開發工具...$(NC)"
+	$(PIP) install pip-tools pipdeptree
 	$(PIP) install black flake8 pylint mypy bandit safety
 	$(PIP) install pytest pytest-cov pytest-watch pytest-benchmark
 	$(PIP) install pre-commit pip-licenses

@@ -183,61 +183,91 @@ def test_data_chinese():
         # 正面測試案例
         {
             "text": "謝謝你的幫助，真的很感激",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "none",
+                "bullying": "none",
+                "emotion": "pos"
+            }
         },
         {
             "text": "今天學到很多新東西，很開心",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "none",
+                "bullying": "none",
+                "emotion": "pos"
+            }
         },
 
         # 中性測試案例
         {
             "text": "今天的天氣如何？",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "none",
+                "bullying": "none",
+                "emotion": "neu"
+            }
         },
         {
             "text": "請問這個問題怎麼解決？",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "none",
+                "bullying": "none",
+                "emotion": "neu"
+            }
         },
 
         # 毒性測試案例
         {
             "text": "你真的很笨耶，怎麼連這個都不會",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "toxic",
+                "bullying": "harassment",
+                "emotion": "neg"
+            }
         },
         {
             "text": "廢物一個，滾開",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "toxic",
+                "bullying": "harassment",
+                "emotion": "neg"
+            }
         },
 
         # 嚴重毒性測試案例
         {
             "text": "我要殺了你，你給我等著",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "severe",
+                "bullying": "threat",
+                "role": "perpetrator"
+            }
         },
         {
             "text": "你最好去死一死，沒人會想念你",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "toxic",
+                "bullying": "threat",
+                "role": "perpetrator"
+            }
         },
 
         # 網路霸凌特殊案例
         {
             "text": "大家都不喜歡你，你知道嗎？",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "toxic",
+                "bullying": "harassment",
+                "role": "perpetrator"
+            }
         },
         {
             "text": "如果你不照我說的做，我就把你的秘密告訴大家",
-            "expe"
-                "cted": {
+            "expected": {
+                "toxicity": "toxic",
+                "bullying": "threat",
+                "role": "perpetrator"
+            }
         }
     ]
 
@@ -275,22 +305,25 @@ def performance_monitor():
         start_time = time.time()
         start_memory = psutil.Process().memory_info().rss
 
-        yield
+        metrics = {}
 
-        end_time = time.time()
-        end_memory = psutil.Process().memory_info().rss
+        try:
+            yield metrics
+        finally:
+            end_time = time.time()
+            end_memory = psutil.Process().memory_info().rss
 
-        duration = end_time - start_time
-        memory_delta = end_memory - start_memory
+            duration = end_time - start_time
+            memory_delta = end_memory - start_memory
 
-        # 記錄效能指標
-        print(f"執行時間: {duration:.3f}秒")
-        print(f"記憶體變化: {memory_delta / 1024 / 1024:.2f}MB")
+            # 記錄效能指標
+            print(f"執行時間: {duration:.3f}秒")
+            print(f"記憶體變化: {memory_delta / 1024 / 1024:.2f}MB")
 
-        return {
-            "duration": duration,
-            "memory_delta": memory_delta
-        }
+            metrics.update({
+                "duration": duration,
+                "memory_delta": memory_delta
+            })
 
     return monitor
 

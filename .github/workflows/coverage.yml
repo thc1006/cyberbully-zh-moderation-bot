@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.12'
   COVERAGE_THRESHOLD: 80
   CORE_MODULE_THRESHOLD: 90
 
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.11', '3.12']
       fail-fast: false
 
     steps:
@@ -42,8 +42,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
 
         # Install additional testing dependencies
         pip install hypothesis pytest-html pytest-json-report
@@ -181,7 +180,7 @@ jobs:
     - name: Download coverage artifacts
       uses: actions/download-artifact@v4
       with:
-        name: coverage-report-3.11
+        name: coverage-report-3.12
         path: ./coverage/
 
     - name: Store coverage trend data
@@ -276,12 +275,12 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        python -m pip install --upgrade pip
+        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
         pip install -e .
 
     - name: Run performance tests

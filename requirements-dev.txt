@@ -1,10 +1,10 @@
 # Development Dependencies
-# 開發環境所需的額外套件
+# 開發環境所需的額外套件 (僅限開發工具，運行時依賴請放在 requirements.txt)
 
-# 測試框架
-pytest>=7.4.0,<8.0.0  # Flexible range for compatibility
-pytest-cov>=4.1.0,<5.0.0
-pytest-asyncio>=0.21.0,<1.0.0
+# 解決依賴衝突的明確約束 (2025年9月最新兼容版本)
+urllib3>=2.0.0,<3.0.0  # Latest urllib3 2.5.0 compatible with modern packages
+
+# 額外測試框架 (基本測試框架在 requirements.txt)
 pytest-benchmark>=4.0.0,<5.0.0
 pytest-watch>=4.2.0,<5.0.0
 pytest-mock>=3.12.0,<4.0.0
@@ -12,12 +12,7 @@ pytest-timeout>=2.2.0,<3.0.0
 pytest-xdist>=3.5.0,<4.0.0  # 平行測試
 hypothesis>=6.92.0,<7.0.0   # 屬性基礎測試
 
-# 解決依賴衝突的明確約束 (2025年9月最新兼容版本)
-urllib3>=2.0.0,<3.0.0  # Latest urllib3 2.5.0 compatible with modern packages
-
-# 程式碼品質
-black==23.12.1       # 程式碼格式化
-flake8==7.0.0        # 程式碼檢查
+# 額外程式碼品質工具 (基本工具在 requirements.txt)
 flake8-docstrings==1.7.0
 flake8-bugbear==23.12.2
 flake8-comprehensions==3.14.0
@@ -25,16 +20,15 @@ pylint==3.0.3        # 程式碼分析
 isort==5.13.2        # import 排序
 autopep8==2.0.4      # PEP8 自動修正
 
-# 型別檢查 (2025年9月最新版本)
-mypy==1.18.2  # Latest stable version (Sep 19, 2025)
-types-requests>=2.31.0.20  # Latest Sep 2025, requires urllib3>=2
+# 型別檢查擴展
+types-requests>=2.31.0.20,<3.0.0  # Latest Sep 2025, requires urllib3>=2
 types-PyYAML==6.0.12.20250822  # Latest (Aug 22, 2025)
 types-python-dateutil==2.9.0.20250822  # Latest (Aug 22, 2025)
 
 # 安全掃描 (2025年9月最新兼容版本)
 bandit[toml]==1.7.6
-safety>=3.3.0  # Latest CLI 3 with Pydantic V2 support
-semgrep>=1.137.0  # Latest version (Sep 24, 2025) with urllib3 2.x support
+safety>=3.3.0,<4.0.0  # Latest CLI 3 with Pydantic V2 support, avoid conflicts
+semgrep>=1.137.0,<2.0.0  # Latest version (Sep 24, 2025) with urllib3 2.x support
 
 # 文檔工具
 pydocstyle==6.3.0    # Docstring 檢查
@@ -44,11 +38,9 @@ sphinx-rtd-theme==2.0.0
 sphinx-autodoc-typehints==1.25.2
 myst-parser==2.0.0
 
-# 開發輔助
+# 開發輔助工具
 ipython==8.19.0
 ipdb==0.13.13        # 調試器
-jupyterlab==4.0.10   # Jupyter Lab
-notebook==7.0.6      # Jupyter Notebook
 
 # 效能分析
 memory-profiler==0.61.0
@@ -76,19 +68,10 @@ freezegun==1.4.0     # 時間 mock
 httpx==0.25.2
 httpie==3.2.2
 
-# 監控與記錄
-rich>=13.5.2,<13.6.0  # Compatible with semgrep ~=13.5.2 requirement
-tqdm==4.66.1         # 進度條
+# 開發輔助記錄
 colorlog==6.8.0      # 彩色日誌
 
-# 資料分析（用於評估）
-pandas==2.1.4
-matplotlib==3.8.2
-seaborn==0.13.1
-plotly==5.18.0
-
-# 環境管理
-python-dotenv==1.0.0
+# 環境管理輔助
 environs==11.0.0
 
 # 程式碼生成
@@ -111,6 +94,8 @@ nox==2023.4.22       # 任務自動化
 # alembic==1.13.1    # 資料庫遷移
 # sqlalchemy==2.0.25 # ORM
 
-# 非同步測試輔助
-aioresponses==0.7.6  # 非同步 HTTP mock
+# 非同步測試輔助 (解決 resolution-too-deep 問題)
+aiohttp>=3.8.0,<4.0.0      # 明確約束 aiohttp 版本
+yarl>=1.7.0,<2.0.0         # 明確約束 yarl 版本
+aioresponses==0.7.6        # 非同步 HTTP mock
 pytest-aiohttp==1.0.5

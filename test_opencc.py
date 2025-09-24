@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """測試 OpenCC 繁簡轉換功能"""
+
+import sys
+import os
+
+# Windows encoding fix
+if sys.platform.startswith('win'):
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 from opencc import OpenCC
 
@@ -27,6 +37,9 @@ def test_opencc():
             print(f"輸出: {result}")
         except Exception as e:
             print(f"錯誤 ({mode}): {e}")
+            # Windows-specific error handling for encoding issues
+            if sys.platform.startswith('win') and 'codec' in str(e).lower():
+                print("提示：Windows 編碼問題，請確保 console 設定為 UTF-8")
 
     # 測試實際應用場景
     print("\n" + "="*50)
@@ -51,6 +64,28 @@ def test_opencc():
     print("\nOpenCC 安裝成功！所有轉換模式可用。")
     print("="*50)
 
+    # Windows encoding test
+    if sys.platform.startswith('win'):
+        print("\n🪟 Windows 編碼測試:")
+        try:
+            test_encoding = "中文編碼測試 - 繁簡轉換 ✓"
+            print(f"編碼測試: {test_encoding}")
+            print("✅ Windows 中文顯示正常")
+        except UnicodeEncodeError as e:
+            print(f"❌ Windows 編碼錯誤: {e}")
+            print("建議執行: chcp 65001 (設定 console 為 UTF-8)")
+
 
 if __name__ == "__main__":
-    test_opencc()
+    try:
+        test_opencc()
+    except UnicodeEncodeError as e:
+        print(f"\n❌ 編碼錯誤: {e}")
+        print("Windows 用戶請嘗試:")
+        print("1. 執行 'chcp 65001' 設定 console 為 UTF-8")
+        print("2. 使用 'python scripts/windows_setup.py' 進行 Windows 專用設定")
+        sys.exit(1)
+    except ImportError as e:
+        print(f"\n❌ 匯入錯誤: {e}")
+        print("請先安裝依賴: python -m pip install opencc-python-reimplemented")
+        sys.exit(1)
