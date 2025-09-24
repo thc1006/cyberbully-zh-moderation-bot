@@ -102,8 +102,7 @@ class TestSessionContext(unittest.TestCase):
         """Test adding messages to session"""
         session = SessionContext(session_id="test_session_001")
 
-        message1 = {"te"
-            "xt": 
+        message1 = {"text": "Hello", "prediction": 0, "timestamp": datetime.now()}
         message2 = {"text": "你好", "prediction": 1, "timestamp": datetime.now()}
 
         session.add_message(message1)
@@ -383,9 +382,7 @@ class TestRealTimeMonitor(unittest.TestCase):
         predictions = [
             {"text": "test1", "prediction": 0, "confidence": 0.8},
             {"text": "test2", "prediction": 1, "confidence": 0.9},
-            {"text": "test3", "prediction": 0, "confidence": 0.7},
-            {"te"
-                "xt": 
+            {"text": "test3", "prediction": 0, "confidence": 0.7}
         ]
 
         for pred in predictions:
@@ -629,12 +626,9 @@ class TestUtilityFunctions(unittest.TestCase):
     def test_compute_session_level_f1(self):
         """Test compute_session_level_f1 function"""
         session_predictions = [
-            {"sessi"
-                "on_id": 
-            {"sessi"
-                "on_id": 
-            {"sessi"
-                "on_id": 
+            {"session_id": "1", "prediction": 0, "label": 0},
+            {"session_id": "1", "prediction": 1, "label": 0},
+            {"session_id": "2", "prediction": 1, "label": 1}
         ]
 
         session_f1 = compute_session_level_f1(session_predictions)

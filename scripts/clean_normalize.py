@@ -24,8 +24,7 @@ try:
     HAS_OPENCC = True
 except ImportError:
     HAS_OPENCC = False
-    print("Warning: OpenCC not installed. Install wit"
-        "h: pip install opencc-python-reimplemented")
+    print("Warning: OpenCC not installed. Install with: pip install opencc-python-reimplemented")
 
 # 設定日誌
 logging.basicConfig(
@@ -82,10 +81,7 @@ class TextNormalizer:
         # URL模式
         self.url_pattern = re.compile(
             r'(?:(?:https?|ftp):\/\/)?'  # 協議
-            r'(
-                ?:(?:[A-Z0-9](?:[A-Z0-9-]{0,
-                61}[A-Z0-9])?\.
-            )+[A-Z]{2,6}\.?|'  # 域名
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # 域名
             r'localhost|'  # localhost
             r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # IP
             r'(?::\d+)?'  # 端口
@@ -95,8 +91,7 @@ class TextNormalizer:
 
         # 社交媒體mention模式 (避免匹配email地址)
         self.mention_pattern = re.compile(
-            r'@[\w\u4e00-\u9fff]+(?![\w.-]*\.[A-Za-z]{2,
-            })'
+            r'@[\w\u4e00-\u9fff]+(?![\w.-]*\.[A-Za-z]{2,})'
         )
 
         # Hashtag模式
@@ -328,8 +323,7 @@ class DatasetCleaner:
 
                 # 處理每一筆資料
                 processed_data = []
-                for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"COLD {"
-                    "split}"):
+                for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"COLD {split}"):
                     # 假設文字欄位名稱為 'text' 或 'content'
                     text_col = None
                     for col in ['text', 'content', 'comment', 'sentence']:
@@ -380,8 +374,7 @@ class DatasetCleaner:
                     'columns': list(processed_df.columns)
                 }
 
-                logger.info(f"Saved {len(processed_df)} proc"
-                    "essed samples to {output_file}")
+                logger.info(f"Saved {len(processed_df)} processed samples to {output_file}")
 
             except Exception as e:
                 logger.error(f"Error processing {input_file}: {e}")
@@ -392,12 +385,11 @@ class DatasetCleaner:
         self,
         dataset_name: str,
         text_field: str = 'text'
-    ) -> Dict[str, Any]::
+    ) -> Dict[str, Any]:
         """清理JSON格式的資料集"""
         dataset_dir = self.input_dir / dataset_name
         if not dataset_dir.exists():
-            logger.warning(f"{dataset_name} dataset n"
-                "ot found at {dataset_dir}")
+            logger.warning(f"{dataset_name} dataset not found at {dataset_dir}")
             return {}
 
         output_dataset_dir = self.output_dir / dataset_name
@@ -443,8 +435,7 @@ class DatasetCleaner:
                             processed_data.append(processed_item)
 
                 # 儲存處理後的資料
-                output_file = output_dataset_dir / f"{json_file.stem"
-                    "}_processed.json"
+                output_file = output_dataset_dir / f"{json_file.stem}_processed.json"
                 with open(output_file, 'w', encoding='utf-8') as f:
                     json.dump(processed_data, f, ensure_ascii=False, indent=2)
 
@@ -454,8 +445,7 @@ class DatasetCleaner:
                     'total_samples': len(processed_data)
                 }
 
-                logger.info(f"Saved {len(processed_data)} pro"
-                    "cessed samples to {output_file}")
+                logger.info(f"Saved {len(processed_data)} processed samples to {output_file}")
 
             except Exception as e:
                 logger.error(f"Error processing {json_file}: {e}")
@@ -468,8 +458,7 @@ class DatasetCleaner:
         with open(mapping_file, 'w', encoding='utf-8') as f:
             json.dump(self.mapping_data, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"Saved {len(self.mapping_data)}"
-            " ID mappings to {mapping_file}")
+        logger.info(f"Saved {len(self.mapping_data)} ID mappings to {mapping_file}")
 
         # 也儲存為CSV以便查詢
         mapping_df = pd.DataFrame(self.mapping_data)

@@ -711,10 +711,8 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
         # Test with conversation context
         conversation_history = [
             {"role": "user", "text": "你好", "timestamp": "2024-01-01T10:00:00"},
-            {"ro"
-                "le": 
-            {"ro"
-                "le": 
+            {"role": "assistant", "text": "你好，有什麼可以幫助你的嗎？", "timestamp": "2024-01-01T10:01:00"},
+            {"role": "user", "text": "我覺得很難過", "timestamp": "2024-01-01T10:02:00"}
         ]
 
         current_text = "我想要傷害自己"
@@ -777,25 +775,19 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
 
         # Configure model to return varying confidence levels
         mock_outputs = [
-            {"toxi"
-                "city": 0.75, 
-            {"toxi"
-                "city": 0.85, 
+            {"toxicity": 0.75, "emotion": 0.8, "bullying": 0.6},
+            {"toxicity": 0.85, "emotion": 0.7, "bullying": 0.8},
+            {"toxicity": 0.95, "emotion": 0.9, "bullying": 0.5}
         ]
 
         for i, expected_confidences in enumerate(mock_outputs):
             # Mock the prediction to return expected values
             mock_output = Mock()
-            mock_output.toxicity = torch.tensor([[1-expected_confidences["toxi"
-                "city"],
-                                                  expected_confidences["toxi"
-                                                      "city"]]])
-            mock_output.emotion = torch.tensor([[expected_confidences["emo"
-                "tion"], 0.2, 0.1]])
-            mock_output.bullying = torch.tensor([[1-expected_confidences["bull"
-                "ying"],
-                                                 expected_confidences["bull"
-                                                     "ying"]]])
+            mock_output.toxicity = torch.tensor([[1-expected_confidences["toxicity"],
+                                                  expected_confidences["toxicity"]]])
+            mock_output.emotion = torch.tensor([[expected_confidences["emotion"], 0.2, 0.1]])
+            mock_output.bullying = torch.tensor([[1-expected_confidences["bullying"],
+                                                 expected_confidences["bullying"]]])
             self.mock_model.predict.return_value = mock_output
 
             result = detector.analyze(f"測試文本 {i}")

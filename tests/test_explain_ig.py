@@ -126,10 +126,8 @@ class TestCyberPuppyExplainer(unittest.TestCase):
         self.mock_device = torch.device("cpu")
 
         # Mock tokenizer behavior
-        self.mock_tokenizer.tokenize.return_value = ["[C"
-            "LS]", 
-        self.mock_tokenizer.convert_tokens_to_ids.return_value = [101, 2523,
-            3221, 3844, 102]
+        self.mock_tokenizer.tokenize.return_value = ["[CLS]", "這", "是", "測", "試", "[SEP]"]
+        self.mock_tokenizer.convert_tokens_to_ids.return_value = [101, 2523, 3221, 3844, 102]
         self.mock_tokenizer.pad_token_id = 0
         self.mock_tokenizer.cls_token_id = 101
         self.mock_tokenizer.sep_token_id = 102
@@ -461,10 +459,8 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.mock_tokenizer = Mock()
 
         # Setup tokenizer mocks
-        self.mock_tokenizer.tokenize.return_value = ["[C"
-            "LS]", 
-        self.mock_tokenizer.convert_tokens_to_ids.return_value = [101, 2523,
-            3221, 3844, 102]
+        self.mock_tokenizer.tokenize.return_value = ["[CLS]", "這", "是", "測", "試", "[SEP]"]
+        self.mock_tokenizer.convert_tokens_to_ids.return_value = [101, 2523, 3221, 3844, 102]
         self.mock_tokenizer.pad_token_id = 0
         self.mock_tokenizer.cls_token_id = 101
         self.mock_tokenizer.sep_token_id = 102
