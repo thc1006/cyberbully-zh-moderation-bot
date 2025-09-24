@@ -26,7 +26,7 @@ types-PyYAML==6.0.12.20250822  # Latest (Aug 22, 2025)
 types-python-dateutil==2.9.0.20250822  # Latest (Aug 22, 2025)
 
 # 安全掃描 (2025年9月最新兼容版本)
-bandit[toml]==1.7.6
+bandit[toml]>=1.7.6,<1.8.0  # Allow minor version updates for compatibility
 safety>=3.3.0,<4.0.0  # Latest CLI 3 with Pydantic V2 support, avoid conflicts
 semgrep>=1.137.0,<2.0.0  # Latest version (Sep 24, 2025) with urllib3 2.x support
 
@@ -65,8 +65,8 @@ responses==0.24.1    # HTTP mock
 freezegun==1.4.0     # 時間 mock
 
 # API 測試
-httpx==0.25.2
-httpie==3.2.2
+httpx>=0.25.2,<0.26.0  # Allow patch updates
+httpie>=3.2.2,<4.0.0  # Allow minor updates for better compatibility
 
 # 開發輔助記錄
 colorlog==6.8.0      # 彩色日誌
