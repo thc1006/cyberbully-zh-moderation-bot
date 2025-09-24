@@ -43,7 +43,7 @@ def test_config(temp_dir: Path) -> Config:
             "models_dir": temp_dir / "models",
             "logs_dir": temp_dir / "logs",
             "cache_dir": temp_dir / "cache",
-        }
+        },
     )
     config.paths.ensure_directories()
     return config
@@ -53,13 +53,15 @@ def test_config(temp_dir: Path) -> Config:
 def mock_env_file(temp_dir: Path) -> Path:
     """Create a mock .env file for testing."""
     env_file = temp_dir / ".env"
-    env_file.write_text("""
+    env_file.write_text(
+        """
 ENV=testing
 DEBUG=true
 APP_NAME=CyberPuppyTest
 DATA_DIR=/tmp/test_data
 MODELS_DIR=/tmp/test_models
-""")
+"""
+    )
     return env_file
 
 
@@ -76,7 +78,7 @@ def sample_data() -> dict[str, Any]:
         "metadata": {
             "source": "test",
             "version": "1.0.0",
-        }
+        },
     }
 
 
@@ -90,12 +92,7 @@ def async_client():
 def pytest_configure(config):
     """Configure pytest with custom markers."""
     config.addinivalue_line(
-        "mar"
-            "kers", 
+        "mar" "kers",
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+    config.addinivalue_line("markers", "unit: marks tests as unit tests")

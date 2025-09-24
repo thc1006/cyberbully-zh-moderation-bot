@@ -17,15 +17,14 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 # 設定日誌
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -82,8 +81,9 @@ class AnalyzeRequest(BaseModel):
         None, max_length=50, description="對話串 ID（可選）"
     )
 
-    @validator("text")
-    def validate_text_not_empty(cls, v):
+    @field_validator("text")
+    @classmethod
+    def validate_text_not_empty(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("文本不能為空")
         return v.strip()
@@ -136,9 +136,7 @@ class AnalyzeResponse(BaseModel):
     # 預測標籤
     toxicity: str = Field(..., description="毒性標籤: none|toxic|severe")
     bullying: str = Field(..., description="霸凌標籤: none|harassment|threat")
-    role: str = Field(
-        ..., description="角色標籤: none|perpetrator|victim|bystander"
-    )
+    role: str = Field(..., description="角色標籤: none|perpetrator|victim|bystander")
     emotion: str = Field(..., description="情緒標籤: pos|neu|neg")
     emotion_strength: int = Field(..., ge=0, le=4, description="情緒強度 0-4")
 
@@ -172,9 +170,7 @@ def mask_pii(text: str) -> str:
     """遮蔽個人識別資訊"""
     masked_text = text
     for pattern in PII_PATTERNS:
-        masked_text = re.sub(
-            pattern, "[MASKED]", masked_text, flags=re.IGNORECASE
-        )
+        masked_text = re.sub(pattern, "[MASKED]", masked_text, flags=re.IGNORECASE)
     return masked_text
 
 
@@ -223,9 +219,7 @@ async def analyze_text_content(
     harassment_keywords = ["騷擾", "煩人", "討厭"]
     threat_keywords = ["威脅", "警告", "後果"]
 
-    has_harassment = any(
-        keyword in text_lower for keyword in harassment_keywords
-    )
+    has_harassment = any(keyword in text_lower for keyword in harassment_keywords)
     has_threat = any(keyword in text_lower for keyword in threat_keywords)
 
     if has_threat or has_severe:
@@ -243,25 +237,22 @@ async def analyze_text_content(
     perpetrator_keywords = ["笨蛋", "廢物"] + toxic_keywords
 
     has_victim = any(keyword in text_lower for keyword in victim_keywords)
-    has_perpetrator = any(
-        keyword in text_lower for keyword in perpetrator_keywords
-    )
+    has_perpetrator = any(keyword in text_lower for keyword in perpetrator_keywords)
 
     if has_perpetrator and not has_victim:
         role = "perpetrator"
-        role_scores = {
-            "none": 0.1, "perpetrator": 0.7, "victim": 0.1, "bystander": 0.1
-        }
+        role_scores = {"none": 0.1, "perpetrator": 0.7, "victim": 0.1, "bystander": 0.1}
     elif has_victim:
         role = "victim"
         role_scores = {
-            "none": 0.1, "perpetrator": 0.05, "victim": 0.75, "bystander": 0.1
+            "none": 0.1,
+            "perpetrator": 0.05,
+            "victim": 0.75,
+            "bystander": 0.1,
         }
     else:
         role = "none"
-        role_scores = {
-            "none": 0.7, "perpetrator": 0.1, "victim": 0.1, "bystander": 0.1
-        }
+        role_scores = {"none": 0.7, "perpetrator": 0.1, "victim": 0.1, "bystander": 0.1}
 
     # 情緒分析模擬
     positive_keywords = ["開心", "高興", "好棒", "謝謝", "感謝"]
@@ -289,8 +280,7 @@ async def analyze_text_content(
     for word in words[:5]:  # 取前5個詞
         if any(
             keyword in word
-            for keyword in toxic_keywords + severe_keywords +
-                harassment_keywords
+            for keyword in toxic_keywords + severe_keywords + harassment_keywords
         ):
             importance = 0.8 + random.random() * 0.2
         else:
@@ -390,7 +380,7 @@ async def analyze_text(request: Request, data: AnalyzeRequest):
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="分析處理失敗，請稍後再試"
+            detail="分析處理失敗，請稍後再試",
         )
 
 
@@ -402,7 +392,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={
             "error": True,
             "message": exc.detail,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         },
     )
 
@@ -437,6 +427,4 @@ if __name__ == "__main__":
     import asyncio
 
     # 開發環境啟動配置
-    uvicorn.run(
-        "app:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
-    )
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

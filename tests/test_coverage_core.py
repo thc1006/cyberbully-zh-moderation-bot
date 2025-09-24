@@ -27,19 +27,17 @@ class TestConfigModule(unittest.TestCase):
         with self.assertRaises(ValueError):
             Settings(
                 model_name="test",
-                confidence_threshold=-0.5  # Invalid negative threshold
+                confidence_threshold=-0.5,  # Invalid negative threshold
             )
 
         with self.assertRaises(ValueError):
             Settings(
-                model_name="test",
-                confidence_threshold=1.5  # Invalid threshold > 1
+                model_name="test", confidence_threshold=1.5  # Invalid threshold > 1
             )
 
         with self.assertRaises(ValueError):
             Settings(
-                model_name="",  # Invalid empty model name
-                confidence_threshold=0.5
+                model_name="", confidence_threshold=0.5  # Invalid empty model name
             )
 
     def test_settings_path_validation(self):
@@ -47,9 +45,7 @@ class TestConfigModule(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Valid paths
             settings = Settings(
-                model_name="test",
-                data_dir=temp_dir,
-                model_dir=temp_dir
+                model_name="test", data_dir=temp_dir, model_dir=temp_dir
             )
 
             # Check that paths are resolved correctly
@@ -61,30 +57,28 @@ class TestConfigModule(unittest.TestCase):
         import os
 
         # Set environment variables
-        os.environ['CYBERPUPPY_MODEL_NAME'] = 'env_model'
-        os.environ['CYBERPUPPY_CONFIDENCE_THRESHOLD'] = '0.85'
-        os.environ['CYBERPUPPY_DEBUG'] = 'true'
+        os.environ["CYBERPUPPY_MODEL_NAME"] = "env_model"
+        os.environ["CYBERPUPPY_CONFIDENCE_THRESHOLD"] = "0.85"
+        os.environ["CYBERPUPPY_DEBUG"] = "true"
 
         try:
             settings = Settings()
 
             # Check that environment values are used
-            self.assertEqual(settings.model_name, 'env_model')
+            self.assertEqual(settings.model_name, "env_model")
             self.assertEqual(settings.confidence_threshold, 0.85)
             self.assertTrue(settings.debug)
 
         finally:
             # Clean up environment variables
-            del os.environ['CYBERPUPPY_MODEL_NAME']
-            del os.environ['CYBERPUPPY_CONFIDENCE_THRESHOLD']
-            del os.environ['CYBERPUPPY_DEBUG']
+            del os.environ["CYBERPUPPY_MODEL_NAME"]
+            del os.environ["CYBERPUPPY_CONFIDENCE_THRESHOLD"]
+            del os.environ["CYBERPUPPY_DEBUG"]
 
     def test_settings_serialization(self):
         """Test settings serialization methods"""
         settings = Settings(
-            model_name="test_model",
-            confidence_threshold=0.75,
-            debug=True
+            model_name="test_model", confidence_threshold=0.75, debug=True
         )
 
         # Test to_dict
@@ -121,9 +115,7 @@ class TestConfigModule(unittest.TestCase):
     def test_settings_path_methods(self):
         """Test path helper methods"""
         settings = Settings(
-            model_name="test_model",
-            data_dir="data",
-            model_dir="models"
+            model_name="test_model", data_dir="data", model_dir="models"
         )
 
         # Test path getter methods
@@ -147,14 +139,14 @@ class TestLabelMapperModule(unittest.TestCase):
                 name="toxicity",
                 labels=["none", "toxic", "severe"],
                 label_to_id={"none": 0, "toxic": 1, "severe": 2},
-                id_to_label={0: "none", 1: "toxic", 2: "severe"}
+                id_to_label={0: "none", 1: "toxic", 2: "severe"},
             ),
             "emotion": TaskLabelConfig(
                 name="emotion",
                 labels=["positive", "neutral", "negative"],
                 label_to_id={"positive": 0, "neutral": 1, "negative": 2},
-                id_to_label={0: "positive", 1: "neutral", 2: "negative"}
-            )
+                id_to_label={0: "positive", 1: "neutral", 2: "negative"},
+            ),
         }
 
     def test_label_mapper_initialization(self):
@@ -272,7 +264,7 @@ class TestModelOutputModule(unittest.TestCase):
         output = ModelOutput(
             toxicity_logits=torch.tensor([[0.2, 0.8]]),
             emotion_logits=torch.tensor([[0.1, 0.3, 0.6]]),
-            bullying_logits=torch.tensor([[0.9, 0.1]])
+            bullying_logits=torch.tensor([[0.9, 0.1]]),
         )
 
         self.assertIsNotNone(output.toxicity_logits)
@@ -284,7 +276,7 @@ class TestModelOutputModule(unittest.TestCase):
         output = ModelOutput(
             toxicity_logits=torch.tensor([[0.0, 1.0]]),
             emotion_logits=torch.tensor([[0.0, 0.0, 2.0]]),
-            bullying_logits=torch.tensor([[2.0, 0.0]])
+            bullying_logits=torch.tensor([[2.0, 0.0]]),
         )
 
         # Get probabilities
@@ -302,7 +294,7 @@ class TestModelOutputModule(unittest.TestCase):
         output = ModelOutput(
             toxicity_logits=torch.tensor([[0.2, 0.8], [-0.5, 0.3]]),
             emotion_logits=torch.tensor([[0.1, 0.3, 0.6], [0.8, 0.1, 0.1]]),
-            bullying_logits=torch.tensor([[0.9, 0.1], [0.2, 0.8]])
+            bullying_logits=torch.tensor([[0.9, 0.1], [0.2, 0.8]]),
         )
 
         # Get predictions (argmax)
@@ -335,8 +327,8 @@ class TestDetectionResultModule(unittest.TestCase):
             metadata={
                 "model_version": "1.2.0",
                 "processing_time": 0.045,
-                "timestamp": datetime.now().isoformat()
-            }
+                "timestamp": datetime.now().isoformat(),
+            },
         )
 
         self.assertEqual(result.text, "測試文本內容")
@@ -354,7 +346,7 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.0,
             bullying_label=0,
-            bullying_confidence=0.0
+            bullying_confidence=0.0,
         )
 
         result_max = DetectionResult(
@@ -364,7 +356,7 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=2,
             emotion_confidence=1.0,
             bullying_label=1,
-            bullying_confidence=1.0
+            bullying_confidence=1.0,
         )
 
         self.assertEqual(result_min.toxicity_confidence, 0.0)
@@ -382,8 +374,8 @@ class TestDetectionResultModule(unittest.TestCase):
             bullying_confidence=0.20,
             explanation={
                 "important_tokens": ["測試", "序列化"],
-                "attribution_scores": [0.3, 0.7]
-            }
+                "attribution_scores": [0.3, 0.7],
+            },
         )
 
         # Test dictionary serialization
@@ -409,7 +401,7 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.60,
             bullying_label=0,
-            bullying_confidence=0.10
+            bullying_confidence=0.10,
         )
 
         # Test confidence recalibration (mock implementation)
@@ -432,7 +424,7 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.60,
             bullying_label=0,
-            bullying_confidence=0.20
+            bullying_confidence=0.20,
         )
 
         result2 = DetectionResult(
@@ -442,22 +434,13 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=1,
             emotion_confidence=0.70,
             bullying_label=0,
-            bullying_confidence=0.15
+            bullying_confidence=0.15,
         )
 
         # Compare confidence levels
-        self.assertGreater(
-            result2.toxicity_confidence,
-            result1.toxicity_confidence
-        )
-        self.assertGreater(
-            result2.emotion_confidence,
-            result1.emotion_confidence
-        )
-        self.assertLess(
-            result2.bullying_confidence,
-            result1.bullying_confidence
-        )
+        self.assertGreater(result2.toxicity_confidence, result1.toxicity_confidence)
+        self.assertGreater(result2.emotion_confidence, result1.emotion_confidence)
+        self.assertLess(result2.bullying_confidence, result1.bullying_confidence)
 
     def test_detection_result_batch_processing(self):
         """Test batch processing of detection results"""
@@ -471,7 +454,7 @@ class TestDetectionResultModule(unittest.TestCase):
                 emotion_label=i % 3,
                 emotion_confidence=0.4 + (i * 0.04),
                 bullying_label=0,
-                bullying_confidence=0.1 + (i * 0.01)
+                bullying_confidence=0.1 + (i * 0.01),
             )
             results.append(result)
 
@@ -495,7 +478,7 @@ class TestDetectionResultModule(unittest.TestCase):
             emotion_label=1,
             emotion_confidence=0.55,
             bullying_label=0,
-            bullying_confidence=0.05
+            bullying_confidence=0.05,
         )
 
         # Test privacy-safe serialization
@@ -521,7 +504,7 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.5,
             bullying_label=0,
-            bullying_confidence=0.1
+            bullying_confidence=0.1,
         )
 
         self.assertEqual(result.text, "")
@@ -546,7 +529,7 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
                 emotion_label=1,
                 emotion_confidence=0.6,
                 bullying_label=0,
-                bullying_confidence=0.1
+                bullying_confidence=0.1,
             )
 
             self.assertEqual(result.text, text)
@@ -564,7 +547,7 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
             emotion_label=2,
             emotion_confidence=0.00001,  # Very low confidence
             bullying_label=0,
-            bullying_confidence=0.5
+            bullying_confidence=0.5,
         )
 
         self.assertEqual(len(result.text), 4000)  # 2 chars * 2 * 1000
@@ -584,7 +567,7 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
                 emotion_label=i % 3,
                 emotion_confidence=np.random.uniform(0.2, 0.8),
                 bullying_label=0,
-                bullying_confidence=np.random.uniform(0.05, 0.3)
+                bullying_confidence=np.random.uniform(0.05, 0.3),
             )
             results.append(result)
 
@@ -603,5 +586,5 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
         self.assertEqual(len(confidences), 100)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

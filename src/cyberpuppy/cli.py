@@ -4,6 +4,7 @@ CyberPuppy Command Line Interface
 A comprehensive CLI for Chinese cyberbullying detection and toxicity analysis.
 Provides commands for text analysis, model training, evaluation, and export.
 """
+
 import argparse
 import json
 import csv
@@ -18,7 +19,11 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 from rich.progress import (
-    Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
 )
 from rich.panel import Panel
 from rich.logging import RichHandler
@@ -44,21 +49,21 @@ class MockDetectionResult:
         self.processing_time = 0.123
 
         # Mock results based on simple heuristics
-        if any(word in text.lower() for word in ['stupid', 'idiot', 'hate', 'kill']):
-            self.toxicity = MockPrediction('toxic', 0.85)
-            self.bullying = MockPrediction('harassment', 0.80)
-            self.emotion = MockEmotionPrediction('neg', 3, 0.78)
-            self.role = MockPrediction('perpetrator', 0.72)
-        elif any(word in text.lower() for word in ['good', 'great', 'nice', 'love']):
-            self.toxicity = MockPrediction('none', 0.92)
-            self.bullying = MockPrediction('none', 0.95)
-            self.emotion = MockEmotionPrediction('pos', 2, 0.88)
-            self.role = MockPrediction('none', 0.90)
+        if any(word in text.lower() for word in ["stupid", "idiot", "hate", "kill"]):
+            self.toxicity = MockPrediction("toxic", 0.85)
+            self.bullying = MockPrediction("harassment", 0.80)
+            self.emotion = MockEmotionPrediction("neg", 3, 0.78)
+            self.role = MockPrediction("perpetrator", 0.72)
+        elif any(word in text.lower() for word in ["good", "great", "nice", "love"]):
+            self.toxicity = MockPrediction("none", 0.92)
+            self.bullying = MockPrediction("none", 0.95)
+            self.emotion = MockEmotionPrediction("pos", 2, 0.88)
+            self.role = MockPrediction("none", 0.90)
         else:
-            self.toxicity = MockPrediction('none', 0.75)
-            self.bullying = MockPrediction('none', 0.80)
-            self.emotion = MockEmotionPrediction('neu', 0, 0.70)
-            self.role = MockPrediction('none', 0.85)
+            self.toxicity = MockPrediction("none", 0.75)
+            self.bullying = MockPrediction("none", 0.80)
+            self.emotion = MockEmotionPrediction("neu", 0, 0.70)
+            self.role = MockPrediction("none", 0.85)
 
         self.explanations = None
 
@@ -108,6 +113,7 @@ class CLIError(Exception):
 @dataclass
 class AnalysisResult:
     """Container for analysis results."""
+
     text: str
     toxicity: str
     bullying: str
@@ -129,26 +135,21 @@ class BaseCommand(ABC):
         """Execute the command with given arguments."""
         pass
 
-    def _validate_file_exists(
-        self,
-        filepath: str,
-        file_type: str = "File"
-    ) -> Path:
+    def _validate_file_exists(self, filepath: str, file_type: str = "File") -> Path:
         """Validate that a file exists."""
         path = Path(filepath)
         if not path.exists():
             raise CLIError(f"{file_type} not found: {filepath}")
         return path
 
-    def _create_progress_bar(self, description: str = "Proce"
-        "ssing") -> Progress:
+    def _create_progress_bar(self, description: str = "Proce" "ssing") -> Progress:
         """Create a Rich progress bar."""
         return Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
-            console=self.console
+            console=self.console,
         )
 
 
@@ -167,10 +168,7 @@ class AnalyzeCommand(BaseCommand):
                 return self._analyze_single_text(args.text, args.format)
             elif args.input:
                 # Batch file processing
-                return self._analyze_batch_file(
-                    args.input,
-                    args.output,
-                    args.format)
+                return self._analyze_batch_file(args.input, args.output, args.format)
             else:
                 # Interactive mode - read from stdin
                 return self._analyze_interactive(args.format)
@@ -182,39 +180,39 @@ class AnalyzeCommand(BaseCommand):
 
     def _analyze_single_text(self, text: str, output_format: str) -> int:
         """Analyze a single text input."""
-        text_preview = text[:100] + ('...' if len(text) > 100 else '')
+        text_preview = text[:100] + ("..." if len(text) > 100 else "")
         self.console.print(f"[blue]Analyzing text:[/blue] {text_preview}")
 
         detection_result = self.detector.analyze(text)
 
         # Convert DetectionResult to dictionary format for CLI compatibility
         result = {
-            'text': detection_result.text,
-            'toxicity': detection_result.toxicity.prediction.value,
-            'bullying': detection_result.bullying.prediction.value,
-            'emotion': detection_result.emotion.prediction.value,
-            'emotion_strength': detection_result.emotion.strength,
-            'role': detection_result.role.prediction.value,
+            "text": detection_result.text,
+            "toxicity": detection_result.toxicity.prediction.value,
+            "bullying": detection_result.bullying.prediction.value,
+            "emotion": detection_result.emotion.prediction.value,
+            "emotion_strength": detection_result.emotion.strength,
+            "role": detection_result.role.prediction.value,
             # Use toxicity confidence as overall confidence score
-            'confidence': detection_result.toxicity.confidence,
-            'explanations': detection_result.explanations,
-            'processing_time': detection_result.processing_time
+            "confidence": detection_result.toxicity.confidence,
+            "explanations": detection_result.explanations,
+            "processing_time": detection_result.processing_time,
         }
 
         analysis_result = AnalysisResult(
             text=text,
-            toxicity=result['toxicity'],
-            bullying=result['bullying'],
-            emotion=result['emotion'],
-            emotion_strength=result['emotion_strength'],
-            role=result['role'],
-            confidence=result['confidence'],
-            explanations=result.get('explanations')
+            toxicity=result["toxicity"],
+            bullying=result["bullying"],
+            emotion=result["emotion"],
+            emotion_strength=result["emotion_strength"],
+            role=result["role"],
+            confidence=result["confidence"],
+            explanations=result.get("explanations"),
         )
 
-        if output_format == 'table':
+        if output_format == "table":
             self._print_table_result(analysis_result)
-        elif output_format == 'json':
+        elif output_format == "json":
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
             self._print_simple_result(analysis_result)
@@ -228,11 +226,11 @@ class AnalyzeCommand(BaseCommand):
         input_file = self._validate_file_exists(input_path, "Input file")
 
         # Detect input format
-        if input_path.endswith('.csv'):
+        if input_path.endswith(".csv"):
             texts = self._read_csv_file(input_file)
-        elif input_path.endswith('.json'):
+        elif input_path.endswith(".json"):
             texts = self._read_json_file(input_file)
-        elif input_path.endswith('.txt'):
+        elif input_path.endswith(".txt"):
             texts = self._read_text_file(input_file)
         else:
             raise CLIError(f"Unsupported input format: {input_path}")
@@ -242,36 +240,34 @@ class AnalyzeCommand(BaseCommand):
             task = progress.add_task("Processing", total=len(texts))
 
             for i, text_data in enumerate(texts):
-                text = text_data['text'] if isinstance(
-                    text_data,
-                    dict) else text_data
+                text = text_data["text"] if isinstance(text_data, dict) else text_data
                 detection_result = self.detector.analyze(text)
 
                 # Convert DetectionResult to dictionary format
                 result = {
-                    'text': detection_result.text,
-                    'toxicity': detection_result.toxicity.prediction.value,
-                    'bullying': detection_result.bullying.prediction.value,
-                    'emotion': detection_result.emotion.prediction.value,
-                    'emotion_strength': detection_result.emotion.strength,
-                    'role': detection_result.role.prediction.value,
-                    'confidence': detection_result.toxicity.confidence,
-                    'processing_time': detection_result.processing_time
+                    "text": detection_result.text,
+                    "toxicity": detection_result.toxicity.prediction.value,
+                    "bullying": detection_result.bullying.prediction.value,
+                    "emotion": detection_result.emotion.prediction.value,
+                    "emotion_strength": detection_result.emotion.strength,
+                    "role": detection_result.role.prediction.value,
+                    "confidence": detection_result.toxicity.confidence,
+                    "processing_time": detection_result.processing_time,
                 }
 
                 # Add metadata if available
                 if isinstance(text_data, dict):
-                    result.update(
-                        {k: v for k,
-                        v in text_data.items() if k != 'text'})
+                    result.update({k: v for k, v in text_data.items() if k != "text"})
                 results.append(result)
                 progress.update(task, advance=1)
 
         # Output results
         if output_path:
             self._save_results(results, output_path, output_format)
-            self.console.print(f"[green]*[/green] Results saved to \
-                {output_path}")
+            self.console.print(
+                f"[green]*[/green] Results saved to \
+                {output_path}"
+            )
         else:
             self._display_batch_results(results, output_format)
 
@@ -280,8 +276,9 @@ class AnalyzeCommand(BaseCommand):
 
     def _analyze_interactive(self, output_format: str) -> int:
         """Analyze text from stdin interactively."""
-        self.console.print("[blue]Enter text to analyze (Ctrl"
-            "+D or empty line to exit):[/blue]")
+        self.console.print(
+            "[blue]Enter text to analyze (Ctrl" "+D or empty line to exit):[/blue]"
+        )
 
         try:
             while True:
@@ -294,27 +291,27 @@ class AnalyzeCommand(BaseCommand):
 
                     # Convert DetectionResult to dictionary format
                     result = {
-                        'text': detection_result.text,
-                        'toxicity': detection_result.toxicity.prediction.value,
-                        'bullying': detection_result.bullying.prediction.value,
-                        'emotion': detection_result.emotion.prediction.value,
-                        'emotion_strength': detection_result.emotion.strength,
-                        'role': detection_result.role.prediction.value,
-                        'confidence': detection_result.toxicity.confidence,
-                        'processing_time': detection_result.processing_time
+                        "text": detection_result.text,
+                        "toxicity": detection_result.toxicity.prediction.value,
+                        "bullying": detection_result.bullying.prediction.value,
+                        "emotion": detection_result.emotion.prediction.value,
+                        "emotion_strength": detection_result.emotion.strength,
+                        "role": detection_result.role.prediction.value,
+                        "confidence": detection_result.toxicity.confidence,
+                        "processing_time": detection_result.processing_time,
                     }
 
                     analysis_result = AnalysisResult(
                         text=text,
-                        toxicity=result['toxicity'],
-                        bullying=result['bullying'],
-                        emotion=result['emotion'],
-                        emotion_strength=result['emotion_strength'],
-                        role=result['role'],
-                        confidence=result['confidence']
+                        toxicity=result["toxicity"],
+                        bullying=result["bullying"],
+                        emotion=result["emotion"],
+                        emotion_strength=result["emotion_strength"],
+                        role=result["role"],
+                        confidence=result["confidence"],
                     )
 
-                    if output_format == 'json':
+                    if output_format == "json":
                         print(json.dumps(result, indent=2, ensure_ascii=False))
                     else:
                         self._print_simple_result(analysis_result)
@@ -330,65 +327,57 @@ class AnalyzeCommand(BaseCommand):
     def _read_csv_file(self, filepath: Path) -> List[Dict[str, Any]]:
         """Read texts from CSV file."""
         texts = []
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                if 'text' in row:
+                if "text" in row:
                     texts.append(row)
                 else:
                     # Assume first column is text
                     first_col = next(iter(row.values()))
-                    texts.append({'text': first_col, **row})
+                    texts.append({"text": first_col, **row})
         return texts
 
     def _read_json_file(self, filepath: Path) -> List[Dict[str, Any]]:
         """Read texts from JSON file."""
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
             if isinstance(data, list):
                 return data
-            elif isinstance(data, dict) and 'texts' in data:
-                return data['texts']
+            elif isinstance(data, dict) and "texts" in data:
+                return data["texts"]
             else:
-                raise CLIError("JSON file must contain a list"
-                    " of texts or {'texts': [...]}")
+                raise CLIError(
+                    "JSON file must contain a list" " of texts or {'texts': [...]}"
+                )
 
     def _read_text_file(self, filepath: Path) -> List[str]:
         """Read texts from plain text file (one per line)."""
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             return [line.strip() for line in f if line.strip()]
 
     def _save_results(
-        self,
-        results: List[Dict[str,
-        Any]],
-        output_path: str,
-        format_type: str
+        self, results: List[Dict[str, Any]], output_path: str, format_type: str
     ):
         """Save results to file."""
-        if format_type == 'json' or output_path.endswith('.json'):
-            with open(output_path, 'w', encoding='utf-8') as f:
+        if format_type == "json" or output_path.endswith(".json"):
+            with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
-        elif format_type == 'csv' or output_path.endswith('.csv'):
+        elif format_type == "csv" or output_path.endswith(".csv"):
             if results:
                 fieldnames = list(results[0].keys())
-                with open(output_path, 'w', newline='', encoding='utf-8') as f:
+                with open(output_path, "w", newline="", encoding="utf-8") as f:
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
                     writer.writeheader()
                     writer.writerows(results)
         else:
             raise CLIError(f"Unsupported output format: {output_path}")
 
-    def _display_batch_results(
-        self,
-        results: List[Dict[str,
-        Any]],
-        format_type: str
-    ):
+    def _display_batch_results(self, results: List[Dict[str, Any]], format_type: str):
         """Display batch results to console."""
-        if format_type == 'json':
+        if format_type == "json":
             print(json.dumps(results, indent=2, ensure_ascii=False))
-        elif format_type == 'table':
+        elif format_type == "table":
             table = Table(title="Analysis Results")
             table.add_column("Text", style="cyan", no_wrap=False, max_width=40)
             table.add_column("Toxicity", style="red")
@@ -397,13 +386,17 @@ class AnalyzeCommand(BaseCommand):
             table.add_column("Confidence", style="blue")
 
             for result in results:
-                text = result['text'][:50] + "..." if len(result['text']) > 50 else result['text']
+                text = (
+                    result["text"][:50] + "..."
+                    if len(result["text"]) > 50
+                    else result["text"]
+                )
                 table.add_row(
                     text,
-                    result.get('toxicity', 'none'),
-                    result.get('bullying', 'none'),
-                    result.get('emotion', 'neu'),
-                    f"{result.get('confidence', 0):.2f}"
+                    result.get("toxicity", "none"),
+                    result.get("bullying", "none"),
+                    result.get("emotion", "neu"),
+                    f"{result.get('confidence', 0):.2f}",
                 )
 
             self.console.print(table)
@@ -411,35 +404,33 @@ class AnalyzeCommand(BaseCommand):
     def _print_table_result(self, result: AnalysisResult):
         """Print analysis result as a formatted table."""
         table = Table(
-            title="Analysis Result",
-            show_header=True,
-            header_style="bold magenta")
+            title="Analysis Result", show_header=True, header_style="bold magenta"
+        )
         table.add_column("Attribute", style="cyan", width=15)
         table.add_column("Value", style="white")
 
         # Color code based on severity
-        toxicity_color = \
-            "red" if result.toxicity in ['toxic', 'severe'] else "green"
-        bullying_color = \
-            "red" if result.bullying in ['harassment', 'threat'] else "green"
+        toxicity_color = "red" if result.toxicity in ["toxic", "severe"] else "green"
+        bullying_color = (
+            "red" if result.bullying in ["harassment", "threat"] else "green"
+        )
         emotion_color = (
-            "green" if result.emotion == 'pos'
-            else ("red" if result.emotion == 'neg' else "yellow")
+            "green"
+            if result.emotion == "pos"
+            else ("red" if result.emotion == "neg" else "yellow")
         )
 
         table.add_row(
             "Text",
-            result.text[:100] + "."
-                ".." if len(result.text) > 100 else result.text)
+            result.text[:100] + "." ".." if len(result.text) > 100 else result.text,
+        )
         table.add_row(
-            "Toxicity",
-            f"[{toxicity_color}]{result.toxicity}[/{toxicity_color}]")
+            "Toxicity", f"[{toxicity_color}]{result.toxicity}[/{toxicity_color}]"
+        )
         table.add_row(
-            "Bullying",
-            f"[{bullying_color}]{result.bullying}[/{bullying_color}]")
-        table.add_row(
-            "Emotion",
-            f"[{emotion_color}]{result.emotion}[/{emotion_color}]")
+            "Bullying", f"[{bullying_color}]{result.bullying}[/{bullying_color}]"
+        )
+        table.add_row("Emotion", f"[{emotion_color}]{result.emotion}[/{emotion_color}]")
         table.add_row("Emotion Strength", str(result.emotion_strength))
         table.add_row("Role", result.role)
         table.add_row("Confidence", f"{result.confidence:.3f}")
@@ -448,17 +439,19 @@ class AnalyzeCommand(BaseCommand):
 
     def _print_simple_result(self, result: AnalysisResult):
         """Print analysis result in simple format."""
-        self.console.print(Panel(
-            f"[bold]Analysis Results[/bold]\n\n"
-            f"[cyan]Text:[/cyan] {result.text}\n"
-            f"[red]Toxicity:[/red] {result.toxicity}\n"
-            f"[yellow]Bullying:[/yellow] {result.bullying}\n"
-            f"[green]Emotion:[/green] {result.emotion} (strength: \
+        self.console.print(
+            Panel(
+                f"[bold]Analysis Results[/bold]\n\n"
+                f"[cyan]Text:[/cyan] {result.text}\n"
+                f"[red]Toxicity:[/red] {result.toxicity}\n"
+                f"[yellow]Bullying:[/yellow] {result.bullying}\n"
+                f"[green]Emotion:[/green] {result.emotion} (strength: \
                 {result.emotion_strength})\n"
-            f"[blue]Role:[/blue] {result.role}\n"
-            f"[white]Confidence:[/white] {result.confidence:.3f}",
-            expand=False
-        ))
+                f"[blue]Role:[/blue] {result.role}\n"
+                f"[white]Confidence:[/white] {result.confidence:.3f}",
+                expand=False,
+            )
+        )
 
 
 class TrainCommand(BaseCommand):
@@ -480,14 +473,13 @@ class TrainCommand(BaseCommand):
 
             # Setup training parameters
             training_params = {
-                'dataset': args.dataset,
-                'epochs': args.epochs or config.get('epochs', 10),
-                'batch_size': args.batch_size or config.get('batch_size', 32),
-                'learning_rate': args.learning_rate or config.get(
-                    'learning_rate',
-                    2e-5),
-                'output': args.output or 'model.pt',
-                'config': config
+                "dataset": args.dataset,
+                "epochs": args.epochs or config.get("epochs", 10),
+                "batch_size": args.batch_size or config.get("batch_size", 32),
+                "learning_rate": args.learning_rate
+                or config.get("learning_rate", 2e-5),
+                "output": args.output or "model.pt",
+                "config": config,
             }
 
             self.console.print(
@@ -504,17 +496,18 @@ class TrainCommand(BaseCommand):
             # Create progress tracking
             with self._create_training_progress() as progress:
                 task = progress.add_task(
-                    f"Training {args.dataset}", total=training_params['epochs']
+                    f"Training {args.dataset}", total=training_params["epochs"]
                 )
 
                 def progress_callback(epoch: int, loss: float, f1: float):
                     progress.update(
-                        task, advance=1,
+                        task,
+                        advance=1,
                         description=f"Epoch {epoch}: loss={loss:.4f}, \
-                            f1={f1:.3f}"
+                            f1={f1:.3f}",
                     )
 
-                training_params['progress_callback'] = progress_callback
+                training_params["progress_callback"] = progress_callback
 
                 # Execute training
                 results = self.trainer.train(**training_params)
@@ -527,17 +520,12 @@ class TrainCommand(BaseCommand):
         except Exception as e:
             raise CLIError(f"Training failed: {str(e)}")
 
-    def _load_training_config(
-        self,
-        args: argparse.Namespace
-    ) -> Dict[str, Any]:
+    def _load_training_config(self, args: argparse.Namespace) -> Dict[str, Any]:
         """Load training configuration from file or defaults."""
         if args.config:
-            config_path = self._validate_file_exists(
-                args.config,
-                "Config file")
-            with open(config_path, 'r', encoding='utf-8') as f:
-                if args.config.endswith('.yaml') or args.config.endswith('.yml'):
+            config_path = self._validate_file_exists(args.config, "Config file")
+            with open(config_path, "r", encoding="utf-8") as f:
+                if args.config.endswith(".yaml") or args.config.endswith(".yml"):
                     return yaml.safe_load(f)
                 else:
                     return json.load(f)
@@ -546,8 +534,7 @@ class TrainCommand(BaseCommand):
 
     def _validate_dataset(self, dataset: str) -> bool:
         """Validate dataset name."""
-        valid_datasets = \
-            ['COLD', 'ChnSentiCorp', 'DMSC', 'NTUSD', 'SCCD', 'CHNCI']
+        valid_datasets = ["COLD", "ChnSentiCorp", "DMSC", "NTUSD", "SCCD", "CHNCI"]
         return dataset in valid_datasets
 
     def _create_training_progress(self) -> Progress:
@@ -557,37 +544,33 @@ class TrainCommand(BaseCommand):
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
-            console=self.console
+            console=self.console,
         )
 
     def _display_training_results(self, results: Dict[str, Any]):
         """Display training results."""
         table = Table(
-            title="Training Results",
-            show_header=True,
-            header_style="bold green")
+            title="Training Results", show_header=True, header_style="bold green"
+        )
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="white")
 
         table.add_row("Final Loss", f"{results.get('final_loss', 0):.4f}")
         table.add_row("Best F1 Score", f"{results.get('best_f1', 0):.3f}")
-        table.add_row(
-            "Epochs Completed",
-            str(results.get('epochs_completed',
-            0)))
-        table.add_row("Model Path", results.get('model_path', 'N/A'))
+        table.add_row("Epochs Completed", str(results.get("epochs_completed", 0)))
+        table.add_row("Model Path", results.get("model_path", "N/A"))
 
         self.console.print(table)
 
-        if results.get('best_f1', 0) > 0.8:
+        if results.get("best_f1", 0) > 0.8:
             self.console.print(
                 "[green]* Training completed success"
-                    "fully with good performance![/green]"
+                "fully with good performance![/green]"
             )
         else:
             self.console.print(
                 "[yellow]! Training completed but pe"
-                    "rformance may be suboptimal[/yellow]"
+                "rformance may be suboptimal[/yellow]"
             )
 
 
@@ -618,8 +601,10 @@ class EvaluateCommand(BaseCommand):
             # Save results if output specified
             if args.output:
                 self._save_evaluation_results(results, args.output)
-                self.console.print(f"[green]*[/green] Results saved to \
-                    {args.output}")
+                self.console.print(
+                    f"[green]*[/green] Results saved to \
+                    {args.output}"
+                )
 
             return 0
 
@@ -627,45 +612,41 @@ class EvaluateCommand(BaseCommand):
             raise CLIError(f"Evaluation failed: {str(e)}")
 
     def _display_evaluation_results(
-        self,
-        results: Dict[str,
-        Any],
-        requested_metrics: List[str]
+        self, results: Dict[str, Any], requested_metrics: List[str]
     ):
         """Display evaluation results in formatted table."""
         table = Table(
-            title="Evaluation Results",
-            show_header=True,
-            header_style="bold magenta")
+            title="Evaluation Results", show_header=True, header_style="bold magenta"
+        )
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="white")
 
         # Core metrics
-        if not requested_metrics or 'accuracy' in requested_metrics:
+        if not requested_metrics or "accuracy" in requested_metrics:
             table.add_row("Accuracy", f"{results.get('accuracy', 0):.4f}")
-        if not requested_metrics or 'f1' in requested_metrics:
+        if not requested_metrics or "f1" in requested_metrics:
             table.add_row("F1 Score", f"{results.get('f1', 0):.4f}")
-        if not requested_metrics or 'precision' in requested_metrics:
+        if not requested_metrics or "precision" in requested_metrics:
             table.add_row("Precision", f"{results.get('precision', 0):.4f}")
-        if not requested_metrics or 'recall' in requested_metrics:
+        if not requested_metrics or "recall" in requested_metrics:
             table.add_row("Recall", f"{results.get('recall', 0):.4f}")
 
         self.console.print(table)
 
         # Confusion matrix if available
-        if 'confusion_matrix' in results:
-            self._display_confusion_matrix(results['confusion_matrix'])
+        if "confusion_matrix" in results:
+            self._display_confusion_matrix(results["confusion_matrix"])
 
         # Classification report if available
-        if 'classification_report' in results:
-            self._display_classification_report(results['classification_report'])
+        if "classification_report" in results:
+            self._display_classification_report(results["classification_report"])
 
     def _display_confusion_matrix(self, confusion_matrix: List[List[int]]):
         """Display confusion matrix."""
         table = Table(title="Confusion Matrix", show_header=True)
         table.add_column("", style="cyan")
 
-        labels = ['none', 'toxic']  # Adjust based on your labels
+        labels = ["none", "toxic"]  # Adjust based on your labels
         for label in labels:
             table.add_column(f"Pred {label}", justify="center")
 
@@ -688,19 +669,14 @@ class EvaluateCommand(BaseCommand):
                     class_name,
                     f"{metrics.get('precision', 0):.3f}",
                     f"{metrics.get('recall', 0):.3f}",
-                    f"{metrics.get('f1-score', 0):.3f}"
+                    f"{metrics.get('f1-score', 0):.3f}",
                 )
 
         self.console.print(table)
 
-    def _save_evaluation_results(
-        self,
-        results: Dict[str,
-        Any],
-        output_path: str
-    ):
+    def _save_evaluation_results(self, results: Dict[str, Any], output_path: str):
         """Save evaluation results to file."""
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
 
@@ -717,30 +693,32 @@ class ExportCommand(BaseCommand):
             # Validate inputs
             self._validate_file_exists(args.model, "Model file")
 
-            supported_formats = ['onnx', 'torchscript', 'huggingface']
+            supported_formats = ["onnx", "torchscript", "huggingface"]
             if args.format not in supported_formats:
-                raise CLIError(f"Unsupported export format: {args.format}. "
-                               f"Supported: {', '.join(supported_formats)}")
+                raise CLIError(
+                    f"Unsupported export format: {args.format}. "
+                    f"Supported: {', '.join(supported_formats)}"
+                )
 
             self.console.print(f"[blue]Exporting model: {args.model}[/blue]")
             self.console.print(f"[cyan]Format: {args.format}[/cyan]")
             self.console.print(f"[cyan]Output: {args.output}[/cyan]")
 
             # Execute export
-            with self.console.status(f"[bold green]Exporting to \
-                {args.format}..."):
-                if args.format == 'onnx':
-                    results = self.exporter.export_to_onnx(
-                        args.model,
-                        args.output)
-                elif args.format == 'torchscript':
+            with self.console.status(
+                f"[bold green]Exporting to \
+                {args.format}..."
+            ):
+                if args.format == "onnx":
+                    results = self.exporter.export_to_onnx(args.model, args.output)
+                elif args.format == "torchscript":
                     results = self.exporter.export_to_torchscript(
-                        args.model,
-                        args.output)
-                elif args.format == 'huggingface':
+                        args.model, args.output
+                    )
+                elif args.format == "huggingface":
                     results = self.exporter.export_to_huggingface(
-                        args.model,
-                        args.output)
+                        args.model, args.output
+                    )
 
             # Display results
             self._display_export_results(results)
@@ -752,18 +730,21 @@ class ExportCommand(BaseCommand):
 
     def _display_export_results(self, results: Dict[str, Any]):
         """Display export results."""
-        if results.get('success'):
-            self.console.print("[green]* Export complet"
-                "ed successfully![/green]")
-            self.console.print(f"[cyan]Output path:[/cyan] \
-                {results.get('output_path')}")
+        if results.get("success"):
+            self.console.print("[green]* Export complet" "ed successfully![/green]")
+            self.console.print(
+                f"[cyan]Output path:[/cyan] \
+                {results.get('output_path')}"
+            )
 
-            if 'model_size_mb' in results:
-                self.console.print(f"[cyan]Model size:[/cyan] \
-                    {results['model_size_mb']:.1f} MB")
+            if "model_size_mb" in results:
+                self.console.print(
+                    f"[cyan]Model size:[/cyan] \
+                    {results['model_size_mb']:.1f} MB"
+                )
         else:
             self.console.print("[red]X Export failed![/red]")
-            if 'error' in results:
+            if "error" in results:
                 self.console.print(f"[red]Error:[/red] {results['error']}")
 
 
@@ -785,7 +766,7 @@ class ConfigCommand(BaseCommand):
             else:
                 self.console.print(
                     "[yellow]No config action specified"
-                        ". Use --help for options.[/yellow]"
+                    ". Use --help for options.[/yellow]"
                 )
                 return 1
 
@@ -797,11 +778,13 @@ class ConfigCommand(BaseCommand):
         config = load_config()
 
         self.console.print("[bold]Current Configuration:[/bold]")
-        self.console.print(Panel(
-            json.dumps(config, indent=2, ensure_ascii=False),
-            title="Config",
-            expand=False
-        ))
+        self.console.print(
+            Panel(
+                json.dumps(config, indent=2, ensure_ascii=False),
+                title="Config",
+                expand=False,
+            )
+        )
 
         return 0
 
@@ -810,14 +793,16 @@ class ConfigCommand(BaseCommand):
         config = load_config()
 
         # Support dotted notation (e.g., model.name)
-        keys = key.split('.')
+        keys = key.split(".")
         value = config
         for k in keys:
             if isinstance(value, dict) and k in value:
                 value = value[k]
             else:
-                self.console.print(f"[red]Configuration key not found: \
-                    {key}[/red]")
+                self.console.print(
+                    f"[red]Configuration key not found: \
+                    {key}[/red]"
+                )
                 return 1
 
         self.console.print(str(value))
@@ -826,8 +811,9 @@ class ConfigCommand(BaseCommand):
     def _set_config_value(self, key: str, value: str) -> int:
         """Set configuration value."""
         # This would need implementation to modify config file
-        self.console.print("[yellow]Config modification "
-            "not yet implemented[/yellow]")
+        self.console.print(
+            "[yellow]Config modification " "not yet implemented[/yellow]"
+        )
         return 1
 
 
@@ -849,8 +835,7 @@ class CyberPuppyCLI:
                     # Use mock detector for testing
                     self.detector = MockDetector()
                 else:
-                    self.detector = \
-                        CyberPuppyDetector(config or get_default_config())
+                    self.detector = CyberPuppyDetector(config or get_default_config())
             if not self.trainer:
                 self.trainer = ModelTrainer(config)
             if not self.evaluator:
@@ -872,9 +857,7 @@ class CyberPuppyCLI:
             # Load configuration
             config = (
                 self._load_config_file(parsed_args.config_file)
-                if hasattr(
-                    parsed_args,
-                    'config_file') and parsed_args.config_file
+                if hasattr(parsed_args, "config_file") and parsed_args.config_file
                 else None
             )
 
@@ -888,8 +871,7 @@ class CyberPuppyCLI:
         except CLIError:
             raise
         except KeyboardInterrupt:
-            self.console.print("\n[yellow]Operation inte"
-                "rrupted by user[/yellow]")
+            self.console.print("\n[yellow]Operation inte" "rrupted by user[/yellow]")
             return 130
         except Exception as e:
             self.console.print(f"[red]Unexpected error: {str(e)}[/red]")
@@ -901,23 +883,23 @@ class CyberPuppyCLI:
         if not config_path.exists():
             raise CLIError(f"Config file not found: {config_file}")
 
-        with open(config_path, 'r', encoding='utf-8') as f:
-            if config_file.endswith('.yaml') or config_file.endswith('.yml'):
+        with open(config_path, "r", encoding="utf-8") as f:
+            if config_file.endswith(".yaml") or config_file.endswith(".yml"):
                 return yaml.safe_load(f)
             else:
                 return json.load(f)
 
     def _create_command(self, args: argparse.Namespace) -> BaseCommand:
         """Create appropriate command instance."""
-        if args.command == 'analyze':
+        if args.command == "analyze":
             return AnalyzeCommand(self.detector, self.console)
-        elif args.command == 'train':
+        elif args.command == "train":
             return TrainCommand(self.trainer, self.console)
-        elif args.command == 'evaluate':
+        elif args.command == "evaluate":
             return EvaluateCommand(self.evaluator, self.console)
-        elif args.command == 'export':
+        elif args.command == "export":
             return ExportCommand(self.exporter, self.console)
-        elif args.command == 'config':
+        elif args.command == "config":
             return ConfigCommand(self.console)
         else:
             raise CLIError(f"Unknown command: {args.command}")
@@ -926,8 +908,8 @@ class CyberPuppyCLI:
 def create_parser() -> argparse.ArgumentParser:
     """Create the main argument parser."""
     parser = argparse.ArgumentParser(
-        prog='cyberpuppy',
-        description='CyberPuppy - Chinese Cyberbullying Detection and Toxicity Analysis',
+        prog="cyberpuppy",
+        description="CyberPuppy - Chinese Cyberbullying Detection and Toxicity Analysis",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -938,106 +920,124 @@ Examples:
   cyberpuppy export --model model.pt --format onnx --output model.onnx
 
 For more information, visit: https://github.com/yourusername/cyberpuppy
-        """
+        """,
     )
 
     # Global options
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Enable verbose output')
-    parser.add_argument('--quiet', '-q', action='store_true',
-                        help='Enable quiet mode')
-    parser.add_argument('--config-file', '-c', type=str,
-                        help='Path to configuration file (YAML or JSON)')
     parser.add_argument(
-        '--version',
-        action='version',
-        version='CyberPuppy 1.0.0')
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
+    parser.add_argument("--quiet", "-q", action="store_true", help="Enable quiet mode")
+    parser.add_argument(
+        "--config-file",
+        "-c",
+        type=str,
+        help="Path to configuration file (YAML or JSON)",
+    )
+    parser.add_argument("--version", action="version", version="CyberPuppy 1.0.0")
 
     # Subcommands
-    subparsers = parser.add_subparsers(
-        dest='command',
-        help='Available commands')
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Analyze command
     analyze_parser = subparsers.add_parser(
-        'analyze',
-        help='Analyze text for toxicity and emotions')
-    analyze_parser.add_argument('text', nargs='?', help='Text to analyze')
-    analyze_parser.add_argument('--input', '-i', type=str,
-                                help='Input file (CSV, JSON, or TXT)')
-    analyze_parser.add_argument('--output', '-o', type=str,
-                                help='Output file for results')
-    analyze_parser.add_argument('--format', '-f', choices=['table', 'json',
-        'csv'],
-                                default='table', help='Output format')
+        "analyze", help="Analyze text for toxicity and emotions"
+    )
+    analyze_parser.add_argument("text", nargs="?", help="Text to analyze")
+    analyze_parser.add_argument(
+        "--input", "-i", type=str, help="Input file (CSV, JSON, or TXT)"
+    )
+    analyze_parser.add_argument(
+        "--output", "-o", type=str, help="Output file for results"
+    )
+    analyze_parser.add_argument(
+        "--format",
+        "-f",
+        choices=["table", "json", "csv"],
+        default="table",
+        help="Output format",
+    )
 
     # Train command
-    train_parser = subparsers.add_parser('train', help='Train a new model')
-    train_parser.add_argument('--dataset', '-d', type=str, required=True,
-                              choices=['COLD', 'ChnSentiCorp', 'DMSC', 'NTUSD',
-                                  'SCCD', 'CHNCI'],
-                              help='Dataset to train on')
-    train_parser.add_argument('--epochs', '-e', type=int, default=10,
-                              help='Number of training epochs')
-    train_parser.add_argument('--batch-size', '-b', type=int, default=32,
-                              help='Training batch size')
-    train_parser.add_argument('--learning-rate', '-lr', type=float,
-        default=2e-5,
-                              help='Learning rate')
-    train_parser.add_argument('--output', '-o', type=str, default='model.pt',
-                              help='Output model path')
-    train_parser.add_argument('--config', type=str,
-                              help='Training configuration file')
+    train_parser = subparsers.add_parser("train", help="Train a new model")
+    train_parser.add_argument(
+        "--dataset",
+        "-d",
+        type=str,
+        required=True,
+        choices=["COLD", "ChnSentiCorp", "DMSC", "NTUSD", "SCCD", "CHNCI"],
+        help="Dataset to train on",
+    )
+    train_parser.add_argument(
+        "--epochs", "-e", type=int, default=10, help="Number of training epochs"
+    )
+    train_parser.add_argument(
+        "--batch-size", "-b", type=int, default=32, help="Training batch size"
+    )
+    train_parser.add_argument(
+        "--learning-rate", "-lr", type=float, default=2e-5, help="Learning rate"
+    )
+    train_parser.add_argument(
+        "--output", "-o", type=str, default="model.pt", help="Output model path"
+    )
+    train_parser.add_argument("--config", type=str, help="Training configuration file")
 
     # Evaluate command
-    eval_parser = subparsers.add_parser(
-        'evaluate',
-        help='Evaluate model performance')
-    eval_parser.add_argument('--model', '-m', type=str, required=True,
-                             help='Path to model file')
-    eval_parser.add_argument('--dataset', '-d', type=str, required=True,
-                             help='Path to evaluation dataset')
-    eval_parser.add_argument('--output', '-o', type=str,
-                             help='Output file for evaluation results')
-    eval_parser.add_argument('--metrics', nargs='+',
-                             choices=['accuracy', 'precision', 'recall', 'f1'],
-                             default=['accuracy', 'f1'],
-                             help='Metrics to compute')
+    eval_parser = subparsers.add_parser("evaluate", help="Evaluate model performance")
+    eval_parser.add_argument(
+        "--model", "-m", type=str, required=True, help="Path to model file"
+    )
+    eval_parser.add_argument(
+        "--dataset", "-d", type=str, required=True, help="Path to evaluation dataset"
+    )
+    eval_parser.add_argument(
+        "--output", "-o", type=str, help="Output file for evaluation results"
+    )
+    eval_parser.add_argument(
+        "--metrics",
+        nargs="+",
+        choices=["accuracy", "precision", "recall", "f1"],
+        default=["accuracy", "f1"],
+        help="Metrics to compute",
+    )
 
     # Export command
-    export_parser = subparsers.add_parser(
-        'export',
-        help='Export model for deployment')
-    export_parser.add_argument('--model', '-m', type=str, required=True,
-                               help='Path to model file')
-    export_parser.add_argument('--format', '-f', type=str, required=True,
-                               choices=['onnx', 'torchscript', 'huggingface'],
-                               help='Export format')
-    export_parser.add_argument('--output', '-o', type=str, required=True,
-                               help='Output path')
+    export_parser = subparsers.add_parser("export", help="Export model for deployment")
+    export_parser.add_argument(
+        "--model", "-m", type=str, required=True, help="Path to model file"
+    )
+    export_parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        required=True,
+        choices=["onnx", "torchscript", "huggingface"],
+        help="Export format",
+    )
+    export_parser.add_argument(
+        "--output", "-o", type=str, required=True, help="Output path"
+    )
 
     # Config command
-    config_parser = subparsers.add_parser(
-        'config',
-        help='Manage configuration')
+    config_parser = subparsers.add_parser("config", help="Manage configuration")
     config_group = config_parser.add_mutually_exclusive_group(required=True)
-    config_group.add_argument('--show', action='store_true',
-                              help='Show current configuration')
-    config_group.add_argument('--get', type=str,
-                              help='Get configuration value by key')
-    config_group.add_argument('--set', type=str,
-                              help='Set configuration value')
-    config_parser.add_argument('--value', type=str,
-                               help='Value to set (used with --set)')
+    config_group.add_argument(
+        "--show", action="store_true", help="Show current configuration"
+    )
+    config_group.add_argument("--get", type=str, help="Get configuration value by key")
+    config_group.add_argument("--set", type=str, help="Set configuration value")
+    config_parser.add_argument(
+        "--value", type=str, help="Value to set (used with --set)"
+    )
 
     return parser
 
 
 def setup_logging(args: argparse.Namespace):
     """Setup logging based on CLI arguments."""
-    if hasattr(args, 'quiet') and args.quiet:
+    if hasattr(args, "quiet") and args.quiet:
         level = logging.ERROR
-    elif hasattr(args, 'verbose') and args.verbose:
+    elif hasattr(args, "verbose") and args.verbose:
         level = logging.DEBUG
     else:
         level = logging.INFO
@@ -1046,7 +1046,7 @@ def setup_logging(args: argparse.Namespace):
         level=level,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)]
+        handlers=[RichHandler(rich_tracebacks=True)],
     )
 
 
@@ -1057,9 +1057,9 @@ def format_analysis_result_table(result: Dict[str, Any], text: str) -> Table:
     table.add_column("Value", style="white")
 
     table.add_row("Text", text[:100] + "..." if len(text) > 100 else text)
-    table.add_row("Toxicity", result.get('toxicity', 'none'))
-    table.add_row("Bullying", result.get('bullying', 'none'))
-    table.add_row("Emotion", result.get('emotion', 'neu'))
+    table.add_row("Toxicity", result.get("toxicity", "none"))
+    table.add_row("Bullying", result.get("bullying", "none"))
+    table.add_row("Emotion", result.get("emotion", "neu"))
     table.add_row("Confidence", f"{result.get('confidence', 0):.3f}")
 
     return table
@@ -1076,7 +1076,7 @@ def create_progress_bar(description: str) -> Progress:
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
-        TaskProgressColumn()
+        TaskProgressColumn(),
     )
 
 
@@ -1100,5 +1100,5 @@ def main(args: List[str] = None) -> int:
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

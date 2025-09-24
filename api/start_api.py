@@ -13,8 +13,7 @@ sys.path.insert(0, str(project_root / "src"))
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 if __name__ == "__main__":
@@ -29,10 +28,4 @@ if __name__ == "__main__":
     print(f"Metrics: http://localhost:{port}/metrics")
     print("\nPress Ctrl+C to stop the server")
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-        access_log=True
-    )
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info", access_log=True)

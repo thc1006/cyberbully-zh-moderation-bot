@@ -10,24 +10,26 @@ import re
 def get_e722_errors():
     """Get E722 errors from flake8."""
     try:
-        result = subprocess.run([
-            'python', '-m', 'flake8', '--select=E722', '.'
-        ], capture_output=True, text=True, cwd='.')
+        result = subprocess.run(
+            ["python", "-m", "flake8", "--select=E722", "."],
+            capture_output=True,
+            text=True,
+            cwd=".",
+        )
 
         if result.returncode != 0 and not result.stdout:
             return {}
 
         errors = {}
-        for line in result.stdout.strip().split('\n'):
+        for line in result.stdout.strip().split("\n"):
             if not line:
                 continue
             # Format: ./path/file.py:line:col: E722 do not use bare 'except'
             match = re.match(
-                r'([^:]+):(\d+):\d+: E722 do not use bare \'except\'',
-                line
+                r"([^:]+):(\d+):\d+: E722 do not use bare \'except\'", line
             )
             if match:
-                filepath = match.group(1).replace('.\\', '').replace('./', '')
+                filepath = match.group(1).replace(".\\", "").replace("./", "")
                 line_num = int(match.group(2))
 
                 if filepath not in errors:
@@ -44,7 +46,7 @@ def get_e722_errors():
 def fix_bare_except(filepath, line_nums):
     """Fix bare except statements in a file."""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         modified = False
@@ -54,16 +56,18 @@ def fix_bare_except(filepath, line_nums):
                 line = lines[line_idx]
 
                 # Replace 'except:' with 'except Exception:'
-                if 'except:' in line and not line.strip().startswith('#'):
-                    new_line = line.replace('except:', 'except Exception:')
+                if "except:" in line and not line.strip().startswith("#"):
+                    new_line = line.replace("except:", "except Exception:")
                     if new_line != line:
                         lines[line_idx] = new_line
                         modified = True
-                        print(f"Fixed {filepath}:{line_num} - b"
-                            "are except -> except Exception:")
+                        print(
+                            f"Fixed {filepath}:{line_num} - b"
+                            "are except -> except Exception:"
+                        )
 
         if modified:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.writelines(lines)
             return True
 
@@ -91,7 +95,6 @@ def main():
     print(f"Fixed {fixed_files}/{len(errors)} files")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     main()
-

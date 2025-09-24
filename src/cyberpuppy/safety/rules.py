@@ -55,7 +55,7 @@ class UserViolationHistory:
                 "timestamp": datetime.now().isoformat(),
                 "level": level.value,
                 "scores": scores,
-                "hash": hashlib.sha256(f"{level.value}_{scores}".encode()).hexdigest()
+                "hash": hashlib.sha256(f"{level.value}_{scores}".encode()).hexdigest(),
             }
         )
         self.total_count += 1
@@ -68,8 +68,11 @@ class UserViolationHistory:
     def get_recent_violations(self, hours: int = 24) -> List[Dict[str, Any]]:
         """取得最近的違規記錄"""
         cutoff = datetime.now() - timedelta(hours=hours)
-        return [v for v in self.violations if datetime.fromisoformat(v["time"
-            "stamp"]) > cutoff]
+        return [
+            v
+            for v in self.violations
+            if datetime.fromisoformat(v["time" "stamp"]) > cutoff
+        ]
 
 
 @dataclass
@@ -148,10 +151,7 @@ class PIIHandler:
             if matches:
                 pii_stats[pii_type] = len(matches)
                 cleaned_text = re.sub(
-                    pattern,
-                    replacement,
-                    cleaned_text,
-                    flags=re.IGNORECASE
+                    pattern, replacement, cleaned_text, flags=re.IGNORECASE
                 )
 
         return cleaned_text, pii_stats
@@ -289,8 +289,11 @@ class SafetyRules:
         """
         if level == ResponseLevel.NONE:
             return ResponseStrategy(
-                level=level, message=""
-                    "", resources=[], notify_admin=False, log_detail=False
+                level=level,
+                message="" "",
+                resources=[],
+                notify_admin=False,
+                log_detail=False,
             )
 
         # 選擇訊息模板
@@ -316,11 +319,7 @@ class SafetyRules:
         )
 
     def update_user_history(
-        self,
-        user_id: str,
-        level: ResponseLevel,
-        scores: Dict[str,
-        float]
+        self, user_id: str, level: ResponseLevel, scores: Dict[str, float]
     ):
         """更新使用者違規歷史"""
         if user_id not in self.user_histories:
@@ -427,8 +426,9 @@ class PrivacyLogger:
             except Exception as e:
                 logger.error(f"日誌寫入失敗: {e}")
 
-        logger.info(f"事件記錄 - 類型: {event_type}, Hash:"
-            " {text_hash}, 行動: {action.name}")
+        logger.info(
+            f"事件記錄 - 類型: {event_type}, Hash:" " {text_hash}, 行動: {action.name}"
+        )
 
         return log_entry
 
@@ -441,12 +441,7 @@ class AppealManager:
         self.appeals: Dict[str, Appeal] = {}
         self.user_appeals: Dict[str, List[str]] = {}  # user_id -> appeal_ids
 
-    def create_appeal(
-        self,
-        user_id: str,
-        event_hash: str,
-        reason: str
-    ) -> Appeal:
+    def create_appeal(self, user_id: str, event_hash: str, reason: str) -> Appeal:
         """
         建立申訴
 
@@ -482,8 +477,7 @@ class AppealManager:
         return appeal
 
     def review_appeal(
-        self, appeal_id: str, reviewer: str, decision: AppealStatus,
-            resolution: str
+        self, appeal_id: str, reviewer: str, decision: AppealStatus, resolution: str
     ) -> Optional[Appeal]:
         """
         審核申訴
@@ -531,8 +525,7 @@ class AppealManager:
         anon_user = PIIHandler.hash_user_id(user_id)
         appeal_ids = self.user_appeals.get(anon_user, [])
 
-        appeals = [self.appeals[aid] for aid in appeal_ids if aid in
-            self.appeals]
+        appeals = [self.appeals[aid] for aid in appeal_ids if aid in self.appeals]
 
         if status_filter:
             appeals = [a for a in appeals if a.status == status_filter]
@@ -574,8 +567,9 @@ class AppealManager:
         if not reviewed:
             return 0
 
-        total_time = sum((a.updated_at -
-            a.created_at).total_seconds() for a in reviewed)
+        total_time = sum(
+            (a.updated_at - a.created_at).total_seconds() for a in reviewed
+        )
 
         return round(total_time / len(reviewed) / 3600, 2)  # 轉換為小時
 
@@ -619,8 +613,10 @@ def example_usage():
         action=response_level,
         user_id=user_id,
     )
-    print(f"日誌記錄 - Hash: {log_entry['text_hash']}"
-        ", PII 偵測: {log_entry['pii_detected']}")
+    print(
+        f"日誌記錄 - Hash: {log_entry['text_hash']}"
+        ", PII 偵測: {log_entry['pii_detected']}"
+    )
 
     # 4. 更新違規歷史
     safety_rules.update_user_history(user_id, response_level, scores)

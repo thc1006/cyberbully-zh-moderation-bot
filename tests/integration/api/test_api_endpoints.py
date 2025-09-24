@@ -57,35 +57,26 @@ class TestAPIHealthCheck:
 class TestAPIAnalyze:
     """文本分析 API 測試"""
 
-    async def test_analyze_valid_text(
-        self,
-        api_server,
-        http_client,
-        test_data_small
-    ):
+    async def test_analyze_valid_text(self, api_server, http_client, test_data_small):
         """測試有效文本分析"""
         for test_case in test_data_small:
             payload = {"text": test_case["text"]}
             start_time = time.time()
 
-            response = await http_client.post(
-                f"{api_server}/analyze",
-                json=payload
-            )
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
 
             response_time = (time.time() - start_time) * 1000
 
             # 驗證回應
-            assert response.status_code == 200, f"Failed for text: {"
-                "test_case['text']}"
+            assert response.status_code == 200, f"Failed for text: {test_case['text']}"
 
             data = response.json()
             await self._validate_analyze_response(data)
 
             # 驗證回應時間
-            assert response_time < MAX_RESPONSE_TIME_MS, \
-                f"Response time {response_time}ms exc"
-                    "eeds limit {MAX_RESPONSE_TIME_MS}ms"
+            assert (
+                response_time < MAX_RESPONSE_TIME_MS
+            ), f"Response time {response_time}ms exceeds limit {MAX_RESPONSE_TIME_MS}ms"
 
             # 驗證預期結果（部分匹配，因為是模擬 API）
             expected = test_case["expected"]
@@ -97,13 +88,10 @@ class TestAPIAnalyze:
         payload = {
             "text": "那不是你的錯",
             "context": "之前有人說: 我覺得我很笨",
-            "thread_id": "test_thread_123"
+            "thread_id": "test_thread_123",
         }
 
-        response = await http_client.post(
-            f"{api_server}/analyze",
-            json=payload
-        )
+        response = await http_client.post(f"{api_server}/analyze", json=payload)
 
         assert response.status_code == 200
         data = response.json()
@@ -113,10 +101,7 @@ class TestAPIAnalyze:
         """測試空文本處理"""
         payload = {"text": ""}
 
-        response = await http_client.post(
-            f"{api_server}/analyze",
-            json=payload
-        )
+        response = await http_client.post(f"{api_server}/analyze", json=payload)
 
         assert response.status_code == 422  # Validation error
 
@@ -124,18 +109,11 @@ class TestAPIAnalyze:
         """測試過長文本處理"""
         payload = {"text": "a" * 2000}  # 超過 1000 字元限制
 
-        response = await http_client.post(
-            f"{api_server}/analyze",
-            json=payload
-        )
+        response = await http_client.post(f"{api_server}/analyze", json=payload)
 
         assert response.status_code == 422  # Validation error
 
-    async def test_analyze_chinese_special_chars(
-        self,
-        api_server,
-        http_client
-    ):
+    async def test_analyze_chinese_special_chars(self, api_server, http_client):
         """測試中文特殊字元處理"""
         special_texts = [
             "😊😢😡 情緒符號測試",
@@ -143,15 +121,12 @@ class TestAPIAnalyze:
             "１２３４５ 全形數字測試",
             "ａｂｃｄｅ 全形英文測試",
             "繁體中文 vs 简体中文",
-            "🚨⚠️💀 警告符號測試"
+            "🚨⚠️💀 警告符號測試",
         ]
 
         for text in special_texts:
             payload = {"text": text}
-            response = await http_client.post(
-                f"{api_server}/analyze",
-                json=payload
-            )
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
 
             assert response.status_code == 200, f"Failed for text: {text}"
             data = response.json()
@@ -161,9 +136,13 @@ class TestAPIAnalyze:
         """驗證分析回應格式"""
         # 必要欄位
         required_fields = [
-            "toxicity", "bullying", "role", "emotion", "emotion_strength",
-            "sco"
-                "res", 
+            "toxicity",
+            "bullying",
+            "role",
+            "emotion",
+            "emotion_strength",
+            "scores",
+            "explanations",
         ]
 
         for field in required_fields:
@@ -187,8 +166,9 @@ class TestAPIAnalyze:
         for category, score_dict in scores.items():
             if isinstance(score_dict, dict):
                 total = sum(score_dict.values())
-                assert 0.99 <= total <= 1.01, f"{category} scores do"
-                    "n't sum to 1: {total}"
+                assert (
+                    0.99 <= total <= 1.01
+                ), f"{category} scores don't sum to 1: {total}"
 
         # 驗證可解釋性資料
         explanations = data["explanations"]
@@ -228,8 +208,7 @@ class TestAPIRateLimit:
         success_count = status_codes.count(200)
         rate_limited_count = status_codes.count(429)
 
-        assert success_count <= 30, f"Too many successful re"
-            "quests: {success_count}"
+        assert success_count <= 30, f"Too many successful requests: {success_count}"
         assert rate_limited_count > 0, "Rate limiting not enforced"
 
 
@@ -242,7 +221,7 @@ class TestAPIErrorHandling:
         response = await http_client.post(
             f"{api_server}/analyze",
             content="invalid json",
-            headers={"content-type": "application/json"}
+            headers={"content-type": "application/json"},
         )
 
         assert response.status_code == 422
@@ -256,10 +235,7 @@ class TestAPIErrorHandling:
         ]
 
         for payload in payloads:
-            response = await http_client.post(
-                f"{api_server}/analyze",
-                json=payload
-            )
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             assert response.status_code == 422
 
     async def test_unsupported_media_type(self, api_server, http_client):
@@ -267,7 +243,7 @@ class TestAPIErrorHandling:
         response = await http_client.post(
             f"{api_server}/analyze",
             content="text=測試",
-            headers={"content-type": "application/x-www-form-urlencoded"}
+            headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
         assert response.status_code == 422
@@ -289,10 +265,7 @@ class TestAPIStressTest:
     """API 壓力測試"""
 
     async def test_concurrent_requests(
-        self,
-        api_server,
-        http_client,
-        performance_monitor
+        self, api_server, http_client, performance_monitor
     ):
         """測試併發請求處理"""
         payload = {"text": "併發測試訊息"}
@@ -308,14 +281,16 @@ class TestAPIStressTest:
 
         # 驗證所有請求都成功
         for i, response in enumerate(responses):
-            assert response.status_code == 200, f"Request {i} failed: {"
-                "response.status_code}"
+            assert (
+                response.status_code == 200
+            ), f"Request {i} failed: {response.status_code}"
 
         # 驗證回應時間合理
         metrics = await monitor
         avg_response_time = metrics["duration"] / concurrent_requests * 1000
-        assert avg_response_time < MAX_RESPONSE_TIME_MS * 2, \
-            f"Average response time too slow: {avg_response_time}ms"
+        assert (
+            avg_response_time < MAX_RESPONSE_TIME_MS * 2
+        ), f"Average response time too slow: {avg_response_time}ms"
 
     async def test_memory_usage_stability(self, api_server, http_client):
         """測試記憶體使用穩定性"""
@@ -328,16 +303,16 @@ class TestAPIStressTest:
         payload = {"text": "記憶體測試訊息 " * 50}  # 較長的文本
 
         for i in range(20):
-            response = await http_client.post(f"{api_serve"
-                "r}/analyze", json=payload)
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             assert response.status_code == 200
 
         final_memory = process.memory_info().rss
         memory_increase = final_memory - initial_memory
 
         # 記憶體增長不應超過 50MB
-        assert memory_increase < 50 * 1024 * 1024, \
-            f"Memory increase too large: {memory_increase / 1024 / 1024:.2f}MB"
+        assert (
+            memory_increase < 50 * 1024 * 1024
+        ), f"Memory increase too large: {memory_increase / 1024 / 1024:.2f}MB"
 
 
 @pytest.mark.api
@@ -354,8 +329,7 @@ class TestAPILogging:
         )
 
         payload = {"text": sensitive_text}
-        response = await http_client.post(f"{api_serve"
-            "r}/analyze", json=payload)
+        response = await http_client.post(f"{api_server}/analyze", json=payload)
 
         assert response.status_code == 200
         data = response.json()

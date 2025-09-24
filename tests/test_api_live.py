@@ -24,8 +24,7 @@ def test_api_server():
         if response.status_code == 200:
             health_data = response.json()
             print(f"- Status: {health_data.get('status')}")
-            print(f"- Model status: {health_data.get('mod"
-                "el_status', {}).get('models_loaded')}")
+            print(f"- Model status: {health_data.get('model_status', {}).get('models_loaded')}")
         else:
             print(f"Health check failed: {response.text}")
             return False

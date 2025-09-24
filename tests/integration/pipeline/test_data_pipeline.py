@@ -88,8 +88,7 @@ class TestDataPipeline:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
         # 執行標籤統一腳本
-        mapping_script = PROJECT_ROOT / "scr"
-            "ipts" / 
+        mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py" 
         output_file = temp_dir / "unified_labels.jsonl"
 
         if mapping_script.exists():
@@ -346,8 +345,7 @@ class TestPipelineIntegrity:
 
         # 階段2：標籤統一
         if stage1_output.exists():
-            mapping_script = PROJECT_ROOT / "scr"
-                "ipts" / 
+            mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py" 
             if mapping_script.exists():
                 subprocess.run([
                     "python", str(mapping_script),

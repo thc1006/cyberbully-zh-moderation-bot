@@ -3,6 +3,7 @@ Model trainer for CyberPuppy.
 
 Placeholder implementation for CLI integration.
 """
+
 import logging
 from typing import Dict, Any, Optional, Callable
 
@@ -23,10 +24,10 @@ class ModelTrainer:
         epochs: int = 10,
         batch_size: int = 32,
         learning_rate: float = 2e-5,
-        output: str = 'model.pt',
+        output: str = "model.pt",
         config: Optional[Dict[str, Any]] = None,
         progress_callback: Optional[Callable] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """Train a model with given parameters."""
         logger.info(f"Starting training: dataset={dataset}, epochs={epochs}")
@@ -41,13 +42,13 @@ class ModelTrainer:
 
         # Return training results
         results = {
-            'final_loss': 0.245,
-            'best_f1': 0.832,
-            'epochs_completed': epochs,
-            'model_path': output,
-            'dataset': dataset,
-            'batch_size': batch_size,
-            'learning_rate': learning_rate
+            "final_loss": 0.245,
+            "best_f1": 0.832,
+            "epochs_completed": epochs,
+            "model_path": output,
+            "dataset": dataset,
+            "batch_size": batch_size,
+            "learning_rate": learning_rate,
         }
 
         logger.info(f"Training completed: F1={results['best_f1']:.3f}")

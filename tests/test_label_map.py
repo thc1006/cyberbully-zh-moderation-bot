@@ -6,14 +6,22 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cyberpuppy.labeling import (BullyingLevel, EmotionType, LabelMapper,
-                                     RoleType, ToxicityLevel, UnifiedLabel,
-                                     from_chnci_to_unified,
-                                     from_cold_to_unified,
-                                     from_sccd_to_unified,
-                                     from_sentiment_to_unified, to_chnci_label,
-                                     to_cold_label, to_sccd_label,
-                                     to_sentiment_label)
+from src.cyberpuppy.labeling import (
+    BullyingLevel,
+    EmotionType,
+    LabelMapper,
+    RoleType,
+    ToxicityLevel,
+    UnifiedLabel,
+    from_chnci_to_unified,
+    from_cold_to_unified,
+    from_sccd_to_unified,
+    from_sentiment_to_unified,
+    to_chnci_label,
+    to_cold_label,
+    to_sccd_label,
+    to_sentiment_label,
+)
 
 
 class TestEnums:
@@ -80,8 +88,9 @@ class TestUnifiedLabel:
     def test_unified_label_to_dict(self):
         """測試統一標籤轉字典"""
         label = UnifiedLabel(
-            toxicity=ToxicityLevel.SEVERE, emotion=EmotionType.NEGATIVE,
-                emotion_intensity=4
+            toxicity=ToxicityLevel.SEVERE,
+            emotion=EmotionType.NEGATIVE,
+            emotion_intensity=4,
         )
 
         result = label.to_dict()
@@ -313,8 +322,9 @@ class TestChnciConversion:
 
         # 嚴重威脅
         label3 = UnifiedLabel(
-            bullying=BullyingLevel.THREAT, role=RoleType.VICTIM,
-                toxicity=ToxicityLevel.SEVERE
+            bullying=BullyingLevel.THREAT,
+            role=RoleType.VICTIM,
+            toxicity=ToxicityLevel.SEVERE,
         )
         result3 = to_chnci_label(label3)
         expected3 = {"bullying_type": "threat", "severity": "high", "role": "victim"}

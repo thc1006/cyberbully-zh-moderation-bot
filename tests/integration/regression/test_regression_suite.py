@@ -66,8 +66,7 @@ class TestRegressionBaseline:
                     if response.status_code == 200:
                         result = response.json()
                         baseline_results.append({
-                            "text"
-                                "_hash": hashlib.sha256(example[
+                            "text_hash": hashlib.sha256(example["text"].encode()).hexdigest()[:16],
                             "expected": example["expected"],
                             "prediction": {
                                 "toxicity": result["toxicity"],

@@ -64,8 +64,7 @@ class TestDockerServices:
             "up", "-d", "cyberpuppy-api-test"
         ], capture_output=True, text=True)
 
-        assert result.returncode == 0, f"Failed to start API con"
-            "tainer: {result.stderr}"
+        assert result.returncode == 0, f"Failed to start API container: {result.stderr}"
 
         # 等待服務啟動
         max_wait = 60  # 60秒超時

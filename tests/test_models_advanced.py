@@ -185,8 +185,7 @@ class TestAdvancedMultiTaskHead(unittest.TestCase):
     """Advanced tests for MultiTaskHead"""
 
     def test_multitask_head_with_regression(self):
-        ""
-            ""
+        """Test MultiTaskHead with mixed classification and regression tasks."""
         task_configs = {
             "toxicity": {"type": "classification", "num_classes": 2},
             "emotion": {"type": "classification", "num_classes": 3},

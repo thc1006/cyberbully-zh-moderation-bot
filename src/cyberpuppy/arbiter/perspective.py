@@ -23,8 +23,12 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # 設定日誌
 logger = logging.getLogger(__name__)
@@ -79,9 +83,7 @@ class PerspectiveAPI:
     """
 
     # API 端點
-    BASE_URL = (
-        "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
-    )
+    BASE_URL = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
 
     # 支援的屬性
     ATTRIBUTES = [
@@ -97,12 +99,10 @@ class PerspectiveAPI:
     DEFAULT_RATE_LIMIT = {
         "requests_per_second": 1,
         "requests_per_minute": 60,
-    } 
+    }
 
     def __init__(
-        self,
-        api_key: Optional[str] = None,
-        rate_limit: Optional[Dict[str, int]] = None
+        self, api_key: Optional[str] = None, rate_limit: Optional[Dict[str, int]] = None
     ):
         """
         初始化 Perspective API 客戶端
@@ -124,11 +124,8 @@ class PerspectiveAPI:
         # 速率限制狀態
         self._request_times: List[float] = []
         self._daily_request_count = 0
-        self._daily_reset_time = datetime.now(
-            ).replace(hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
+        self._daily_reset_time = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
         )
 
         # HTTP 客戶端
@@ -155,10 +152,7 @@ class PerspectiveAPI:
         if now.date() != self._daily_reset_time.date():
             self._daily_request_count = 0
             self._daily_reset_time = now.replace(
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0
+                hour=0, minute=0, second=0, microsecond=0
             )
 
         if self._daily_request_count >= self.rate_limit["requests_per_day"]:
@@ -174,8 +168,7 @@ class PerspectiveAPI:
 
         # 清理過期的請求時間記錄
         cutoff_time = current_time - 1.0  # 1秒前
-        self._request_times = [t for t in self._request_times if t >
-            cutoff_time]
+        self._request_times = [t for t in self._request_times if t > cutoff_time]
 
         # 檢查是否超過速率限制
         if len(self._request_times) >= self.rate_limit["requests_per_second"]:
@@ -190,14 +183,13 @@ class PerspectiveAPI:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type(
-            (httpx.RequestError,
-            httpx.HTTPStatusError)
-        ),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
     )
     async def analyze_comment(
-        self, text: str, lang: str = "z"
-            "h", requested_attributes: Optional[List[str]] = None
+        self,
+        text: str,
+        lang: str = "z" "h",
+        requested_attributes: Optional[List[str]] = None,
     ) -> PerspectiveResult:
         """
         分析評論的毒性
@@ -230,8 +222,9 @@ class PerspectiveAPI:
 
         # 準備請求屬性
         attributes = requested_attributes or self.ATTRIBUTES
-        requested_attributes_dict = {attr: {} for attr in attributes if attr in
-            self.ATTRIBUTES}
+        requested_attributes_dict = {
+            attr: {} for attr in attributes if attr in self.ATTRIBUTES
+        }
 
         # 構建請求
         request_data = {
@@ -260,8 +253,7 @@ class PerspectiveAPI:
             # 取得配額資訊（如果有）
             quota_remaining = None
             if "X-RateLimit-Remaining" in response.headers:
-                quota_remaining = int(response.headers["X-RateLimi"
-                    "t-Remaining"])
+                quota_remaining = int(response.headers["X-RateLimi" "t-Remaining"])
 
             # 生成文本雜湊
             import hashlib
@@ -270,16 +262,13 @@ class PerspectiveAPI:
 
             result = PerspectiveResult(
                 toxicity_score=self._extract_score(scores, "TOXICITY"),
-                severe_toxicity_score=self._extract_score(scores, "SEVERE_"
-                    "TOXICITY"),
-                identity_attack_score=self._extract_score(scores, "IDENTIT"
-                    "Y_ATTACK"),
+                severe_toxicity_score=self._extract_score(scores, "SEVERE_" "TOXICITY"),
+                identity_attack_score=self._extract_score(scores, "IDENTIT" "Y_ATTACK"),
                 insult_score=self._extract_score(scores, "INSULT"),
                 profanity_score=self._extract_score(scores, "PROFANITY"),
                 threat_score=self._extract_score(scores, "THREAT"),
                 text_hash=text_hash,
-                language_detected=result_data.get("detected"
-                    "Languages", [None])[0],
+                language_detected=result_data.get("detected" "Languages", [None])[0],
                 processing_time_ms=processing_time,
                 api_quota_remaining=quota_remaining,
                 raw_response=result_data,
@@ -353,9 +342,7 @@ class UncertaintyDetector:
         )
 
     def analyze_uncertainty(
-        self,
-        prediction_scores: Dict[str,
-        Any]
+        self, prediction_scores: Dict[str, Any]
     ) -> UncertaintyAnalysis:
         """
         分析預測結果的不確定性
@@ -386,9 +373,7 @@ class UncertaintyDetector:
             threshold_details["confidence_gap"] = max_score - second_max_score
 
             # 邊界分數檢測
-            if (
-                self.uncertainty_threshold < max_score < self.confidence_threshold
-            ):
+            if self.uncertainty_threshold < max_score < self.confidence_threshold:
                 is_uncertain = True
                 reasons.append(UncertaintyReason.BORDERLINE_SCORE)
 
@@ -485,9 +470,7 @@ async def example_usage():
             text = "這是一個測試文本"
             try:
                 result = await perspective.analyze_comment(text, lang="zh")
-                logger.info(
-                    f"Perspective API 毒性分數: {result.toxicity_score:.3f}"
-                )
+                logger.info(f"Perspective API 毒性分數: {result.toxicity_score:.3f}")
 
                 # 取得配額狀態
                 quota = await perspective.get_quota_status()

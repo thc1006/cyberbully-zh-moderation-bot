@@ -8,13 +8,13 @@ import logging
 import os
 
 from ..integration import validate_with_arbiter
+
 # 導入 CyberPuppy 模組
 from ..perspective import PerspectiveAPI, UncertaintyDetector
 
 # 設定日誌
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -47,10 +47,7 @@ async def basic_perspective_example():
                 # 分析文本
                 result = await perspective.analyze_comment(
                     text=text,
-                    lang=(
-                        "zh" if any(ord(c) > 127 for c in text)
-                        else "en"
-                    ),
+                    lang=("zh" if any(ord(c) > 127 for c in text) else "en"),
                 )
 
                 # 顯示結果
@@ -94,9 +91,7 @@ async def uncertainty_detection_example():
     logger.info("\n=== 不確定性檢測範例 ===")
 
     detector = UncertaintyDetector(
-        uncertainty_threshold=0.4,
-        confidence_threshold=0.6,
-        min_confidence_gap=0.1
+        uncertainty_threshold=0.4, confidence_threshold=0.6, min_confidence_gap=0.1
     )
 
     # 模擬不同的本地模型預測情況
@@ -105,9 +100,7 @@ async def uncertainty_detection_example():
             "name": "高信心度預測（無需外部驗證）",
             "prediction": {
                 "toxicity": "none",
-                "scores": {
-                    "toxicity": {"none": 0.85, "toxic": 0.12, "severe": 0.03}
-                },
+                "scores": {"toxicity": {"none": 0.85, "toxic": 0.12, "severe": 0.03}},
                 "emotion": "neu",
             },
         },
@@ -115,9 +108,7 @@ async def uncertainty_detection_example():
             "name": "邊界分數（需要外部驗證）",
             "prediction": {
                 "toxicity": "none",
-                "scores": {
-                    "toxicity": {"none": 0.45, "toxic": 0.4, "severe": 0.15}
-                },
+                "scores": {"toxicity": {"none": 0.45, "toxic": 0.4, "severe": 0.15}},
                 "emotion": "neu",
             },
         },
@@ -125,9 +116,7 @@ async def uncertainty_detection_example():
             "name": "情緒衝突信號（需要驗證）",
             "prediction": {
                 "toxicity": "none",
-                "scores": {
-                    "toxicity": {"none": 0.8, "toxic": 0.15, "severe": 0.05}
-                },
+                "scores": {"toxicity": {"none": 0.8, "toxic": 0.15, "severe": 0.05}},
                 "emotion": "neg",
                 "emotion_strength": 4,
             },
@@ -136,9 +125,7 @@ async def uncertainty_detection_example():
             "name": "低信心度差距",
             "prediction": {
                 "toxicity": "toxic",
-                "scores": {
-                    "toxicity": {"none": 0.48, "toxic": 0.47, "severe": 0.05}
-                },
+                "scores": {"toxicity": {"none": 0.48, "toxic": 0.47, "severe": 0.05}},
                 "emotion": "neu",
             },
         },
@@ -147,9 +134,7 @@ async def uncertainty_detection_example():
     for case in test_cases:
         logger.info(f"\n--- {case['name']} ---")
 
-        should_use, analysis = detector.should_use_perspective(
-            case["prediction"]
-        )
+        should_use, analysis = detector.should_use_perspective(case["prediction"])
 
         logger.info(f"是否需要外部驗證: {should_use}")
         logger.info(f"信心度分數: {analysis.confidence_score:.3f}")
@@ -212,9 +197,7 @@ async def integrated_validation_example():
                     logger.info(
                         f"信心度調整: {enhanced_prediction['confidence_adjustment']}"
                     )
-                    logger.info(
-                        f"驗證備註: {enhanced_prediction['validation_note']}"
-                    )
+                    logger.info(f"驗證備註: {enhanced_prediction['validation_note']}")
 
             logger.info(f"最終建議: {metadata['recommendation']}")
 
@@ -263,12 +246,10 @@ async def performance_analysis_example():
         total_time = time.time() - start_time
         logger.info("\n效能統計:")
         logger.info("總處理時間: %.2fs" % total_time)
-        logger.info("平均每個請求: %.2fs" % (total_time/len(test_texts)))
+        logger.info("平均每個請求: %.2fs" % (total_time / len(test_texts)))
 
         if results:
-            avg_api_time = (
-                sum(r.processing_time_ms for r in results) / len(results)
-            )
+            avg_api_time = sum(r.processing_time_ms for r in results) / len(results)
             logger.info(f"平均 API 處理時間: {avg_api_time:.1f}ms")
 
         # 配額使用情況

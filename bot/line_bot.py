@@ -27,15 +27,24 @@ import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import LineBotApiError
-from linebot.models import (BoxComponent, BubbleContainer, ButtonComponent,
-                            CarouselContainer, FlexSendMessage, MessageAction,
-                            MessageEvent, QuickReply, QuickReplyButton,
-                            TextComponent, TextSendMessage, URIAction)
+from linebot.models import (
+    BoxComponent,
+    BubbleContainer,
+    ButtonComponent,
+    CarouselContainer,
+    FlexSendMessage,
+    MessageAction,
+    MessageEvent,
+    QuickReply,
+    QuickReplyButton,
+    TextComponent,
+    TextSendMessage,
+    URIAction,
+)
 
 # 設定日誌
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -45,8 +54,9 @@ LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 CYBERPUPPY_API_URL = os.getenv("CYBERPUPPY_API_URL", "http://localhost:8000")
 
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
-    logger.error("LINE 設定遺失：需要設定 LINE_CHANNEL_ACC"
-        "ESS_TOKEN 和 LINE_CHANNEL_SECRET")
+    logger.error(
+        "LINE 設定遺失：需要設定 LINE_CHANNEL_ACC" "ESS_TOKEN 和 LINE_CHANNEL_SECRET"
+    )
     raise ValueError("LINE Bot 設定不完整")
 
 # LINE Bot 初始化
@@ -108,9 +118,7 @@ class CyberPuppyBot:
         self.api_client = httpx.AsyncClient(timeout=30.0)
 
     async def analyze_message(
-        self,
-        text: str,
-        context: Optional[str] = None
+        self, text: str, context: Optional[str] = None
     ) -> Dict[str, Any]:
         """呼叫分析 API"""
         payload = {"text": text, "context": context}
@@ -124,22 +132,24 @@ class CyberPuppyBot:
                 return response.json()
 
             except httpx.RequestError as e:
-                logger.warning(f"API 請求失敗 (嘗試 {attempt + \
-                    1}/{retry_config.max_retries}): {e}")
+                logger.warning(
+                    f"API 請求失敗 (嘗試 {attempt + 1}/{retry_config.max_retries}): {e}"
+                )
                 if attempt == retry_config.max_retries - 1:
                     raise HTTPException(status_code=503, detail="分析服務暫時不可用")
 
                 # 指數退避
                 delay = min(
-                    retry_config.base_delay * (
-                        retry_config.backoff_factor**attempt),
-                    retry_config.max_delay
+                    retry_config.base_delay * (retry_config.backoff_factor**attempt),
+                    retry_config.max_delay,
                 )
                 await asyncio.sleep(delay)
 
             except httpx.HTTPStatusError as e:
-                logger.error(f"API 回應錯誤: {e.response.status_code} - \
-                    {e.response.text}")
+                logger.error(
+                    f"API 回應錯誤: {e.response.status_code} - \
+                    {e.response.text}"
+                )
                 raise HTTPException(status_code=502, detail="分析服務錯誤")
 
     def determine_response_strategy(
@@ -187,15 +197,9 @@ class CyberPuppyBot:
             body=BoxComponent(
                 layout="vertical",
                 contents=[
+                    TextComponent(text="⚠️ 注意事項", weight="bold", size="lg"),
                     TextComponent(
-                        text="⚠️ 注意事項",
-                        weight="bold",
-                        size="lg"
-                    ),
-                    TextComponent(
-                        text=(
-                            "我們偵測到您的訊息可能包含不適當內容。請注意："
-                        ),
+                        text=("我們偵測到您的訊息可能包含不適當內容。請注意："),
                         margin="md",
                         wrap=True,
                     ),
@@ -217,7 +221,7 @@ class CyberPuppyBot:
                     ButtonComponent(
                         action=URIAction(
                             label="了解網路霸凌",
-                            uri="https://www.mohw.gov.tw/cp-4266-48131-1.html"
+                            uri="https://www.mohw.gov.tw/cp-4266-48131-1.html",
                         ),
                         style="primary",
                         color="#4ECDC4",
@@ -247,10 +251,8 @@ class CyberPuppyBot:
                         layout="vertical",
                         contents=[
                             ButtonComponent(
-                                action=URIAction(
-                                    label="心理健康專線",
-                                    uri="tel:1925"),
-                                color="#69C7A2"
+                                action=URIAction(label="心理健康專線", uri="tel:1925"),
+                                color="#69C7A2",
                             )
                         ],
                     ),
@@ -259,13 +261,9 @@ class CyberPuppyBot:
                     body=BoxComponent(
                         layout="vertical",
                         contents=[
+                            TextComponent(text="🤝 霸凌防治", weight="bold", size="lg"),
                             TextComponent(
-                                text="🤝 霸凌防治", weight="bold", size="lg"
-                            ),
-                            TextComponent(
-                                text="遭遇網路霸凌的求助管道",
-                                margin="md",
-                                wrap=True
+                                text="遭遇網路霸凌的求助管道", margin="md", wrap=True
                             ),
                         ],
                     ),
@@ -275,7 +273,7 @@ class CyberPuppyBot:
                             ButtonComponent(
                                 action=URIAction(
                                     label="iWIN網路內容防護",
-                                    uri="https://i.win.org.tw/"
+                                    uri="https://i.win.org.tw/",
                                 ),
                                 color="#4ECDC4",
                             )
@@ -293,17 +291,12 @@ class CyberPuppyBot:
                 layout="vertical",
                 contents=[
                     TextComponent(
-                        text="🚨 重要提醒",
-                        weight="bold",
-                        size="lg",
-                        color="#ff0000"
+                        text="🚨 重要提醒", weight="bold", size="lg", color="#ff0000"
                     ),
                     TextComponent(
-                        text=(
-                            "您已多次發送不適當內容。持續的網路霸凌行為："
-                        ),
+                        text=("您已多次發送不適當內容。持續的網路霸凌行為："),
                         margin="md",
-                        wrap=True
+                        wrap=True,
                     ),
                     TextComponent(
                         text=(
@@ -327,23 +320,17 @@ class CyberPuppyBot:
 
         quick_reply = QuickReply(
             items=[
+                QuickReplyButton(action=URIAction(label="求助專線", uri="tel:1995")),
                 QuickReplyButton(
-                    action=URIAction(label="求助專線",
-                    uri="tel:1995")),
-                QuickReplyButton(
-                    action=MessageAction(label="我了解了",
-                    text="我會注意我的言行"))
+                    action=MessageAction(label="我了解了", text="我會注意我的言行")
+                ),
             ]
         )
 
         return FlexSendMessage(alt_text="嚴重警告", contents=bubble), quick_reply
 
     async def update_user_session(
-        self,
-        user_id: str,
-        message_text: str,
-        analysis: Dict[str,
-        Any]
+        self, user_id: str, message_text: str, analysis: Dict[str, Any]
     ):
         """更新使用者會話狀態"""
         if user_id not in user_sessions:
@@ -356,7 +343,7 @@ class CyberPuppyBot:
             {
                 "text": message_text,
                 "analysis": analysis,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
         )
 
@@ -368,17 +355,14 @@ class CyberPuppyBot:
         toxicity = analysis.get("toxicity", "none")
         bullying = analysis.get("bullying", "none")
 
-        if (
-            toxicity in ["toxic", "severe"] or
-            bullying in ["harassment", "threat"]
-        ):
+        if toxicity in ["toxic", "severe"] or bullying in ["harassment", "threat"]:
             session.warning_count += 1
             session.last_warning_time = datetime.now()
 
         # 重置警告計數（24小時後）
         if (
-            session.last_warning_time and
-            datetime.now() - session.last_warning_time > timedelta(hours=24)
+            session.last_warning_time
+            and datetime.now() - session.last_warning_time > timedelta(hours=24)
         ):
             session.warning_count = max(0, session.warning_count - 1)
 
@@ -389,10 +373,7 @@ class CyberPuppyBot:
         try:
             # 建立對話上下文
             context = None
-            if (
-                user_id in user_sessions and
-                user_sessions[user_id].recent_messages
-            ):
+            if user_id in user_sessions and user_sessions[user_id].recent_messages:
                 # 最近3條訊息
                 recent = user_sessions[user_id].recent_messages[-3:]
                 context = " | ".join([msg["text"] for msg in recent])
@@ -491,10 +472,7 @@ def verify_line_signature(body: bytes, signature: str) -> bool:
     try:
         # 計算預期簽名
         expected_signature = base64.b64encode(
-            hmac.new(
-                LINE_CHANNEL_SECRET.encode("utf-8"),
-                body,
-                hashlib.sha256).digest()
+            hmac.new(LINE_CHANNEL_SECRET.encode("utf-8"), body, hashlib.sha256).digest()
         ).decode("utf-8")
 
         # 安全比較
@@ -525,23 +503,19 @@ async def process_line_event(event_data: dict):
                         (),
                         {
                             "reply_token": reply_token,
-                            "source": type(
-                                "MockSource",
-                                (),
-                                {"user_id": user_id})()
+                            "source": type("MockSource", (), {"user_id": user_id})(),
                         },
                     )()
 
                     await cyberpuppy_bot.handle_message_analysis(
-                        mock_event,
-                        user_id,
-                        message_text)
+                        mock_event, user_id, message_text
+                    )
 
         elif event_type == "postback":
             # 處理 Postback 事件
             logger.info(
-                f"收到 Postback 事件: {event_data.get('postback',
-                {}).get('data')}")
+                f"收到 Postback 事件: {event_data.get('postback', {}).get('data')}"
+            )
 
     except Exception as e:
         logger.error(f"處理 LINE 事件時發生錯誤: {e}")
@@ -564,9 +538,7 @@ async def health_check():
     # 檢查分析 API
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{CYBERPUPPY_API_URL}/healthz", timeout=5.0
-            )
+            response = await client.get(f"{CYBERPUPPY_API_URL}/healthz", timeout=5.0)
             analysis_api_status = (
                 "healthy" if response.status_code == 200 else "unhealthy"
             )
@@ -589,9 +561,7 @@ async def health_check():
 @app.get("/stats")
 async def get_stats():
     """取得統計資訊"""
-    total_warnings = sum(
-        session.warning_count for session in user_sessions.values()
-    )
+    total_warnings = sum(session.warning_count for session in user_sessions.values())
     total_escalations = sum(
         session.escalation_count for session in user_sessions.values()
     )
@@ -608,9 +578,4 @@ if __name__ == "__main__":
     logger.info("🐕 CyberPuppy LINE Bot 啟動中...")
     logger.info(f"分析 API URL: {CYBERPUPPY_API_URL}")
 
-    uvicorn.run(
-        "line_bot:app",
-        host="0.0.0.0",
-        port=8080,
-        reload=True
-    )
+    uvicorn.run("line_bot:app", host="0.0.0.0", port=8080, reload=True)

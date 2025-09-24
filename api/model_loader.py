@@ -16,14 +16,13 @@ import warnings
 
 # Import CyberPuppy components
 import sys
+
 sys.path.append(str(Path(__file__).parent.parent))
 from src.cyberpuppy.models.detector import CyberPuppyDetector  # noqa: E402
-from src.cyberpuppy.models.baselines import (  # noqa: E402
-    BaselineModel, ModelConfig
-)
+from src.cyberpuppy.models.baselines import BaselineModel, ModelConfig  # noqa: E402
 
 # Suppress warnings
-warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -52,18 +51,17 @@ class ModelCache:
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         return {
-            'cached_models': list(self._models.keys()),
-            'load_times': self._load_times.copy(),
-            'access_counts': self._access_count.copy(),
-            'total_models': len(self._models)
+            "cached_models": list(self._models.keys()),
+            "load_times": self._load_times.copy(),
+            "access_counts": self._access_count.copy(),
+            "total_models": len(self._models),
         }
 
     def clear(self) -> None:
         """Clear cache."""
         # Clear GPU memory if needed
         for model in self._models.values():
-            if (hasattr(model, 'device') and
-                    str(model.device).startswith('cuda')):
+            if hasattr(model, "device") and str(model.device).startswith("cuda"):
                 del model
 
         if torch.cuda.is_available():
@@ -95,8 +93,7 @@ class ModelLoader:
                 device_props = torch.cuda.get_device_properties(0)
                 memory_gb = device_props.total_memory / (1024**3)
                 logger.info(f"CUDA available: {gpu_name} ({memory_gb:.1f}GB)")
-            elif (hasattr(torch.backends, 'mps') and
-                  torch.backends.mps.is_available()):
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                 device = "mps"
                 logger.info("Apple MPS available")
             else:
@@ -117,7 +114,7 @@ class ModelLoader:
             return self._get_default_config()
 
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             logger.info(f"Loaded config from {config_path}")
             return config
@@ -133,30 +130,28 @@ class ModelLoader:
             "num_toxicity_classes": 3,
             "num_bullying_classes": 3,
             "num_role_classes": 4,
-            "num_emotion_classes": 3
+            "num_emotion_classes": 3,
         }
 
     def _create_model_config(self, config_dict: Dict[str, Any]) -> ModelConfig:
         """Create ModelConfig object from dictionary."""
         return ModelConfig(
-            model_name=config_dict.get(
-                "model_name",
-                "hfl/chinese-macbert-base"),
+            model_name=config_dict.get("model_name", "hfl/chinese-macbert-base"),
             num_toxicity_classes=config_dict.get("num_toxicity_classes", 3),
             num_emotion_classes=config_dict.get("num_emotion_classes", 3),
             num_bullying_classes=config_dict.get("num_bullying_classes", 3),
-            num_role_classes=config_dict.get("num_role_classes", 4)
+            num_role_classes=config_dict.get("num_role_classes", 4),
         )
 
-    def _load_single_model(
-        self, model_path: Path, model_type: str
-    ) -> BaselineModel:
+    def _load_single_model(self, model_path: Path, model_type: str) -> BaselineModel:
         """Load a single trained model."""
         checkpoint_path = model_path / "best.ckpt"
 
         if not checkpoint_path.exists():
-            raise FileNotFoundError(f"Model checkpoint not found: \
-                {checkpoint_path}")
+            raise FileNotFoundError(
+                f"Model checkpoint not found: \
+                {checkpoint_path}"
+            )
 
         # Load configuration
         config_dict = self._load_model_config(model_path)
@@ -171,10 +166,10 @@ class ModelLoader:
             checkpoint = torch.load(checkpoint_path, map_location=self.device)
 
             # Handle different checkpoint formats
-            if 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
-            elif 'model_state_dict' in checkpoint:
-                state_dict = checkpoint['model_state_dict']
+            if "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
+            elif "model_state_dict" in checkpoint:
+                state_dict = checkpoint["model_state_dict"]
             else:
                 state_dict = checkpoint
 
@@ -183,14 +178,18 @@ class ModelLoader:
             model.eval()
 
             load_time = time.time() - start_time
-            logger.info(f"Loaded {model_type} model from {checkpoint_path} \
-                in {load_time:.2f}s")
+            logger.info(
+                f"Loaded {model_type} model from {checkpoint_path} \
+                in {load_time:.2f}s"
+            )
 
             return model
 
         except Exception as e:
-            logger.error(f"Failed to load model weights from \
-                {checkpoint_path}: {e}")
+            logger.error(
+                f"Failed to load model weights from \
+                {checkpoint_path}: {e}"
+            )
             raise RuntimeError(f"Model loading failed: {e}")
 
     def load_models(self) -> CyberPuppyDetector:
@@ -214,69 +213,54 @@ class ModelLoader:
 
             if toxicity_model_path.exists():
                 logger.info("Found toxicity specialist model")
-                model_paths['toxicity_specialist'] = \
-                    str(toxicity_model_path / "best.ckpt")
+                model_paths["toxicity_specialist"] = str(
+                    toxicity_model_path / "best.ckpt"
+                )
 
             if multitask_model_path.exists():
                 logger.info("Found multitask model")
-                model_paths['multitask'] = \
-                    str(multitask_model_path / "best.ckpt")
+                model_paths["multitask"] = str(multitask_model_path / "best.ckpt")
 
             if not model_paths:
-                raise FileNotFoundError(
-                    "No trained models found in models directory"
-                )
+                raise FileNotFoundError("No trained models found in models directory")
 
             # Create detector configuration
             detector_config = {
-                'base_model': 'hfl/chinese-macbert-base',
-                'model_paths': model_paths,
-                'ensemble_weights': {
-                    'baseline': 1.0,  # Use single model for now
-                    'contextual': 0.0,
-                    'weak_supervision': 0.0
+                "base_model": "hfl/chinese-macbert-base",
+                "model_paths": model_paths,
+                "ensemble_weights": {
+                    "baseline": 1.0,  # Use single model for now
+                    "contextual": 0.0,
+                    "weak_supervision": 0.0,
                 },
-                'preprocessing': {
-                    'max_length': 256,
-                    'normalize_unicode': True,
-                    'convert_traditional': True
+                "preprocessing": {
+                    "max_length": 256,
+                    "normalize_unicode": True,
+                    "convert_traditional": True,
                 },
-                'confidence_thresholds': {
-                    'toxicity': {
-                        'none': 0.3,
-                        'toxic': 0.7,
-                        'severe': 0.8
+                "confidence_thresholds": {
+                    "toxicity": {"none": 0.3, "toxic": 0.7, "severe": 0.8},
+                    "emotion": {"pos": 0.6, "neu": 0.5, "neg": 0.6},
+                    "bullying": {"none": 0.3, "harassment": 0.7, "threat": 0.8},
+                    "role": {
+                        "none": 0.3,
+                        "perpetrator": 0.7,
+                        "victim": 0.7,
+                        "bystander": 0.6,
                     },
-                    'emotion': {
-                        'pos': 0.6,
-                        'neu': 0.5,
-                        'neg': 0.6
-                    },
-                    'bullying': {
-                        'none': 0.3,
-                        'harassment': 0.7,
-                        'threat': 0.8
-                    },
-                    'role': {
-                        'none': 0.3,
-                        'perpetrator': 0.7,
-                        'victim': 0.7,
-                        'bystander': 0.6
-                    }
                 },
-                'model_version': '1.0.0'
+                "model_version": "1.0.0",
             }
 
             # For now, load only the baseline model to avoid complexity
             # We'll use a simplified approach with the toxicity specialist
             model_path_to_use = (
-                toxicity_model_path if toxicity_model_path.exists()
+                toxicity_model_path
+                if toxicity_model_path.exists()
                 else multitask_model_path
             )
             detector = SimplifiedDetector(
-                device=self.device,
-                model_path=model_path_to_use,
-                config=detector_config
+                device=self.device, model_path=model_path_to_use, config=detector_config
             )
 
             load_time = time.time() - start_time
@@ -290,10 +274,7 @@ class ModelLoader:
             logger.error(f"Failed to load models: {e}")
             raise RuntimeError(f"Model loading failed: {e}")
 
-    def warm_up_models(
-        self,
-        sample_texts: Optional[list] = None
-) -> Dict[str, Any]:
+    def warm_up_models(self, sample_texts: Optional[list] = None) -> Dict[str, Any]:
         """Warm up models with sample predictions."""
         if self.detector is None:
             self.detector = self.load_models()
@@ -303,14 +284,14 @@ class ModelLoader:
                 "你好",
                 "这是一个测试",
                 "笨蛋，去死吧",
-                "我很开心今天的天气很好"
+                "我很开心今天的天气很好",
             ]
 
         warmup_stats = {
-            'warmup_samples': len(sample_texts),
-            'warmup_times': [],
-            'success_count': 0,
-            'error_count': 0
+            "warmup_samples": len(sample_texts),
+            "warmup_times": [],
+            "success_count": 0,
+            "error_count": 0,
         }
 
         logger.info(f"Starting model warm-up with {len(sample_texts)} samples")
@@ -321,8 +302,8 @@ class ModelLoader:
                 result = self.detector.analyze(text)
                 warmup_time = time.time() - start_time
 
-                warmup_stats['warmup_times'].append(warmup_time)
-                warmup_stats['success_count'] += 1
+                warmup_stats["warmup_times"].append(warmup_time)
+                warmup_stats["success_count"] += 1
 
                 logger.debug(
                     f"Warmup {i+1}/{len(sample_texts)}: {warmup_time:.3f}s "
@@ -331,12 +312,12 @@ class ModelLoader:
 
             except Exception as e:
                 logger.warning(f"Warmup sample {i+1} failed: {e}")
-                warmup_stats['error_count'] += 1
+                warmup_stats["error_count"] += 1
 
-        warmup_stats['average_time'] = (
-            sum(warmup_stats['warmup_times']) /
-                len(warmup_stats['warmup_times'])
-            if warmup_stats['warmup_times'] else 0
+        warmup_stats["average_time"] = (
+            sum(warmup_stats["warmup_times"]) / len(warmup_stats["warmup_times"])
+            if warmup_stats["warmup_times"]
+            else 0
         )
 
         self._warmup_complete = True
@@ -348,18 +329,19 @@ class ModelLoader:
     def get_model_status(self) -> Dict[str, Any]:
         """Get comprehensive model status."""
         return {
-            'device': self.device,
-            'models_loaded': self.detector is not None,
-            'warmup_complete': self._warmup_complete,
-            'cache_stats': self.cache.get_stats(),
-            'detector_ready': (
+            "device": self.device,
+            "models_loaded": self.detector is not None,
+            "warmup_complete": self._warmup_complete,
+            "cache_stats": self.cache.get_stats(),
+            "detector_ready": (
                 self.detector is not None and self.detector.is_ready()
-                if hasattr(self.detector, 'is_ready')
+                if hasattr(self.detector, "is_ready")
                 else self.detector is not None
             ),
-            'gpu_available': torch.cuda.is_available(),
-            'gpu_memory': self._get_gpu_memory_info() if
-                torch.cuda.is_available() else None
+            "gpu_available": torch.cuda.is_available(),
+            "gpu_memory": (
+                self._get_gpu_memory_info() if torch.cuda.is_available() else None
+            ),
         }
 
     def _get_gpu_memory_info(self) -> Dict[str, float]:
@@ -373,12 +355,12 @@ class ModelLoader:
             memory_total = torch.cuda.get_device_properties(0).total_memory / (1024**3)
 
             return {
-                'allocated_gb': round(memory_allocated, 2),
-                'cached_gb': round(memory_cached, 2),
-                'total_gb': round(memory_total, 2),
-                'utilization_percent': round(
-                    (memory_allocated / memory_total) * 100,
-                    1)
+                "allocated_gb": round(memory_allocated, 2),
+                "cached_gb": round(memory_cached, 2),
+                "total_gb": round(memory_total, 2),
+                "utilization_percent": round(
+                    (memory_allocated / memory_total) * 100, 1
+                ),
             }
         except Exception as e:
             logger.warning(f"Failed to get GPU memory info: {e}")
@@ -406,24 +388,18 @@ class SimplifiedDetector:
         try:
             # Load configuration
             config_path = model_path / "model_config.json"
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 model_config_dict = json.load(f)
 
             # Create model config
             model_config = ModelConfig(
                 model_name=model_config_dict.get(
-                    "model_name",
-                    "hfl/chinese-macbert-base"),
-                num_toxicity_classes=model_config_dict.get(
-                    "num_toxicity_classes",
-                    3),
-                num_emotion_classes=model_config_dict.get(
-                    "num_emotion_classes",
-                    3),
-                num_bullying_classes=model_config_dict.get(
-                    "num_bullying_classes",
-                    3),
-                num_role_classes=model_config_dict.get("num_role_classes", 4)
+                    "model_name", "hfl/chinese-macbert-base"
+                ),
+                num_toxicity_classes=model_config_dict.get("num_toxicity_classes", 3),
+                num_emotion_classes=model_config_dict.get("num_emotion_classes", 3),
+                num_bullying_classes=model_config_dict.get("num_bullying_classes", 3),
+                num_role_classes=model_config_dict.get("num_role_classes", 4),
             )
 
             # Load model
@@ -432,8 +408,8 @@ class SimplifiedDetector:
             checkpoint = torch.load(checkpoint_path, map_location=self.device)
 
             # Handle different checkpoint formats
-            if 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
+            if "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
             else:
                 state_dict = checkpoint
 
@@ -465,25 +441,25 @@ class SimplifiedDetector:
             raise
 
     def _convert_predictions_to_api_format(
-            self, predictions: Dict[str, torch.Tensor], text: str
+        self, predictions: Dict[str, torch.Tensor], text: str
     ) -> Dict[str, Any]:
         """Convert model predictions to API response format."""
 
         # Label mappings
         label_mappings = {
-            'toxicity': ['none', 'toxic', 'severe'],
-            'emotion': ['pos', 'neu', 'neg'],
-            'bullying': ['none', 'harassment', 'threat'],
-            'role': ['none', 'perpetrator', 'victim', 'bystander']
+            "toxicity": ["none", "toxic", "severe"],
+            "emotion": ["pos", "neu", "neg"],
+            "bullying": ["none", "harassment", "threat"],
+            "role": ["none", "perpetrator", "victim", "bystander"],
         }
 
         result = {
-            'scores': {},
-            'explanations': {
-                'important_words': [],
-                'method': 'baseline_model',
-                'confidence': 0.0
-            }
+            "scores": {},
+            "explanations": {
+                "important_words": [],
+                "method": "baseline_model",
+                "confidence": 0.0,
+            },
         }
 
         overall_confidence = 0.0
@@ -514,56 +490,52 @@ class SimplifiedDetector:
 
             # Store results
             result[task] = predicted_label
-            result['scores'][task] = scores_dict
+            result["scores"][task] = scores_dict
 
             # Update overall confidence
             overall_confidence += max_prob
             confidence_count += 1
 
         # Calculate emotion strength for API compatibility
-        if 'emotion' in result:
-            emotion_label = result['emotion']
-            if emotion_label == 'neu':
-                result['emotion_strength'] = 0
+        if "emotion" in result:
+            emotion_label = result["emotion"]
+            if emotion_label == "neu":
+                result["emotion_strength"] = 0
             else:
                 # Map confidence to 1-4 scale
-                emotion_conf = result['scores']['emotion'].get(
-                    emotion_label,
-                    0.5)
+                emotion_conf = result["scores"]["emotion"].get(emotion_label, 0.5)
                 if emotion_conf < 0.3:
-                    result['emotion_strength'] = 1
+                    result["emotion_strength"] = 1
                 elif emotion_conf < 0.5:
-                    result['emotion_strength'] = 2
+                    result["emotion_strength"] = 2
                 elif emotion_conf < 0.7:
-                    result['emotion_strength'] = 3
+                    result["emotion_strength"] = 3
                 else:
-                    result['emotion_strength'] = 4
+                    result["emotion_strength"] = 4
         else:
-            result['emotion'] = 'neu'
-            result['emotion_strength'] = 0
-            result['scores']['emotion'] = \
-                {'pos': 0.33, 'neu': 0.34, 'neg': 0.33}
+            result["emotion"] = "neu"
+            result["emotion_strength"] = 0
+            result["scores"]["emotion"] = {"pos": 0.33, "neu": 0.34, "neg": 0.33}
 
         # Generate simple explanations based on keywords
-        result['explanations']['important_words'] = \
-            self._generate_simple_explanations(text, result)
-        result['explanations']['confidence'] = overall_confidence / max(
-            confidence_count,
-            1)
+        result["explanations"]["important_words"] = self._generate_simple_explanations(
+            text, result
+        )
+        result["explanations"]["confidence"] = overall_confidence / max(
+            confidence_count, 1
+        )
 
         return result
 
     def _generate_simple_explanations(
-        self,
-        text: str,
-        predictions: Dict[str,
-        Any]) -> list:
+        self, text: str, predictions: Dict[str, Any]
+    ) -> list:
         """Generate simple explanations based on keyword matching."""
         # Simple keyword-based explanations
-        toxic_keywords = ['笨蛋', '白痴', '去死', '滚', '废物', '蠢', '傻']
-        severe_keywords = ['杀死', '自杀', '威胁', '死']
-        positive_keywords = ['开心', '高兴', '好棒', '谢谢', '感谢', '不错']
-        negative_keywords = ['难过', '生气', '讨厌', '糟糕', '愤怒']
+        toxic_keywords = ["笨蛋", "白痴", "去死", "滚", "废物", "蠢", "傻"]
+        severe_keywords = ["杀死", "自杀", "威胁", "死"]
+        positive_keywords = ["开心", "高兴", "好棒", "谢谢", "感谢", "不错"]
+        negative_keywords = ["难过", "生气", "讨厌", "糟糕", "愤怒"]
 
         important_words = []
         words = text.split()
@@ -582,13 +554,10 @@ class SimplifiedDetector:
                 importance = 0.7
 
             if importance > 0.5 or len(important_words) < 3:
-                important_words.append({
-                    'word': word,
-                    'importance': importance
-                })
+                important_words.append({"word": word, "importance": importance})
 
         # Sort by importance and take top 5
-        important_words.sort(key=lambda x: x['importance'], reverse=True)
+        important_words.sort(key=lambda x: x["importance"], reverse=True)
         return important_words[:5]
 
     def is_ready(self) -> bool:
@@ -604,6 +573,6 @@ def get_model_loader() -> ModelLoader:
     """Get global model loader instance."""
     global _model_loader
     if _model_loader is None:
-        models_dir = os.getenv('MODELS_DIR', 'models')
+        models_dir = os.getenv("MODELS_DIR", "models")
         _model_loader = ModelLoader(models_dir)
     return _model_loader

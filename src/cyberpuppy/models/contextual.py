@@ -15,8 +15,7 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoderLayer
 from transformers import AutoModel, AutoTokenizer
 
-from ..labeling.label_map import (BullyingLevel, RoleType, ToxicityLevel,
-                                  UnifiedLabel)
+from ..labeling.label_map import BullyingLevel, RoleType, ToxicityLevel, UnifiedLabel
 
 logger = logging.getLogger(__name__)
 
@@ -98,16 +97,13 @@ class HierarchicalThreadEncoder(nn.Module):
         self.position_embedding = nn.Embedding(max_thread_length, hidden_size)
 
         # 角色編碼
-        self.role_embedding = \
-            nn.Embedding(
-                4,
-                hidden_size
-            )  # none, perpetrator, victim, bystander
+        self.role_embedding = nn.Embedding(
+            4, hidden_size
+        )  # none, perpetrator, victim, bystander
 
         # 注意力池化
         self.attention_pooler = nn.MultiheadAttention(
-            embed_dim=hidden_size, num_heads=num_heads, dropout=0.1,
-                batch_first=True
+            embed_dim=hidden_size, num_heads=num_heads, dropout=0.1, batch_first=True
         )
 
         # 輸出投影
@@ -150,9 +146,9 @@ class HierarchicalThreadEncoder(nn.Module):
         device = next(self.text_encoder.parameters()).device
 
         # 限制會話長度
-        thread_messages = thread_messages[-self.max_thread_length:]
+        thread_messages = thread_messages[-self.max_thread_length :]
         if roles:
-            roles = roles[-self.max_thread_length:]
+            roles = roles[-self.max_thread_length :]
 
         # 編碼每個消息
         message_embeddings = []
@@ -175,28 +171,22 @@ class HierarchicalThreadEncoder(nn.Module):
 
         # 添加角色編碼
         if roles:
-            role_map = \
-                {"none": 0, "perpetrator": 1, "victim": 2, "bystander": 3}
+            role_map = {"none": 0, "perpetrator": 1, "victim": 2, "bystander": 3}
             role_ids = torch.tensor(
-                [role_map.get(role.lower(),
-                0) for role in roles]).to(device)
+                [role_map.get(role.lower(), 0) for role in roles]
+            ).to(device)
             role_embeddings = self.role_embedding(role_ids).unsqueeze(0)
             message_embeddings += role_embeddings
 
         # Transformer 編碼
-        encoded = self.message_encoder(
-            message_embeddings)  # [1, seq_len, hidden_size]
+        encoded = self.message_encoder(message_embeddings)  # [1, seq_len, hidden_size]
 
         # 注意力池化
         query = encoded.mean(dim=1, keepdim=True)  # [1, 1, hidden_size]
-        context_emb, attention_weights = self.attention_pooler(
-            query,
-            encoded,
-            encoded)
+        context_emb, attention_weights = self.attention_pooler(query, encoded, encoded)
 
         # 輸出投影
-        context_emb = self.output_projection(
-            context_emb.squeeze(1))  # [1, hidden_size]
+        context_emb = self.output_projection(context_emb.squeeze(1))  # [1, hidden_size]
 
         return context_emb, attention_weights
 
@@ -223,9 +213,7 @@ class EventFeatureExtractor(nn.Module):
         self.event_type_embedding = nn.Embedding(num_event_types, hidden_size)
 
         # 嚴重程度嵌入
-        self.severity_embedding = nn.Embedding(
-            num_severity_levels,
-            hidden_size)
+        self.severity_embedding = nn.Embedding(num_severity_levels, hidden_size)
 
         # 參與者角色嵌入
         self.participant_embedding = nn.Embedding(
@@ -249,10 +237,7 @@ class EventFeatureExtractor(nn.Module):
         )
 
     def extract_temporal_features(
-        self,
-        temporal_info: Dict[str,
-        Union[int,
-        str]]
+        self, temporal_info: Dict[str, Union[int, str]]
     ) -> torch.Tensor:
         """抽取時序特徵"""
         device = next(self.text_encoder.parameters()).device
@@ -274,8 +259,9 @@ class EventFeatureExtractor(nn.Module):
                 intervals = temporal_info["time_intervals"]
                 if isinstance(intervals, list) and intervals:
                     temporal_features[2] = float(np.mean(intervals))
-                    temporal_features[3] = \
-                        float(np.std(intervals) if len(intervals) > 1 else 0)
+                    temporal_features[3] = float(
+                        np.std(intervals) if len(intervals) > 1 else 0
+                    )
 
             # 週期性特徵
             if "periodicity" in temporal_info:
@@ -285,8 +271,7 @@ class EventFeatureExtractor(nn.Module):
             if "event_density" in temporal_info:
                 temporal_features[5] = float(temporal_info["event_density"])
 
-        return self.temporal_encoder(
-            temporal_features.unsqueeze(0))  # [1, hidden_size]
+        return self.temporal_encoder(temporal_features.unsqueeze(0))  # [1, hidden_size]
 
     def forward(
         self,
@@ -310,14 +295,16 @@ class EventFeatureExtractor(nn.Module):
 
         # 編碼主要文本
         inputs = self.tokenizer(
-            text, max_length=256, padding="max_length",
-            truncation=True, return_tensors="pt"
+            text,
+            max_length=256,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
         )
         inputs = {k: v.to(device) for k, v in inputs.items()}
 
         text_outputs = self.text_encoder(**inputs)
-        text_embedding = \
-            text_outputs.last_hidden_state[:, 0, :]  # [1, hidden_size]
+        text_embedding = text_outputs.last_hidden_state[:, 0, :]  # [1, hidden_size]
 
         # 抽取事件特徵
         features = [text_embedding]
@@ -334,18 +321,19 @@ class EventFeatureExtractor(nn.Module):
                 "normal": 0,
             }
             event_type_id = event_type_map.get(event_context["event_type"], 0)
-            event_type_emb = \
-                self.event_type_embedding(torch.tensor([event_type_id]).to(device))
+            event_type_emb = self.event_type_embedding(
+                torch.tensor([event_type_id]).to(device)
+            )
             features.append(event_type_emb)
             feature_names.append("event_type")
 
         # 嚴重程度特徵
         if "severity" in event_context:
-            severity_map = \
-                {"none": 0, "low": 1, "moderate": 2, "high": 3, "severe": 4}
+            severity_map = {"none": 0, "low": 1, "moderate": 2, "high": 3, "severe": 4}
             severity_id = severity_map.get(event_context["severity"], 0)
-            severity_emb = \
-                self.severity_embedding(torch.tensor([severity_id]).to(device))
+            severity_emb = self.severity_embedding(
+                torch.tensor([severity_id]).to(device)
+            )
             features.append(severity_emb)
             feature_names.append("severity")
 
@@ -353,13 +341,10 @@ class EventFeatureExtractor(nn.Module):
         if "participants" in event_context:
             participants = event_context["participants"]
             if isinstance(participants, list):
-                role_map = \
-                    {"perpetrator": 1, "victim": 2, "bystander": 3, "none": 0}
+                role_map = {"perpetrator": 1, "victim": 2, "bystander": 3, "none": 0}
                 # 使用主要角色或多個角色的平均
                 role_ids = [role_map.get(p, 0) for p in participants]
-                main_role_id = max(
-                    set(role_ids),
-                    key=role_ids.count) if role_ids else 0
+                main_role_id = max(set(role_ids), key=role_ids.count) if role_ids else 0
                 participant_emb = self.participant_embedding(
                     torch.tensor([main_role_id]).to(device)
                 )
@@ -375,8 +360,8 @@ class EventFeatureExtractor(nn.Module):
         # 特徵融合
         if len(features) > 1:
             feature_stack = torch.stack(
-                features,
-                dim=1)  # [1, num_features, hidden_size]
+                features, dim=1
+            )  # [1, num_features, hidden_size]
 
             # 使用注意力融合特徵
             query = feature_stack[:, 0:1, :]  # 使用文本作為查詢
@@ -385,17 +370,13 @@ class EventFeatureExtractor(nn.Module):
             )
 
             # 整合文本和融合特徵
-            combined = torch.cat(
-                [text_embedding,
-                fused_features.squeeze(1)],
-                dim=-1)
+            combined = torch.cat([text_embedding, fused_features.squeeze(1)], dim=-1)
             event_embedding = self.integration_layer(combined)
 
             # 整理注意力權重
             feature_weights = {
-                name: attention_weights[0, 0, i].item(
-                    ) for i,
-                    name in enumerate(feature_names)
+                name: attention_weights[0, 0, i].item()
+                for i, name in enumerate(feature_names)
             }
         else:
             event_embedding = text_embedding
@@ -408,8 +389,10 @@ class ContrastiveLearningModule(nn.Module):
     """對比學習模組"""
 
     def __init__(
-        self, embedding_dim: int = \
-            768, temperature: float = 0.1, projection_dim: int = 128
+        self,
+        embedding_dim: int = 768,
+        temperature: float = 0.1,
+        projection_dim: int = 128,
     ):
         super().__init__()
 
@@ -466,22 +449,20 @@ class ContrastiveLearningModule(nn.Module):
         device = embeddings.device
 
         # 計算相似度矩陣
-        similarity_matrix = torch.matmul(
-            embeddings,
-            embeddings.T) / self.temperature
+        similarity_matrix = torch.matmul(embeddings, embeddings.T) / self.temperature
 
         # 建立正負樣本掩碼
         if session_ids is not None:
             # 同會話/事件的樣本作為正樣本
-            session_mask = \
-                (session_ids.unsqueeze(0) == session_ids.unsqueeze(1)).float()
+            session_mask = (
+                session_ids.unsqueeze(0) == session_ids.unsqueeze(1)
+            ).float()
             # 同標籤的樣本也作為正樣本
             label_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
             positive_mask = torch.max(session_mask, label_mask)
         else:
             # 僅使用標籤作為正樣本
-            positive_mask = \
-                (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+            positive_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
         # 移除對角線（自己與自己的相似度）
         positive_mask.fill_diagonal_(0)
@@ -596,8 +577,11 @@ class ContextualModel(nn.Module):
     def encode_text(self, text: str) -> torch.Tensor:
         """編碼基礎文本"""
         inputs = self.tokenizer(
-            text, max_length=256, padding="max_length",
-            truncation=True, return_tensors="pt"
+            text,
+            max_length=256,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
         )
 
         device = next(self.text_encoder.parameters()).device
@@ -607,8 +591,7 @@ class ContextualModel(nn.Module):
         return outputs.last_hidden_state[:, 0, :]  # [1, hidden_size]
 
     def forward(
-        self, contextual_inputs: List[ContextualInput], return_embeddings: bool
-            = False
+        self, contextual_inputs: List[ContextualInput], return_embeddings: bool = False
     ) -> Union[ContextualOutput, List[ContextualOutput]]:
         """
         前向傳播
@@ -639,8 +622,8 @@ class ContextualModel(nn.Module):
                     roles = ctx_input.role_info["thread_roles"]
 
                 context_emb, thread_attention = self.thread_encoder(
-                    ctx_input.thread_context,
-                    roles)
+                    ctx_input.thread_context, roles
+                )
                 embeddings_list.append(context_emb)
                 embedding_names.append("context")
 
@@ -649,8 +632,7 @@ class ContextualModel(nn.Module):
             event_weights = None
             if ctx_input.event_context:
                 event_emb, event_weights = self.event_extractor(
-                    ctx_input.text, ctx_input.event_context,
-                        ctx_input.temporal_info
+                    ctx_input.text, ctx_input.event_context, ctx_input.temporal_info
                 )
                 embeddings_list.append(event_emb)
                 embedding_names.append("event")
@@ -760,12 +742,16 @@ class ContextualModel(nn.Module):
         batch_emotion_labels = []
 
         # 標籤映射
-        toxicity_map = \
-            {ToxicityLevel.NONE: 0, ToxicityLevel.TOXIC: 1,
-                ToxicityLevel.SEVERE: 2}
-        bullying_map = \
-            {BullyingLevel.NONE: 0, BullyingLevel.HARASSMENT: 1,
-                BullyingLevel.THREAT: 2}
+        toxicity_map = {
+            ToxicityLevel.NONE: 0,
+            ToxicityLevel.TOXIC: 1,
+            ToxicityLevel.SEVERE: 2,
+        }
+        bullying_map = {
+            BullyingLevel.NONE: 0,
+            BullyingLevel.HARASSMENT: 1,
+            BullyingLevel.THREAT: 2,
+        }
         role_map = {
             RoleType.NONE: 0,
             RoleType.PERPETRATOR: 1,
@@ -787,9 +773,7 @@ class ContextualModel(nn.Module):
             batch_toxicity_labels.append(toxicity_map.get(label.toxicity, 0))
             batch_bullying_labels.append(bullying_map.get(label.bullying, 0))
             batch_role_labels.append(role_map.get(label.role, 0))
-            batch_emotion_labels.append(
-                emotion_map.get(label.emotion.value,
-                1))
+            batch_emotion_labels.append(emotion_map.get(label.emotion.value, 1))
 
         # 堆疊批次張量
         toxicity_logits = torch.cat(batch_toxicity_logits, dim=0)
@@ -806,22 +790,16 @@ class ContextualModel(nn.Module):
         losses = {}
 
         losses["toxicity"] = (
-            F.cross_entropy(
-                toxicity_logits,
-                toxicity_labels) * loss_weights["toxicity"]
+            F.cross_entropy(toxicity_logits, toxicity_labels) * loss_weights["toxicity"]
         )
         losses["bullying"] = (
-            F.cross_entropy(
-                bullying_logits,
-                bullying_labels) * loss_weights["bullying"]
+            F.cross_entropy(bullying_logits, bullying_labels) * loss_weights["bullying"]
         )
-        losses["role"] = F.cross_entropy(
-            role_logits,
-            role_labels) * loss_weights["role"]
+        losses["role"] = (
+            F.cross_entropy(role_logits, role_labels) * loss_weights["role"]
+        )
         losses["emotion"] = (
-            F.cross_entropy(
-                emotion_logits,
-                emotion_labels) * loss_weights["emotion"]
+            F.cross_entropy(emotion_logits, emotion_labels) * loss_weights["emotion"]
         )
 
         # 對比學習損失
@@ -829,12 +807,10 @@ class ContextualModel(nn.Module):
             contrastive_features = torch.cat(batch_contrastive_features, dim=0)
 
             # 使用毒性標籤作為主要對比標籤
-            contrastive_loss = \
-                self.contrastive_module.compute_contrastive_loss(
+            contrastive_loss = self.contrastive_module.compute_contrastive_loss(
                 contrastive_features, toxicity_labels, session_ids
             )
-            losses["contrastive"] = \
-                contrastive_loss * loss_weights["contrastive"]
+            losses["contrastive"] = contrastive_loss * loss_weights["contrastive"]
 
         # 總損失
         losses["total"] = sum(losses.values())
@@ -842,8 +818,7 @@ class ContextualModel(nn.Module):
         return losses
 
     def predict(
-        self,
-        contextual_input: ContextualInput
+        self, contextual_input: ContextualInput
     ) -> Dict[str, Union[str, float]]:
         """
         預測單個樣本
@@ -867,21 +842,14 @@ class ContextualModel(nn.Module):
             # 映射回標籤
             toxicity_map = {0: "none", 1: "toxic", 2: "severe"}
             bullying_map = {0: "none", 1: "harassment", 2: "threat"}
-            role_map = \
-                {0: "none", 1: "perpetrator", 2: "victim", 3: "bystander"}
+            role_map = {0: "none", 1: "perpetrator", 2: "victim", 3: "bystander"}
             emotion_map = {0: "pos", 1: "neu", 2: "neg"}
 
             # 計算置信度
-            toxicity_conf = torch.softmax(
-                output.toxicity_logits,
-                dim=-1).max().item()
-            bullying_conf = torch.softmax(
-                output.bullying_logits,
-                dim=-1).max().item()
+            toxicity_conf = torch.softmax(output.toxicity_logits, dim=-1).max().item()
+            bullying_conf = torch.softmax(output.bullying_logits, dim=-1).max().item()
             role_conf = torch.softmax(output.role_logits, dim=-1).max().item()
-            emotion_conf = torch.softmax(
-                output.emotion_logits,
-                dim=-1).max().item()
+            emotion_conf = torch.softmax(output.emotion_logits, dim=-1).max().item()
 
             return {
                 "toxicity": toxicity_map[toxicity_pred],
@@ -911,7 +879,7 @@ def main():
                 "severity": "high",
                 "participants": ["perpetrator", "victim"],
             },
-            temporal_info={"duration": 300}
+            temporal_info={"duration": 300},
         ),
         ContextualInput(
             text="今天天氣很好",

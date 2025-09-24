@@ -15,10 +15,7 @@ from typing import AsyncGenerator, Generator
 import docker
 import psutil
 import os
-from . import (
-    PROJECT_ROOT, FIXTURES_DIR,
-    TIMEOUT_SECONDS, TEST_API_BASE, TEST_BOT_BASE
-)
+from . import PROJECT_ROOT, FIXTURES_DIR, TIMEOUT_SECONDS, TEST_API_BASE, TEST_BOT_BASE
 
 
 @pytest.fixture(scope="session")
@@ -57,12 +54,18 @@ async def api_server():
         # 啟動 API 伺服器
         process = subprocess.Popen(
             [
-                "python", "-m", "uvicorn", "api.app:app",
-                "--host", "0.0.0.0", "--port", "8000"
+                "python",
+                "-m",
+                "uvicorn",
+                "api.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
             ],
             cwd=PROJECT_ROOT,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
 
         # 等待伺服器啟動
@@ -93,21 +96,29 @@ async def bot_server(api_server):
     try:
         # 設定測試環境變數
         env = os.environ.copy()
-        env.update({
-            "LINE_CHANNEL_ACCESS_TOKEN": "test_token_" + "x" * 100,
-            "LINE_CHANNEL_SECRET": "test_secret_" + "x" * 32,
-            "CYBERPUPPY_API_URL": api_server
-        })
+        env.update(
+            {
+                "LINE_CHANNEL_ACCESS_TOKEN": "test_token_" + "x" * 100,
+                "LINE_CHANNEL_SECRET": "test_secret_" + "x" * 32,
+                "CYBERPUPPY_API_URL": api_server,
+            }
+        )
 
         process = subprocess.Popen(
             [
-                "python", "-m", "uvicorn", "bot.line_bot:app",
-                "--host", "0.0.0.0", "--port", "8080"
+                "python",
+                "-m",
+                "uvicorn",
+                "bot.line_bot:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8080",
             ],
             cwd=PROJECT_ROOT,
             env=env,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
 
         # 等待 Bot 伺服器啟動
@@ -151,28 +162,20 @@ def test_data_small():
     return [
         {
             "text": "你好，今天天氣真不錯",
-            "expected": {
-                "toxicity": "none",
-                "bullying": "none",
-                "emotion": "pos"
-            }
+            "expected": {"toxicity": "none", "bullying": "none", "emotion": "pos"},
         },
         {
             "text": "你這個笨蛋，什麼都不懂",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "harassment",
-                "emotion": "neg"
-            }
+                "emotion": "neg",
+            },
         },
         {
             "text": "我會讓你後悔的，小心點",
-            "expected": {
-                "toxicity": "severe",
-                "bullying": "threat",
-                "emotion": "neg"
-            }
-        }
+            "expected": {"toxicity": "severe", "bullying": "threat", "emotion": "neg"},
+        },
     ]
 
 
@@ -183,92 +186,72 @@ def test_data_chinese():
         # 正面測試案例
         {
             "text": "謝謝你的幫助，真的很感激",
-            "expected": {
-                "toxicity": "none",
-                "bullying": "none",
-                "emotion": "pos"
-            }
+            "expected": {"toxicity": "none", "bullying": "none", "emotion": "pos"},
         },
         {
             "text": "今天學到很多新東西，很開心",
-            "expected": {
-                "toxicity": "none",
-                "bullying": "none",
-                "emotion": "pos"
-            }
+            "expected": {"toxicity": "none", "bullying": "none", "emotion": "pos"},
         },
-
         # 中性測試案例
         {
             "text": "今天的天氣如何？",
-            "expected": {
-                "toxicity": "none",
-                "bullying": "none",
-                "emotion": "neu"
-            }
+            "expected": {"toxicity": "none", "bullying": "none", "emotion": "neu"},
         },
         {
             "text": "請問這個問題怎麼解決？",
-            "expected": {
-                "toxicity": "none",
-                "bullying": "none",
-                "emotion": "neu"
-            }
+            "expected": {"toxicity": "none", "bullying": "none", "emotion": "neu"},
         },
-
         # 毒性測試案例
         {
             "text": "你真的很笨耶，怎麼連這個都不會",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "harassment",
-                "emotion": "neg"
-            }
+                "emotion": "neg",
+            },
         },
         {
             "text": "廢物一個，滾開",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "harassment",
-                "emotion": "neg"
-            }
+                "emotion": "neg",
+            },
         },
-
         # 嚴重毒性測試案例
         {
             "text": "我要殺了你，你給我等著",
             "expected": {
                 "toxicity": "severe",
                 "bullying": "threat",
-                "role": "perpetrator"
-            }
+                "role": "perpetrator",
+            },
         },
         {
             "text": "你最好去死一死，沒人會想念你",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "threat",
-                "role": "perpetrator"
-            }
+                "role": "perpetrator",
+            },
         },
-
         # 網路霸凌特殊案例
         {
             "text": "大家都不喜歡你，你知道嗎？",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "harassment",
-                "role": "perpetrator"
-            }
+                "role": "perpetrator",
+            },
         },
         {
             "text": "如果你不照我說的做，我就把你的秘密告訴大家",
             "expected": {
                 "toxicity": "toxic",
                 "bullying": "threat",
-                "role": "perpetrator"
-            }
-        }
+                "role": "perpetrator",
+            },
+        },
     ]
 
 
@@ -282,24 +265,22 @@ def line_webhook_payload():
                 "type": "message",
                 "mode": "active",
                 "timestamp": int(time.time() * 1000),
-                "source": {
-                    "type": "user",
-                    "userId": "test_user_123"
-                },
+                "source": {"type": "user", "userId": "test_user_123"},
                 "replyToken": "test_reply_token",
                 "message": {
                     "id": "test_message_id",
                     "type": "text",
-                    "text": "測試訊息"
-                }
+                    "text": "測試訊息",
+                },
             }
-        ]
+        ],
     }
 
 
 @pytest.fixture
 def performance_monitor():
     """Performance monitoring context"""
+
     @asynccontextmanager
     async def monitor():
         start_time = time.time()
@@ -320,10 +301,7 @@ def performance_monitor():
             print(f"執行時間: {duration:.3f}秒")
             print(f"記憶體變化: {memory_delta / 1024 / 1024:.2f}MB")
 
-            metrics.update({
-                "duration": duration,
-                "memory_delta": memory_delta
-            })
+            metrics.update({"duration": duration, "memory_delta": memory_delta})
 
     return monitor
 
@@ -331,6 +309,7 @@ def performance_monitor():
 @pytest.fixture
 def mock_line_signature():
     """Mock LINE signature for webhook testing"""
+
     def create_signature(body: bytes) -> str:
         import hmac
         import hashlib
@@ -382,21 +361,9 @@ pytestmark = [
 
 def pytest_configure(config):
     """Configure pytest with custom markers"""
-    config.addinivalue_line(
-        "markers", "integration: integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "slow: slow running tests"
-    )
-    config.addinivalue_line(
-        "markers", "api: API integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "bot: bot integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "pipeline: pipeline integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "performance: performance tests"
-    )
+    config.addinivalue_line("markers", "integration: integration tests")
+    config.addinivalue_line("markers", "slow: slow running tests")
+    config.addinivalue_line("markers", "api: API integration tests")
+    config.addinivalue_line("markers", "bot: bot integration tests")
+    config.addinivalue_line("markers", "pipeline: pipeline integration tests")
+    config.addinivalue_line("markers", "performance: performance tests")

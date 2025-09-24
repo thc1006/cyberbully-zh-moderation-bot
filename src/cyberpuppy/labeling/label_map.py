@@ -177,9 +177,7 @@ class LabelMapper:
             UnifiedLabel 物件
         """
         if label is None or label not in cls.COLD_MAPPING:
-            logger.warning(
-                f"Unknown COLD label: {label}, treating as non-toxic"
-            )
+            logger.warning(f"Unknown COLD label: {label}, treating as non-toxic")
             label = 0
 
         mapping = cls.COLD_MAPPING[label]
@@ -199,10 +197,7 @@ class LabelMapper:
 
     @classmethod
     def from_sccd_to_unified(
-        cls,
-        label: str,
-        role: Optional[str] = None,
-        **kwargs
+        cls, label: str, role: Optional[str] = None, **kwargs
     ) -> UnifiedLabel:
         """
         將 SCCD 標籤轉換為統一格式
@@ -222,9 +217,7 @@ class LabelMapper:
             label = label.lower()
 
         if label not in cls.SCCD_MAPPING:
-            logger.warning(
-                f"Unknown SCCD label: {label}, treating as non-bullying"
-            )
+            logger.warning(f"Unknown SCCD label: {label}, treating as non-bullying")
             label = "normal"
 
         mapping = cls.SCCD_MAPPING[label]
@@ -253,9 +246,7 @@ class LabelMapper:
         )
 
     @classmethod
-    def from_chnci_to_unified(
-        cls, chnci_data, **kwargs
-    ) -> UnifiedLabel:
+    def from_chnci_to_unified(cls, chnci_data, **kwargs) -> UnifiedLabel:
         """
         將 CHNCI 標籤轉換為統一格式
 
@@ -282,10 +273,7 @@ class LabelMapper:
         elif bullying_type == "cyberbullying":
             toxicity = ToxicityLevel.TOXIC
             bullying = BullyingLevel.HARASSMENT
-            role_type = (
-                RoleType.PERPETRATOR if role == "perpetrator"
-                else RoleType.NONE
-            )
+            role_type = RoleType.PERPETRATOR if role == "perpetrator" else RoleType.NONE
             emotion_intensity = 2
         elif bullying_type == "threat":
             toxicity = ToxicityLevel.SEVERE
@@ -311,7 +299,8 @@ class LabelMapper:
             bullying=bullying,
             role=role_type,
             emotion=(
-                EmotionType.NEGATIVE if toxicity != ToxicityLevel.NONE
+                EmotionType.NEGATIVE
+                if toxicity != ToxicityLevel.NONE
                 else EmotionType.NEUTRAL
             ),
             emotion_intensity=emotion_intensity,
@@ -320,8 +309,7 @@ class LabelMapper:
 
     @classmethod
     def from_sentiment_to_unified(
-        cls, label: Union[int, float], text_emotion: Optional[str] = None,
-        **kwargs
+        cls, label: Union[int, float], text_emotion: Optional[str] = None, **kwargs
     ) -> UnifiedLabel:
         """
         將情感標籤轉換為統一格式
@@ -335,13 +323,12 @@ class LabelMapper:
             UnifiedLabel 物件
         """
         # Handle invalid labels
-        if (label not in [0, 1] and
-                label not in cls.SENTIMENT_MAPPING):
+        if label not in [0, 1] and label not in cls.SENTIMENT_MAPPING:
             logger.warning(f"Unknown sentiment label: {label}")
             return UnifiedLabel(
                 emotion=EmotionType.NEUTRAL,
                 emotion_intensity=2,
-                source_dataset="sentiment"
+                source_dataset="sentiment",
             )
 
         # Map label to emotion
@@ -492,18 +479,12 @@ class LabelMapper:
             return labels[0]
 
         # 計算平均分數
-        avg_toxicity_score = (
-            sum(label.toxicity_score for label in labels) / len(labels)
+        avg_toxicity_score = sum(label.toxicity_score for label in labels) / len(labels)
+        avg_bullying_score = sum(label.bullying_score for label in labels) / len(labels)
+        avg_emotion_intensity = sum(label.emotion_intensity for label in labels) / len(
+            labels
         )
-        avg_bullying_score = (
-            sum(label.bullying_score for label in labels) / len(labels)
-        )
-        avg_emotion_intensity = (
-            sum(label.emotion_intensity for label in labels) / len(labels)
-        )
-        avg_confidence = (
-            sum(label.confidence for label in labels) / len(labels)
-        )
+        avg_confidence = sum(label.confidence for label in labels) / len(labels)
 
         # 投票決定類別
         toxicity_votes = {}
@@ -512,18 +493,10 @@ class LabelMapper:
         emotion_votes = {}
 
         for label in labels:
-            toxicity_votes[label.toxicity] = (
-                toxicity_votes.get(label.toxicity, 0) + 1
-            )
-            bullying_votes[label.bullying] = (
-                bullying_votes.get(label.bullying, 0) + 1
-            )
-            role_votes[label.role] = (
-                role_votes.get(label.role, 0) + 1
-            )
-            emotion_votes[label.emotion] = (
-                emotion_votes.get(label.emotion, 0) + 1
-            )
+            toxicity_votes[label.toxicity] = toxicity_votes.get(label.toxicity, 0) + 1
+            bullying_votes[label.bullying] = bullying_votes.get(label.bullying, 0) + 1
+            role_votes[label.role] = role_votes.get(label.role, 0) + 1
+            emotion_votes[label.emotion] = emotion_votes.get(label.emotion, 0) + 1
 
         # 選擇最多票的類別
         toxicity = max(toxicity_votes, key=toxicity_votes.get)
@@ -556,9 +529,7 @@ class LabelMapper:
         """
         return [self.from_cold_to_unified(label) for label in labels]
 
-    def batch_convert_from_sentiment(
-        self, labels: List[int]
-    ) -> List[UnifiedLabel]:
+    def batch_convert_from_sentiment(self, labels: List[int]) -> List[UnifiedLabel]:
         """
         批次轉換情感標籤
 
@@ -568,9 +539,7 @@ class LabelMapper:
         Returns:
             UnifiedLabel 物件列表
         """
-        return [
-            self.from_sentiment_to_unified(label) for label in labels
-        ]
+        return [self.from_sentiment_to_unified(label) for label in labels]
 
     def get_label_statistics(
         self, labels: List[UnifiedLabel]
@@ -594,27 +563,19 @@ class LabelMapper:
         for label in labels:
             # Count toxicity levels
             tox_val = label.toxicity.value
-            stats["toxicity"][tox_val] = (
-                stats["toxicity"].get(tox_val, 0) + 1
-            )
+            stats["toxicity"][tox_val] = stats["toxicity"].get(tox_val, 0) + 1
 
             # Count bullying levels
             bull_val = label.bullying.value
-            stats["bullying"][bull_val] = (
-                stats["bullying"].get(bull_val, 0) + 1
-            )
+            stats["bullying"][bull_val] = stats["bullying"].get(bull_val, 0) + 1
 
             # Count role types
             role_val = label.role.value
-            stats["role"][role_val] = (
-                stats["role"].get(role_val, 0) + 1
-            )
+            stats["role"][role_val] = stats["role"].get(role_val, 0) + 1
 
             # Count emotion types
             emotion_val = label.emotion.value
-            stats["emotion"][emotion_val] = (
-                stats["emotion"].get(emotion_val, 0) + 1
-            )
+            stats["emotion"][emotion_val] = stats["emotion"].get(emotion_val, 0) + 1
 
         return stats
 
@@ -626,9 +587,7 @@ def from_cold_to_unified(label: int, **kwargs) -> UnifiedLabel:
 
 
 def from_sccd_to_unified(
-    label: str,
-    role: Optional[str] = None,
-    **kwargs
+    label: str, role: Optional[str] = None, **kwargs
 ) -> UnifiedLabel:
     """SCCD 到統一格式"""
     return LabelMapper.from_sccd_to_unified(label, role, **kwargs)
@@ -640,14 +599,10 @@ def from_chnci_to_unified(chnci_data, **kwargs) -> UnifiedLabel:
 
 
 def from_sentiment_to_unified(
-    label: Union[int, float],
-    text_emotion: Optional[str] = None,
-    **kwargs
+    label: Union[int, float], text_emotion: Optional[str] = None, **kwargs
 ) -> UnifiedLabel:
     """情感標籤到統一格式"""
-    return LabelMapper.from_sentiment_to_unified(
-        label, text_emotion, **kwargs
-    )
+    return LabelMapper.from_sentiment_to_unified(label, text_emotion, **kwargs)
 
 
 def to_cold_label(unified: UnifiedLabel) -> int:

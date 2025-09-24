@@ -22,9 +22,11 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
+
 # Captum imports
 # 參考: https://captum.ai/api/integrated_gradients.html
 from captum.attr import IntegratedGradients, TokenReferenceBase
+
 # 本地imports
 from ..models.baselines import BaselineModel
 
@@ -65,11 +67,7 @@ class IntegratedGradientsExplainer:
     https://captum.ai/tutorials/Bert_SQUAD_Interpret
     """
 
-    def __init__(
-        self,
-        model: BaselineModel,
-        device: Optional[torch.device] = None
-    ):
+    def __init__(self, model: BaselineModel, device: Optional[torch.device] = None):
         """
         初始化IG解釋器
 
@@ -78,7 +76,9 @@ class IntegratedGradientsExplainer:
             device: 計算設備
         """
         self.model = model
-        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         self.model.to(self.device)
         self.model.eval()
 
@@ -197,13 +197,12 @@ class IntegratedGradientsExplainer:
         # #captum.attr.IntegratedGradients.attribute
         try:
             # 毒性attribution
-            toxicity_target = target_class if target_class is not None else toxicity_pred
+            toxicity_target = (
+                target_class if target_class is not None else toxicity_pred
+            )
             toxicity_attributions = self.ig_toxicity.attribute(
                 inputs=(input_ids, attention_mask),
-                baselines=(
-                    reference_indices,
-                    torch.zeros_like(attention_mask)
-                ),
+                baselines=(reference_indices, torch.zeros_like(attention_mask)),
                 target=toxicity_target,
                 n_steps=n_steps,
                 internal_batch_size=internal_batch_size,
@@ -217,10 +216,7 @@ class IntegratedGradientsExplainer:
             emotion_target = emotion_pred
             emotion_attr = self.ig_emotion.attribute(
                 inputs=(input_ids, attention_mask),
-                baselines=(
-                    reference_indices,
-                    torch.zeros_like(attention_mask)
-                ),
+                baselines=(reference_indices, torch.zeros_like(attention_mask)),
                 target=emotion_target,
                 n_steps=n_steps,
                 internal_batch_size=internal_batch_size,
@@ -232,10 +228,7 @@ class IntegratedGradientsExplainer:
             bullying_target = bullying_pred
             bullying_attr = self.ig_bullying.attribute(
                 inputs=(input_ids, attention_mask),
-                baselines=(
-                    reference_indices,
-                    torch.zeros_like(attention_mask)
-                ),
+                baselines=(reference_indices, torch.zeros_like(attention_mask)),
                 target=bullying_target,
                 n_steps=n_steps,
                 internal_batch_size=internal_batch_size,
@@ -272,8 +265,9 @@ class IntegratedGradientsExplainer:
             },
         )
 
-        logger.info(f"Attribution computed. Convergenc"
-            "e delta: {convergence_delta:.4f}")
+        logger.info(
+            f"Attribution computed. Convergenc" "e delta: {convergence_delta:.4f}"
+        )
         return result
 
 
@@ -295,9 +289,28 @@ class BiasAnalyzer:
         # 定義偏見詞彙集合（可擴展）
         self.identity_terms = {
             # 性別相關
-            "gender": ["男", "女", "男性", "女性", "男人", "女人", "先生", "女士", "小姐"],
+            "gender": [
+                "男",
+                "女",
+                "男性",
+                "女性",
+                "男人",
+                "女人",
+                "先生",
+                "女士",
+                "小姐",
+            ],
             # 種族/地域相關
-            "ethnicity": ["中國", "日本", "韓國", "美國", "台灣", "香港", "大陸", "內地"],
+            "ethnicity": [
+                "中國",
+                "日本",
+                "韓國",
+                "美國",
+                "台灣",
+                "香港",
+                "大陸",
+                "內地",
+            ],
             # 職業相關
             "occupation": ["老師", "學生", "醫生", "護士", "工程師", "農民", "工人"],
             # 年齡相關
@@ -312,8 +325,7 @@ class BiasAnalyzer:
         }
 
     def analyze_bias_patterns(
-        self, texts: List[str], top_k: int = 10, output_csv: Optional[str] =
-            None
+        self, texts: List[str], top_k: int = 10, output_csv: Optional[str] = None
     ) -> pd.DataFrame:
         """
         分析文本集合中的偏見模式
@@ -357,11 +369,11 @@ class BiasAnalyzer:
                                 "bias_category": bias_category[0],
                                 "bias_subcategory": bias_category[1],
                                 "toxicity_a"
-                                    "ttribution": result.toxicity_attributions[j],
+                                "ttribution": result.toxicity_attributions[j],
                                 "emotion_a"
-                                    "ttribution": result.emotion_attributions[j],
+                                "ttribution": result.emotion_attributions[j],
                                 "bullying_a"
-                                    "ttribution": result.bullying_attributions[j],
+                                "ttribution": result.bullying_attributions[j],
                                 "toxicity_pred": result.toxicity_pred,
                                 "toxicity_prob": result.toxicity_prob,
                                 "emotion_pred": result.emotion_pred,
@@ -388,8 +400,7 @@ class BiasAnalyzer:
         if output_csv:
             self.save_bias_report(df, output_csv, top_k)
 
-        logger.info(f"Bias analysis completed. Found"
-            " {len(df)} bias-related tokens.")
+        logger.info(f"Bias analysis completed. Found" " {len(df)} bias-related tokens.")
         return df
 
     def _classify_bias_term(self, token: str) -> Optional[Tuple[str, str]]:
@@ -416,11 +427,7 @@ class BiasAnalyzer:
 
         return None
 
-    def _compute_bias_statistics(
-        self,
-        df: pd.DataFrame,
-        top_k: int
-    ) -> pd.DataFrame:
+    def _compute_bias_statistics(self, df: pd.DataFrame, top_k: int) -> pd.DataFrame:
         """計算偏見統計資訊"""
         # 按類別和attribution分數排序
         df["abs_toxicity_attr"] = df["toxicity_attribution"].abs()
@@ -493,8 +500,7 @@ class BiasAnalyzer:
                 )
 
                 for i, row in enumerate(top_tokens.itertuples(), 1):
-                    frequency = len(category_df[category_df["to"
-                        "ken"] == row.token])
+                    frequency = len(category_df[category_df["to" "ken"] == row.token])
                     writer.writerow(
                         [
                             i,
@@ -507,8 +513,11 @@ class BiasAnalyzer:
                             f"{row.total_importance:.4f}",
                             frequency,
                             f"{row.toxicity_prob:.3f}",
-                            row.text[:50] + "."
-                                ".." if len(row.text) > 50 else row.text,
+                            (
+                                row.text[:50] + "." ".."
+                                if len(row.text) > 50
+                                else row.text
+                            ),
                         ]
                     )
 
@@ -624,8 +633,7 @@ def create_attribution_heatmap(
 
 
 def save_attribution_report(
-    results: List[ExplanationResult], output_path: str, include_tokens: bool =
-        True
+    results: List[ExplanationResult], output_path: str, include_tokens: bool = True
 ):
     """
     儲存attribution報告到CSV
@@ -696,11 +704,7 @@ def save_attribution_report(
     logger.info(f"Attribution report saved to {output_path}")
 
 
-def _get_top_tokens(
-    tokens: List[str],
-    attributions: np.ndarray,
-    k: int = 3
-) -> str:
+def _get_top_tokens(tokens: List[str], attributions: np.ndarray, k: int = 3) -> str:
     """獲取attribution分數最高的k個tokens"""
     # 過濾特殊tokens
     valid_indices = []

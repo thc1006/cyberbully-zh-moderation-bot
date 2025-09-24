@@ -103,9 +103,7 @@ class UncertaintySampler:
         return 1.0 - np.max(probs)
 
     def select_uncertain_samples(
-        self,
-        predictions: List[Dict[str, Any]],
-        k: int
+        self, predictions: List[Dict[str, Any]], k: int
     ) -> List[int]:
         """
         選擇最不確定的樣本
@@ -151,10 +149,7 @@ class ControversyDetector:
         self.model_predictions = defaultdict(list)
 
     def add_model_prediction(
-        self,
-        sample_id: str,
-        model_name: str,
-        prediction: Dict[str, Any]
+        self, sample_id: str, model_name: str, prediction: Dict[str, Any]
     ):
         """
         添加模型預測
@@ -164,7 +159,9 @@ class ControversyDetector:
             model_name: 模型名稱
             prediction: 預測結果
         """
-        self.model_predictions[sample_id].append({"model": model_name, "prediction": prediction}) 
+        self.model_predictions[sample_id].append(
+            {"model": model_name, "prediction": prediction}
+        )
 
     def calculate_controversy(self, sample_id: str) -> float:
         """
@@ -207,8 +204,7 @@ class ControversyDetector:
             for i in range(len(probs_list)):
                 for j in range(i + 1, len(probs_list)):
                     kl_div = self._kl_divergence(
-                        np.array(probs_list[i]),
-                        np.array(probs_list[j])
+                        np.array(probs_list[i]), np.array(probs_list[j])
                     )
                     kl_controversy += kl_div
 
@@ -251,8 +247,7 @@ class DiversitySampler:
         self.config = config
 
     def calculate_embeddings_diversity(
-        self, embeddings: np.ndarray, selected_indices: List[int],
-            candidate_index: int
+        self, embeddings: np.ndarray, selected_indices: List[int], candidate_index: int
     ) -> float:
         """
         計算候選樣本與已選樣本的多樣性
@@ -268,12 +263,11 @@ class DiversitySampler:
         if len(selected_indices) == 0:
             return 1.0
 
-        candidate_emb = embeddings[candidate_index:candidate_index + 1]
+        candidate_emb = embeddings[candidate_index : candidate_index + 1]
         selected_embs = embeddings[selected_indices]
 
         # 計算與已選樣本的最小距離
-        distances = pairwise_distances(candidate_emb, selected_embs, metric="cos"
-            "ine")
+        distances = pairwise_distances(candidate_emb, selected_embs, metric="cos" "ine")
 
         return np.min(distances)
 
@@ -307,11 +301,7 @@ class DiversitySampler:
                     continue
 
                 # 計算多樣性
-                diversity = self.calculate_embeddings_diversity(
-                    embeddings,
-                    selected,
-                    i
-                )
+                diversity = self.calculate_embeddings_diversity(embeddings, selected, i)
 
                 # 結合不確定性和多樣性
                 score = (
@@ -382,9 +372,7 @@ class ActiveLearningLoop:
 
         # 添加到爭議檢測器
         self.controversy_detector.add_model_prediction(
-            sample_id,
-            model_name,
-            prediction
+            sample_id, model_name, prediction
         )
 
     def select_samples_for_annotation(self) -> List[Dict]:
@@ -437,12 +425,12 @@ class ActiveLearningLoop:
                 uncertainties_array = np.array(uncertainties)
 
                 diverse_local_indices = self.diversity_sampler.select_diverse_samples(
-                    embeddings_matrix, uncertainties_array,
-                        self.config.max_samples_per_batch // 3
+                    embeddings_matrix,
+                    uncertainties_array,
+                    self.config.max_samples_per_batch // 3,
                 )
 
-                diverse_indices = [valid_indices[i] for i in
-                    diverse_local_indices]
+                diverse_indices = [valid_indices[i] for i in diverse_local_indices]
 
         # 合併選中的樣本
         selected_indices = set(uncertain_indices + diverse_indices)
@@ -454,8 +442,7 @@ class ActiveLearningLoop:
                 selected_indices.add(id_to_index[controversial_id])
 
         # 限制總數
-        selected_indices = list(selected_indices)[:
-            self.config.max_samples_per_batch]
+        selected_indices = list(selected_indices)[: self.config.max_samples_per_batch]
 
         # 獲取選中的樣本
         selected_samples = [self.sample_pool[i] for i in selected_indices]
@@ -473,8 +460,9 @@ class ActiveLearningLoop:
                         reasons.append(f"high_uncertainty({entropy:.3f})")
 
             # 檢查爭議性
-            controversy = self.controversy_detector.calculate_controversy(sample["i"
-                "d"])
+            controversy = self.controversy_detector.calculate_controversy(
+                sample["i" "d"]
+            )
             if controversy > self.config.controversy_threshold:
                 reasons.append(f"controversial({controversy:.3f})")
 
@@ -483,10 +471,7 @@ class ActiveLearningLoop:
         self.selected_samples = selected_samples
         return selected_samples
 
-    def export_annotation_tasks(
-        self,
-        output_path: Optional[str] = None
-    ) -> str:
+    def export_annotation_tasks(self, output_path: Optional[str] = None) -> str:
         """
         輸出標註任務到 CSV
 
@@ -506,7 +491,9 @@ class ActiveLearningLoop:
         # 設定輸出路徑
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = Path(self.config.output_dir) / f"annotation_tasks_{timestamp}.csv"
+            output_path = (
+                Path(self.config.output_dir) / f"annotation_tasks_{timestamp}.csv"
+            )
 
         # 準備 CSV 數據
         csv_data = []
@@ -540,8 +527,7 @@ class ActiveLearningLoop:
         df = pd.DataFrame(csv_data)
         df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-        logger.info(f"Exported {len(csv_data)} anno"
-            "tation tasks to {output_path}")
+        logger.info(f"Exported {len(csv_data)} anno" "tation tasks to {output_path}")
         return str(output_path)
 
     def load_completed_annotations(self, csv_path: str) -> List[Dict]:
@@ -671,8 +657,7 @@ class ActiveLearningLoop:
             是否應該再訓練
         """
         # 檢查已完成標註的數量
-        completed_pattern = Path(self.config.output_dir).glob("complet"
-            "ed_*.csv")
+        completed_pattern = Path(self.config.output_dir).glob("complet" "ed_*.csv")
         total_annotations = 0
 
         for csv_file in completed_pattern:
@@ -683,7 +668,9 @@ class ActiveLearningLoop:
 
         # 檢查是否達到閾值
         if total_annotations >= self.config.min_samples_for_retrain:
-            logger.info(f"Retraining triggered: {total_annotations} annotations available")
+            logger.info(
+                f"Retraining triggered: {total_annotations} annotations available"
+            )
             return True
 
         logger.info(
@@ -699,8 +686,7 @@ def example_usage():
 
     # 初始化
     config = ActiveLearningConfig(
-        uncertainty_threshold=0.3, max_samples_per_batch=50,
-            min_samples_for_retrain=100
+        uncertainty_threshold=0.3, max_samples_per_batch=50, min_samples_for_retrain=100
     )
 
     active_loop = ActiveLearningLoop(config)

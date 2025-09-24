@@ -62,9 +62,7 @@ class Config:
 
         # API 配置
         self.api = ApiConfig(
-            cyberpuppy_url=os.getenv(
-                "CYBERPUPPY_API_URL",
-                "http://localhost:8000"),
+            cyberpuppy_url=os.getenv("CYBERPUPPY_API_URL", "http://localhost:8000"),
             timeout=float(os.getenv("API_TIMEOUT", "30.0")),
             max_retries=int(os.getenv("API_MAX_RETRIES", "3")),
         )
@@ -73,16 +71,13 @@ class Config:
         self.security = SecurityConfig(
             max_message_length=int(os.getenv("MAX_MESSAGE_LENGTH", "1000")),
             rate_limit_per_user=int(os.getenv("RATE_LIMIT_PER_USER", "20")),
-            session_timeout_hours=int(
-                os.getenv("SESSION_TIMEOUT_HOURS", "24"))
+            session_timeout_hours=int(os.getenv("SESSION_TIMEOUT_HOURS", "24")),
         )
 
         # 回應配置
         self.response = ResponseConfig(
-            gentle_reminder_threshold=int(
-                os.getenv("GENTLE_REMINDER_THRESHOLD", "1")),
-            firm_warning_threshold=int(
-                os.getenv("FIRM_WARNING_THRESHOLD", "2")),
+            gentle_reminder_threshold=int(os.getenv("GENTLE_REMINDER_THRESHOLD", "1")),
+            firm_warning_threshold=int(os.getenv("FIRM_WARNING_THRESHOLD", "2")),
             escalation_threshold=int(os.getenv("ESCALATION_THRESHOLD", "3")),
             cooldown_hours=int(os.getenv("COOLDOWN_HOURS", "24")),
         )
@@ -116,9 +111,7 @@ class Config:
                 "session_timeout_hours": self.security.session_timeout_hours,
             },
             "response": {
-                "gentle_reminder_threshold": (
-                    self.response.gentle_reminder_threshold
-                ),
+                "gentle_reminder_threshold": (self.response.gentle_reminder_threshold),
                 "firm_warning_threshold": self.response.firm_warning_threshold,
                 "escalation_threshold": self.response.escalation_threshold,
                 "cooldown_hours": self.response.cooldown_hours,

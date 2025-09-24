@@ -19,7 +19,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -29,8 +29,7 @@ from model_loader_simple import get_model_loader
 
 # 設定日誌
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -40,12 +39,12 @@ limiter = Limiter(key_func=get_remote_address)
 # Global model loader and metrics
 model_loader = None
 model_metrics = {
-    'total_predictions': 0,
-    'successful_predictions': 0,
-    'failed_predictions': 0,
-    'total_processing_time': 0.0,
-    'cache_hits': 0,
-    'startup_time': None
+    "total_predictions": 0,
+    "successful_predictions": 0,
+    "failed_predictions": 0,
+    "total_processing_time": 0.0,
+    "cache_hits": 0,
+    "startup_time": None,
 }
 
 
@@ -69,7 +68,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Model warm-up completed: {warmup_stats}")
 
         startup_time = time.time() - startup_start
-        model_metrics['startup_time'] = startup_time
+        model_metrics["startup_time"] = startup_time
 
         logger.info(f"CyberPuppy API startup complete in {startup_time:.2f}s")
 
@@ -93,7 +92,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # 中介層設定
@@ -140,8 +139,9 @@ class AnalyzeRequest(BaseModel):
         None, max_length=50, description="對話串 ID（可選）"
     )
 
-    @validator("text")
-    def validate_text_not_empty(cls, v):
+    @field_validator("text")
+    @classmethod
+    def validate_text_not_empty(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("文本不能為空")
         return v.strip()
@@ -182,6 +182,7 @@ class EmotionScore(BaseModel):
 
 class ImportantWord(BaseModel):
     """重要詞彙與權重"""
+
     word: str = Field(..., description="詞彙")
     importance: float = Field(..., ge=0, le=1, description="重要性權重")
 
@@ -200,9 +201,7 @@ class AnalyzeResponse(BaseModel):
     # 預測標籤
     toxicity: str = Field(..., description="毒性標籤: none|toxic|severe")
     bullying: str = Field(..., description="霸凌標籤: none|harassment|threat")
-    role: str = Field(
-        ..., description="角色標籤: none|perpetrator|victim|bystander"
-    )
+    role: str = Field(..., description="角色標籤: none|perpetrator|victim|bystander")
     emotion: str = Field(..., description="情緒標籤: pos|neu|neg")
     emotion_strength: int = Field(..., ge=0, le=4, description="情緒強度 0-4")
 
@@ -220,6 +219,7 @@ class AnalyzeResponse(BaseModel):
 
 class ModelStatus(BaseModel):
     """模型狀態"""
+
     models_loaded: bool = Field(..., description="模型是否已載入")
     device: str = Field(..., description="計算設備")
     warmup_complete: bool = Field(..., description="預熱是否完成")
@@ -242,9 +242,7 @@ def mask_pii(text: str) -> str:
     """遮蔽個人識別資訊"""
     masked_text = text
     for pattern in PII_PATTERNS:
-        masked_text = re.sub(
-            pattern, "[MASKED]", masked_text, flags=re.IGNORECASE
-        )
+        masked_text = re.sub(pattern, "[MASKED]", masked_text, flags=re.IGNORECASE)
     return masked_text
 
 
@@ -264,11 +262,11 @@ async def analyze_text_content(
     if model_loader is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="模型未載入，請稍後再試"
+            detail="模型未載入，請稍後再試",
         )
 
     start_time = time.time()
-    model_metrics['total_predictions'] += 1
+    model_metrics["total_predictions"] += 1
 
     try:
         # Get detector from model loader
@@ -280,9 +278,9 @@ async def analyze_text_content(
         result = detector.analyze(text)
 
         # Track successful prediction
-        model_metrics['successful_predictions'] += 1
+        model_metrics["successful_predictions"] += 1
         processing_time = time.time() - start_time
-        model_metrics['total_processing_time'] += processing_time
+        model_metrics["total_processing_time"] += processing_time
 
         # Log prediction (privacy compliant - no text content)
         text_hash = generate_text_hash(text)
@@ -296,9 +294,9 @@ async def analyze_text_content(
         return result
 
     except Exception as e:
-        model_metrics['failed_predictions'] += 1
+        model_metrics["failed_predictions"] += 1
         processing_time = time.time() - start_time
-        model_metrics['total_processing_time'] += processing_time
+        model_metrics["total_processing_time"] += processing_time
 
         # Log error (privacy compliant)
         text_hash = generate_text_hash(text)
@@ -311,7 +309,7 @@ async def analyze_text_content(
         # Don't expose internal errors to API consumers
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="模型預測失敗，請稍後再試"
+            detail="模型預測失敗，請稍後再試",
         )
 
 
@@ -327,18 +325,16 @@ async def health_check():
     if model_loader:
         try:
             status_info = model_loader.get_model_status()
-            avg_processing_time = (
-                model_metrics['total_processing_time'] / max(
-                    model_metrics['total_predictions'],
-                    1)
+            avg_processing_time = model_metrics["total_processing_time"] / max(
+                model_metrics["total_predictions"], 1
             )
 
             model_status_data = ModelStatus(
-                models_loaded=status_info.get('models_loaded', False),
-                device=status_info.get('device', 'unknown'),
-                warmup_complete=status_info.get('warmup_complete', False),
-                total_predictions=model_metrics['total_predictions'],
-                average_processing_time=round(avg_processing_time, 4)
+                models_loaded=status_info.get("models_loaded", False),
+                device=status_info.get("device", "unknown"),
+                warmup_complete=status_info.get("warmup_complete", False),
+                total_predictions=model_metrics["total_predictions"],
+                average_processing_time=round(avg_processing_time, 4),
             )
         except Exception as e:
             logger.warning(f"Failed to get model status: {e}")
@@ -349,8 +345,7 @@ async def health_check():
         status = "starting"
     elif model_status_data and not model_status_data.models_loaded:
         status = "degraded"
-    elif (model_metrics['failed_predictions'] >
-          model_metrics['successful_predictions']):
+    elif model_metrics["failed_predictions"] > model_metrics["successful_predictions"]:
         status = "degraded"
 
     return HealthResponse(
@@ -358,7 +353,7 @@ async def health_check():
         timestamp=datetime.now().isoformat(),
         version="1.0.0",
         uptime_seconds=round(uptime, 2),
-        model_status=model_status_data
+        model_status=model_status_data,
     )
 
 
@@ -422,7 +417,7 @@ async def analyze_text(request: Request, data: AnalyzeRequest):
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="分析處理失敗，請稍後再試"
+            detail="分析處理失敗，請稍後再試",
         )
 
 
@@ -430,41 +425,37 @@ async def analyze_text(request: Request, data: AnalyzeRequest):
 @app.get("/metrics")
 async def get_metrics():
     """取得 API 效能指標"""
-    avg_processing_time = (
-        model_metrics['total_processing_time'] / max(
-            model_metrics['total_predictions'],
-            1)
+    avg_processing_time = model_metrics["total_processing_time"] / max(
+        model_metrics["total_predictions"], 1
     )
 
-    success_rate = (
-        model_metrics['successful_predictions'] / max(
-            model_metrics['total_predictions'],
-            1)
+    success_rate = model_metrics["successful_predictions"] / max(
+        model_metrics["total_predictions"], 1
     )
 
     metrics = {
-        'total_predictions': model_metrics['total_predictions'],
-        'successful_predictions': model_metrics['successful_predictions'],
-        'failed_predictions': model_metrics['failed_predictions'],
-        'success_rate': round(success_rate, 4),
-        'average_processing_time_ms': round(avg_processing_time * 1000, 2),
-        'total_processing_time_s': round(
-            model_metrics['total_processing_time'],
-            2),
-        'startup_time_s': model_metrics.get('startup_time'),
-        'cache_hits': model_metrics['cache_hits']
+        "total_predictions": model_metrics["total_predictions"],
+        "successful_predictions": model_metrics["successful_predictions"],
+        "failed_predictions": model_metrics["failed_predictions"],
+        "success_rate": round(success_rate, 4),
+        "average_processing_time_ms": round(avg_processing_time * 1000, 2),
+        "total_processing_time_s": round(model_metrics["total_processing_time"], 2),
+        "startup_time_s": model_metrics.get("startup_time"),
+        "cache_hits": model_metrics["cache_hits"],
     }
 
     # Add model-specific metrics if available
     if model_loader:
         try:
             model_status = model_loader.get_model_status()
-            metrics.update({
-                'model_device': model_status.get('device'),
-                'models_loaded': model_status.get('models_loaded'),
-                'warmup_complete': model_status.get('warmup_complete'),
-                'gpu_memory': model_status.get('gpu_memory')
-            })
+            metrics.update(
+                {
+                    "model_device": model_status.get("device"),
+                    "models_loaded": model_status.get("models_loaded"),
+                    "warmup_complete": model_status.get("warmup_complete"),
+                    "gpu_memory": model_status.get("gpu_memory"),
+                }
+            )
         except Exception as e:
             logger.warning(f"Failed to get detailed metrics: {e}")
 
@@ -483,8 +474,7 @@ async def get_model_info():
     except Exception as e:
         logger.error(f"Failed to get model info: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="無法取得模型資訊"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="無法取得模型資訊"
         )
 
 
@@ -494,8 +484,7 @@ async def clear_model_cache():
     """清理模型快取（管理端點）"""
     if model_loader is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="模型載入器未初始化"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="模型載入器未初始化"
         )
 
     try:
@@ -505,8 +494,7 @@ async def clear_model_cache():
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="快取清理失敗"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="快取清理失敗"
         )
 
 
@@ -518,7 +506,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={
             "error": True,
             "message": exc.detail,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         },
     )
 
@@ -554,13 +542,11 @@ async def root():
             "Emotion classification",
             "Role identification",
             "Model explainability",
-            "Privacy-compliant logging"
-        ]
+            "Privacy-compliant logging",
+        ],
     }
 
 
 if __name__ == "__main__":
     # 開發環境啟動配置
-    uvicorn.run(
-        "app:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
-    )
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

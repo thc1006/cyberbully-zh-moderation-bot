@@ -35,10 +35,10 @@ def test_explanation_data_model():
     explanation_data = {
         "important_words": [
             {"word": "测试", "importance": 0.85},
-            {"word": "文本", "importance": 0.72}
+            {"word": "文本", "importance": 0.72},
         ],
         "method": "keyword_based_mock",
-        "confidence": 0.75
+        "confidence": 0.75,
     }
 
     explanation_model = ExplanationData(**explanation_data)
@@ -65,8 +65,7 @@ def test_explanation_data_with_model_loader():
     assert isinstance(explanation_model, ExplanationData)
     assert len(explanation_model.important_words) > 0
     assert all(
-        isinstance(word,
-        ImportantWord) for word in explanation_model.important_words
+        isinstance(word, ImportantWord) for word in explanation_model.important_words
     )
     assert explanation_model.method == "keyword_based_mock"
     assert 0 <= explanation_model.confidence <= 1
@@ -96,7 +95,7 @@ def test_analyze_response_full():
         "explanations": result["explanations"],
         "text_hash": text_hash,
         "timestamp": datetime.now().isoformat(),
-        "processing_time_ms": 123.45
+        "processing_time_ms": 123.45,
     }
 
     response_model = AnalyzeResponse(**response_data)
@@ -105,8 +104,8 @@ def test_analyze_response_full():
     assert isinstance(response_model.explanations, ExplanationData)
     assert len(response_model.explanations.important_words) > 0
     assert all(
-        isinstance(word,
-        ImportantWord) for word in response_model.explanations.important_words
+        isinstance(word, ImportantWord)
+        for word in response_model.explanations.important_words
     )
 
 

@@ -39,8 +39,7 @@ class TestAPIPerformance:
             payload = {"text": test_case["text"]}
 
             start_time = time.time()
-            response = await http_client.post(f"{api_serve"
-                "r}/analyze", json=payload)
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             end_time = time.time()
 
             assert response.status_code == 200
@@ -129,8 +128,7 @@ class TestAPIPerformance:
             payload = {"text": f"突發負載測試 {request_id}"}
             try:
                 start = time.time()
-                response = await session.post(f"{api_serve"
-                    "r}/analyze", json=payload)
+                response = await session.post(f"{api_server}/analyze", json=payload)
                 duration = time.time() - start
                 return {
                     "id": request_id,
@@ -168,8 +166,7 @@ class TestAPIPerformance:
         response_times = [r["response_time"] for r in results
                          if isinstance(r, dict) and r.get("success")]
 
-        avg_response_time = statistics.mean(response_times) if response_times
-            else 0
+        avg_response_time = statistics.mean(response_times) if response_times else 0
 
         print("突發負載測試結果:")
         print(f"  總時間: {total_time:.2f}s")
@@ -180,8 +177,7 @@ class TestAPIPerformance:
 
         # 突發負載效能要求
         assert success_rate >= 0.8, f"突發負載成功率太低: {success_rate:.2%}"
-        assert avg_response_time < 5.0, f"突發負載平均回應時間過長: {avg_"
-            "response_time:.3f}s"
+        assert avg_response_time < 5.0, f"突發負載平均回應時間過長: {avg_response_time:.3f}s"
 
     async def test_sustained_load_performance(self, api_server):
         """測試持續負載效能"""
@@ -228,8 +224,7 @@ class TestAPIPerformance:
         # 分析持續負載結果
         total_requests = len(results)
         successful_requests = sum(1 for r in results if r["success"])
-        success_rate = successful_requests /
-            total_requests if total_requests > 0 else 0
+        success_rate = successful_requests / total_requests if total_requests > 0 else 0
 
         print("持續負載測試結果:")
         print(f"  測試時長: {duration_seconds}s")
@@ -256,8 +251,7 @@ class TestMemoryUsage:
         # 執行大量請求
         for i in range(100):
             payload = {"text": f"記憶體測試訊息 {i} " + "x" * 50}
-            response = await http_client.post(f"{api_serve"
-                "r}/analyze", json=payload)
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             assert response.status_code == 200
 
             # 每20個請求檢查一次記憶體
@@ -391,8 +385,7 @@ class TestThroughput:
                 try:
                     start_time = time.time()
                     payload = {"text": f"吞吐量測試 {request_id}"}
-                    response = await session.post(f"{api_serve"
-                        "r}/analyze", json=payload)
+                    response = await session.post(f"{api_server}/analyze", json=payload)
                     end_time = time.time()
 
                     return {
@@ -488,16 +481,14 @@ class TestResourceOptimization:
 
         # 第一次請求（冷啟動）
         start = time.time()
-        response = await http_client.post(f"{api_serve"
-            "r}/analyze", json=payload)
+        response = await http_client.post(f"{api_server}/analyze", json=payload)
         first_request_time = time.time() - start
         assert response.status_code == 200
 
         # 多次重複請求
         for i in range(10):
             start = time.time()
-            response = await http_client.post(f"{api_serve"
-                "r}/analyze", json=payload)
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             request_time = time.time() - start
             response_times.append(request_time)
             assert response.status_code == 200
@@ -599,8 +590,7 @@ class TestScalabilityLimits:
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     payload = {"text": f"連接測試 {connection_id}"}
-                    response = await client.post(f"{api_serve"
-                        "r}/analyze", json=payload)
+                    response = await client.post(f"{api_server}/analyze", json=payload)
                     return response.status_code == 200
             except Exception:
                 return False
@@ -635,8 +625,7 @@ class TestScalabilityLimits:
             payload = {"text": large_text}
 
             start_time = time.time()
-            response = await http_client.post(f"{api_serve"
-                "r}/analyze", json=payload)
+            response = await http_client.post(f"{api_server}/analyze", json=payload)
             response_time = time.time() - start_time
 
             print(f"負載大小 {size} 字元: {response_time:.3f}s")

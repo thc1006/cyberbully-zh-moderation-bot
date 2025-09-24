@@ -28,10 +28,7 @@ class TestWebhookSignatureVerification:
         signature = mock_line_signature(body)
 
         # 修補環境變數進行測試
-        with patch(
-            'bot.line_bot.LINE_CHANNEL_SECRET',
-            'test_secret_' + 'x' * 32
-        ):
+        with patch("bot.line_bot.LINE_CHANNEL_SECRET", "test_secret_" + "x" * 32):
             result = verify_line_signature(body, signature)
             assert result is True
 
@@ -42,10 +39,7 @@ class TestWebhookSignatureVerification:
         body = b'{"test": "data"}'
         invalid_signature = "invalid_signature"
 
-        with patch(
-            'bot.line_bot.LINE_CHANNEL_SECRET',
-            'test_secret_' + 'x' * 32
-        ):
+        with patch("bot.line_bot.LINE_CHANNEL_SECRET", "test_secret_" + "x" * 32):
             result = verify_line_signature(body, invalid_signature)
             assert result is False
 
@@ -55,10 +49,7 @@ class TestWebhookSignatureVerification:
 
         body = b'{"test": "data"}'
 
-        with patch(
-            'bot.line_bot.LINE_CHANNEL_SECRET',
-            'test_secret_' + 'x' * 32
-        ):
+        with patch("bot.line_bot.LINE_CHANNEL_SECRET", "test_secret_" + "x" * 32):
             result = verify_line_signature(body, "")
             assert result is False
 
@@ -72,8 +63,8 @@ class TestWebhookSignatureVerification:
             content=body,
             headers={
                 "content-type": "application/json",
-                "X-Line-Signature": "invalid_signature"
-            }
+                "X-Line-Signature": "invalid_signature",
+            },
         )
 
         assert response.status_code == 400
@@ -84,10 +75,7 @@ class TestMessageProcessing:
     """訊息處理測試"""
 
     async def test_text_message_processing(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試文字訊息處理"""
         payload = {
@@ -100,8 +88,8 @@ class TestMessageProcessing:
                     "message": {
                         "id": "test_msg_id",
                         "type": "text",
-                        "text": "你好，今天天氣如何？"
-                    }
+                        "text": "你好，今天天氣如何？",
+                    },
                 }
             ]
         }
@@ -109,24 +97,21 @@ class TestMessageProcessing:
         body = json.dumps(payload).encode()
         signature = mock_line_signature(body)
 
-        with patch('bot.line_bot.line_bot_api.reply_message') as _mock_reply:
+        with patch("bot.line_bot.line_bot_api.reply_message") as _mock_reply:
             response = await http_client.post(
                 f"{bot_server}/webhook",
                 content=body,
                 headers={
                     "content-type": "application/json",
-                    "X-Line-Signature": signature
-                }
+                    "X-Line-Signature": signature,
+                },
             )
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
     async def test_toxic_message_processing(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試毒性訊息處理與回應"""
         toxic_payload = {
@@ -139,8 +124,8 @@ class TestMessageProcessing:
                     "message": {
                         "id": "test_msg_toxic",
                         "type": "text",
-                        "text": "你這個笨蛋，什麼都不懂"
-                    }
+                        "text": "你這個笨蛋，什麼都不懂",
+                    },
                 }
             ]
         }
@@ -148,14 +133,14 @@ class TestMessageProcessing:
         body = json.dumps(toxic_payload).encode()
         signature = mock_line_signature(body)
 
-        with patch('bot.line_bot.line_bot_api.reply_message') as mock_reply:
+        with patch("bot.line_bot.line_bot_api.reply_message") as mock_reply:
             response = await http_client.post(
                 f"{bot_server}/webhook",
                 content=body,
                 headers={
                     "content-type": "application/json",
-                    "X-Line-Signature": signature
-                }
+                    "X-Line-Signature": signature,
+                },
             )
 
             # 等待背景處理完成
@@ -166,10 +151,7 @@ class TestMessageProcessing:
         mock_reply.assert_called()
 
     async def test_severe_threat_processing(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試嚴重威脅訊息處理"""
         threat_payload = {
@@ -182,8 +164,8 @@ class TestMessageProcessing:
                     "message": {
                         "id": "test_msg_threat",
                         "type": "text",
-                        "text": "我要殺了你，你給我等著"
-                    }
+                        "text": "我要殺了你，你給我等著",
+                    },
                 }
             ]
         }
@@ -191,14 +173,14 @@ class TestMessageProcessing:
         body = json.dumps(threat_payload).encode()
         signature = mock_line_signature(body)
 
-        with patch('bot.line_bot.line_bot_api.reply_message') as mock_reply:
+        with patch("bot.line_bot.line_bot_api.reply_message") as mock_reply:
             response = await http_client.post(
                 f"{bot_server}/webhook",
                 content=body,
                 headers={
                     "content-type": "application/json",
-                    "X-Line-Signature": signature
-                }
+                    "X-Line-Signature": signature,
+                },
             )
 
             await asyncio.sleep(0.5)
@@ -212,10 +194,7 @@ class TestUserSessionManagement:
     """使用者會話管理測試"""
 
     async def test_user_session_creation(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試使用者會話建立"""
         user_id = "test_session_user"
@@ -229,8 +208,8 @@ class TestUserSessionManagement:
                     "message": {
                         "id": "test_msg_id",
                         "type": "text",
-                        "text": "第一條訊息"
-                    }
+                        "text": "第一條訊息",
+                    },
                 }
             ]
         }
@@ -238,38 +217,32 @@ class TestUserSessionManagement:
         body = json.dumps(payload).encode()
         signature = mock_line_signature(body)
 
-        with patch('bot.line_bot.line_bot_api.reply_message'):
+        with patch("bot.line_bot.line_bot_api.reply_message"):
             response = await http_client.post(
                 f"{bot_server}/webhook",
                 content=body,
                 headers={
                     "content-type": "application/json",
-                    "X-Line-Signature": signature
-                }
+                    "X-Line-Signature": signature,
+                },
             )
 
         assert response.status_code == 200
 
         # 驗證會話建立（透過內部狀態）
         from bot.line_bot import user_sessions
+
         assert user_id in user_sessions
         assert len(user_sessions[user_id].recent_messages) == 1
 
     async def test_warning_count_escalation(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試警告計數與升級"""
         user_id = "test_escalation_user"
 
         # 發送多條毒性訊息
-        toxic_messages = [
-            "你很笨耶",
-            "廢物一個",
-            "滾開啦你"
-        ]
+        toxic_messages = ["你很笨耶", "廢物一個", "滾開啦你"]
 
         for i, message in enumerate(toxic_messages):
             payload = {
@@ -282,8 +255,8 @@ class TestUserSessionManagement:
                         "message": {
                             "id": f"test_msg_id_{i}",
                             "type": "text",
-                            "text": message
-                        }
+                            "text": message,
+                        },
                     }
                 ]
             }
@@ -291,14 +264,14 @@ class TestUserSessionManagement:
             body = json.dumps(payload).encode()
             signature = mock_line_signature(body)
 
-            with patch('bot.line_bot.line_bot_api.reply_message'):
+            with patch("bot.line_bot.line_bot_api.reply_message"):
                 response = await http_client.post(
                     f"{bot_server}/webhook",
                     content=body,
                     headers={
                         "content-type": "application/json",
-                        "X-Line-Signature": signature
-                    }
+                        "X-Line-Signature": signature,
+                    },
                 )
 
             assert response.status_code == 200
@@ -306,24 +279,16 @@ class TestUserSessionManagement:
 
         # 驗證警告計數
         from bot.line_bot import user_sessions
+
         assert user_id in user_sessions
         assert user_sessions[user_id].warning_count >= 2
 
-    async def test_context_building(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
-    ):
+    async def test_context_building(self, bot_server, http_client, mock_line_signature):
         """測試對話上下文建立"""
         user_id = "test_context_user"
 
         # 發送一系列相關訊息
-        messages = [
-            "我今天很不開心",
-            "同學都不理我",
-            "我覺得自己很沒用"
-        ]
+        messages = ["我今天很不開心", "同學都不理我", "我覺得自己很沒用"]
 
         for i, message in enumerate(messages):
             payload = {
@@ -336,8 +301,8 @@ class TestUserSessionManagement:
                         "message": {
                             "id": f"test_msg_id_{i}",
                             "type": "text",
-                            "text": message
-                        }
+                            "text": message,
+                        },
                     }
                 ]
             }
@@ -345,14 +310,14 @@ class TestUserSessionManagement:
             body = json.dumps(payload).encode()
             signature = mock_line_signature(body)
 
-            with patch('bot.line_bot.line_bot_api.reply_message'):
+            with patch("bot.line_bot.line_bot_api.reply_message"):
                 response = await http_client.post(
                     f"{bot_server}/webhook",
                     content=body,
                     headers={
                         "content-type": "application/json",
-                        "X-Line-Signature": signature
-                    }
+                        "X-Line-Signature": signature,
+                    },
                 )
 
             assert response.status_code == 200
@@ -360,6 +325,7 @@ class TestUserSessionManagement:
 
         # 驗證上下文建立
         from bot.line_bot import user_sessions
+
         assert user_id in user_sessions
         assert len(user_sessions[user_id].recent_messages) == 3
 
@@ -375,7 +341,7 @@ class TestResponseStrategies:
         bot = CyberPuppyBot()
         message = bot.create_gentle_reminder_message()
 
-        assert hasattr(message, 'text')
+        assert hasattr(message, "text")
         assert len(message.text) > 0
 
     def test_firm_warning_creation(self):
@@ -385,8 +351,8 @@ class TestResponseStrategies:
         bot = CyberPuppyBot()
         message = bot.create_firm_warning_message()
 
-        assert hasattr(message, 'contents')
-        assert hasattr(message, 'alt_text')
+        assert hasattr(message, "contents")
+        assert hasattr(message, "alt_text")
         assert message.alt_text == "網路行為提醒"
 
     def test_resource_sharing_creation(self):
@@ -396,8 +362,8 @@ class TestResponseStrategies:
         bot = CyberPuppyBot()
         message = bot.create_resource_sharing_message()
 
-        assert hasattr(message, 'contents')
-        assert hasattr(message, 'alt_text')
+        assert hasattr(message, "contents")
+        assert hasattr(message, "alt_text")
         assert message.alt_text == "支持資源"
 
     def test_escalation_message_creation(self):
@@ -407,8 +373,8 @@ class TestResponseStrategies:
         bot = CyberPuppyBot()
         message, quick_reply = bot.create_escalation_message()
 
-        assert hasattr(message, 'contents')
-        assert hasattr(message, 'alt_text')
+        assert hasattr(message, "contents")
+        assert hasattr(message, "alt_text")
         assert message.alt_text == "嚴重警告"
         assert quick_reply is not None
 
@@ -420,39 +386,23 @@ class TestResponseStrategies:
         user_session = UserSession(user_id="test_user")
 
         # 測試無毒性 -> 忽略
-        analysis = {
-            "toxicity": "none",
-            "bullying": "none",
-            "emotion": "neu"
-        }
+        analysis = {"toxicity": "none", "bullying": "none", "emotion": "neu"}
         strategy = bot.determine_response_strategy(analysis, user_session)
         assert strategy == ResponseStrategy.IGNORE
 
         # 測試輕微毒性 -> 溫和提醒
-        analysis = {
-            "toxicity": "toxic",
-            "bullying": "harassment",
-            "emotion": "neg"
-        }
+        analysis = {"toxicity": "toxic", "bullying": "harassment", "emotion": "neg"}
         strategy = bot.determine_response_strategy(analysis, user_session)
         assert strategy == ResponseStrategy.GENTLE_REMINDER
 
         # 測試嚴重毒性 -> 嚴厲警告
-        analysis = {
-            "toxicity": "severe",
-            "bullying": "threat",
-            "emotion": "neg"
-        }
+        analysis = {"toxicity": "severe", "bullying": "threat", "emotion": "neg"}
         strategy = bot.determine_response_strategy(analysis, user_session)
         assert strategy == ResponseStrategy.FIRM_WARNING
 
         # 測試重複違規 -> 升級處理
         user_session.warning_count = 3
-        analysis = {
-            "toxicity": "toxic",
-            "bullying": "harassment",
-            "emotion": "neg"
-        }
+        analysis = {"toxicity": "toxic", "bullying": "harassment", "emotion": "neg"}
         strategy = bot.determine_response_strategy(analysis, user_session)
         assert strategy == ResponseStrategy.ESCALATION
 
@@ -500,10 +450,7 @@ class TestErrorHandling:
     """Bot 錯誤處理測試"""
 
     async def test_api_service_unavailable(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試分析 API 服務不可用時的處理"""
         payload = {
@@ -516,8 +463,8 @@ class TestErrorHandling:
                     "message": {
                         "id": "test_msg_id",
                         "type": "text",
-                        "text": "測試錯誤處理"
-                    }
+                        "text": "測試錯誤處理",
+                    },
                 }
             ]
         }
@@ -526,19 +473,15 @@ class TestErrorHandling:
         signature = mock_line_signature(body)
 
         # 模擬 API 服務不可用
-        with patch(
-            'bot.line_bot.CYBERPUPPY_API_URL',
-            'http://invalid-api-url:9999'
-        ):
-            with patch('bot.line_bot.line_bot_api.reply_message') as
-                mock_reply:
+        with patch("bot.line_bot.CYBERPUPPY_API_URL", "http://invalid-api-url:9999"):
+            with patch("bot.line_bot.line_bot_api.reply_message") as mock_reply:
                 response = await http_client.post(
                     f"{bot_server}/webhook",
                     content=body,
                     headers={
                         "content-type": "application/json",
-                        "X-Line-Signature": signature
-                    }
+                        "X-Line-Signature": signature,
+                    },
                 )
 
                 await asyncio.sleep(1)  # 等待錯誤處理
@@ -548,10 +491,7 @@ class TestErrorHandling:
         mock_reply.assert_called()
 
     async def test_malformed_webhook_data(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試格式錯誤的 Webhook 資料處理"""
         # 缺少必要欄位的 payload
@@ -570,20 +510,14 @@ class TestErrorHandling:
         response = await http_client.post(
             f"{bot_server}/webhook",
             content=body,
-            headers={
-                "content-type": "application/json",
-                "X-Line-Signature": signature
-            }
+            headers={"content-type": "application/json", "X-Line-Signature": signature},
         )
 
         # 即使資料格式錯誤，webhook 也應該回傳 200 以免 LINE 重送
         assert response.status_code == 200
 
     async def test_non_text_message_handling(
-        self,
-        bot_server,
-        http_client,
-        mock_line_signature
+        self, bot_server, http_client, mock_line_signature
     ):
         """測試非文字訊息處理"""
         # 圖片訊息
@@ -594,10 +528,7 @@ class TestErrorHandling:
                     "timestamp": int(time.time() * 1000),
                     "source": {"type": "user", "userId": "test_image_user"},
                     "replyToken": "test_reply_token",
-                    "message": {
-                        "id": "test_msg_id",
-                        "type": "image"
-                    }
+                    "message": {"id": "test_msg_id", "type": "image"},
                 }
             ]
         }
@@ -608,10 +539,7 @@ class TestErrorHandling:
         response = await http_client.post(
             f"{bot_server}/webhook",
             content=body,
-            headers={
-                "content-type": "application/json",
-                "X-Line-Signature": signature
-            }
+            headers={"content-type": "application/json", "X-Line-Signature": signature},
         )
 
         assert response.status_code == 200

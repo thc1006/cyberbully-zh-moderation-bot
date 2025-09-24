@@ -17,6 +17,7 @@ from datetime import datetime
 
 class ToxicityLevel(Enum):
     """Toxicity level enumeration."""
+
     NONE = "none"
     TOXIC = "toxic"
     SEVERE = "severe"
@@ -24,6 +25,7 @@ class ToxicityLevel(Enum):
 
 class EmotionType(Enum):
     """Emotion type enumeration."""
+
     POSITIVE = "pos"
     NEUTRAL = "neu"
     NEGATIVE = "neg"
@@ -31,6 +33,7 @@ class EmotionType(Enum):
 
 class BullyingType(Enum):
     """Bullying type enumeration."""
+
     NONE = "none"
     HARASSMENT = "harassment"
     THREAT = "threat"
@@ -38,6 +41,7 @@ class BullyingType(Enum):
 
 class RoleType(Enum):
     """Role type enumeration."""
+
     NONE = "none"
     PERPETRATOR = "perpetrator"
     VICTIM = "victim"
@@ -47,6 +51,7 @@ class RoleType(Enum):
 @dataclass
 class ToxicityResult:
     """Result for toxicity detection task."""
+
     prediction: ToxicityLevel
     confidence: float
     raw_scores: Dict[str, float]
@@ -58,23 +63,24 @@ class ToxicityResult:
             "prediction": self.prediction.value,
             "confidence": self.confidence,
             "raw_scores": self.raw_scores,
-            "threshold_met": self.threshold_met
+            "threshold_met": self.threshold_met,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ToxicityResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "ToxicityResult":
         """Create from dictionary."""
         return cls(
             prediction=ToxicityLevel(data["prediction"]),
             confidence=data["confidence"],
             raw_scores=data["raw_scores"],
-            threshold_met=data["threshold_met"]
+            threshold_met=data["threshold_met"],
         )
 
 
 @dataclass
 class EmotionResult:
     """Result for emotion classification task."""
+
     prediction: EmotionType
     confidence: float
     strength: int  # 0-4 scale
@@ -84,8 +90,7 @@ class EmotionResult:
     def __post_init__(self):
         """Validate emotion strength range."""
         if not 0 <= self.strength <= 4:
-            raise ValueError(f"Emotion strength must be"
-                " 0-4, got {self.strength}")
+            raise ValueError(f"Emotion strength must be" " 0-4, got {self.strength}")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -94,24 +99,25 @@ class EmotionResult:
             "confidence": self.confidence,
             "strength": self.strength,
             "raw_scores": self.raw_scores,
-            "threshold_met": self.threshold_met
+            "threshold_met": self.threshold_met,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'EmotionResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "EmotionResult":
         """Create from dictionary."""
         return cls(
             prediction=EmotionType(data["prediction"]),
             confidence=data["confidence"],
             strength=data["strength"],
             raw_scores=data["raw_scores"],
-            threshold_met=data["threshold_met"]
+            threshold_met=data["threshold_met"],
         )
 
 
 @dataclass
 class BullyingResult:
     """Result for bullying detection task."""
+
     prediction: BullyingType
     confidence: float
     raw_scores: Dict[str, float]
@@ -123,23 +129,24 @@ class BullyingResult:
             "prediction": self.prediction.value,
             "confidence": self.confidence,
             "raw_scores": self.raw_scores,
-            "threshold_met": self.threshold_met
+            "threshold_met": self.threshold_met,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'BullyingResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "BullyingResult":
         """Create from dictionary."""
         return cls(
             prediction=BullyingType(data["prediction"]),
             confidence=data["confidence"],
             raw_scores=data["raw_scores"],
-            threshold_met=data["threshold_met"]
+            threshold_met=data["threshold_met"],
         )
 
 
 @dataclass
 class RoleResult:
     """Result for role classification task."""
+
     prediction: RoleType
     confidence: float
     raw_scores: Dict[str, float]
@@ -151,23 +158,24 @@ class RoleResult:
             "prediction": self.prediction.value,
             "confidence": self.confidence,
             "raw_scores": self.raw_scores,
-            "threshold_met": self.threshold_met
+            "threshold_met": self.threshold_met,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'RoleResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "RoleResult":
         """Create from dictionary."""
         return cls(
             prediction=RoleType(data["prediction"]),
             confidence=data["confidence"],
             raw_scores=data["raw_scores"],
-            threshold_met=data["threshold_met"]
+            threshold_met=data["threshold_met"],
         )
 
 
 @dataclass
 class ExplanationResult:
     """Result for explanation generation."""
+
     attributions: List[float]
     tokens: List[str]
     explanation_text: str
@@ -181,24 +189,25 @@ class ExplanationResult:
             "tokens": self.tokens,
             "explanation_text": self.explanation_text,
             "top_contributing_words": self.top_contributing_words,
-            "method": self.method
+            "method": self.method,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ExplanationResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "ExplanationResult":
         """Create from dictionary."""
         return cls(
             attributions=data["attributions"],
             tokens=data["tokens"],
             explanation_text=data["explanation_text"],
             top_contributing_words=data["top_contributing_words"],
-            method=data["method"]
+            method=data["method"],
         )
 
 
 @dataclass
 class ModelPrediction:
     """Individual model prediction result."""
+
     model_name: str
     predictions: Dict[str, torch.Tensor]
     confidence_scores: Dict[str, float]
@@ -213,11 +222,11 @@ class ModelPrediction:
                 for task, pred in self.predictions.items()
             },
             "confidence_scores": self.confidence_scores,
-            "processing_time": self.processing_time
+            "processing_time": self.processing_time,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ModelPrediction':
+    def from_dict(cls, data: Dict[str, Any]) -> "ModelPrediction":
         """Create from dictionary."""
         predictions = {}
         for task, pred in data["predictions"].items():
@@ -230,7 +239,7 @@ class ModelPrediction:
             model_name=data["model_name"],
             predictions=predictions,
             confidence_scores=data["confidence_scores"],
-            processing_time=data["processing_time"]
+            processing_time=data["processing_time"],
         )
 
 
@@ -266,19 +275,17 @@ class DetectionResult:
         # Validate confidence scores
         for result in [self.toxicity, self.emotion, self.bullying, self.role]:
             if not 0.0 <= result.confidence <= 1.0:
-                raise ValueError(f"Confidence must be in [0,1"
-                    "], got {result.confidence}")
+                raise ValueError(
+                    f"Confidence must be in [0,1" "], got {result.confidence}"
+                )
 
         # Validate processing time
         if self.processing_time < 0:
-            raise ValueError(f"Processing time must be non-nega"
-                "tive, got {self.processing_time}")
+            raise ValueError(
+                f"Processing time must be non-nega" "tive, got {self.processing_time}"
+            )
 
-    def is_high_risk(
-        self,
-        thresholds: Optional[Dict[str,
-        float]] = None
-    ) -> bool:
+    def is_high_risk(self, thresholds: Optional[Dict[str, float]] = None) -> bool:
         """
         Determine if the result indicates high risk based on thresholds.
 
@@ -290,52 +297,48 @@ class DetectionResult:
         """
         if thresholds is None:
             thresholds = {
-                'toxicity_severe': 0.8,
-                'toxicity_toxic': 0.7,
-                'bullying_threat': 0.8,
-                'bullying_harassment': 0.7,
-                'emotion_negative_strong': 0.8
+                "toxicity_severe": 0.8,
+                "toxicity_toxic": 0.7,
+                "bullying_threat": 0.8,
+                "bullying_harassment": 0.7,
+                "emotion_negative_strong": 0.8,
             }
 
         # Check severe toxicity
-        if (self.toxicity.prediction == ToxicityLevel.SEVERE and
-                self.toxicity.confidence >= thresholds.get(
-                    'toxicity_severe',
-                    0.8)
-                ):
+        if (
+            self.toxicity.prediction == ToxicityLevel.SEVERE
+            and self.toxicity.confidence >= thresholds.get("toxicity_severe", 0.8)
+        ):
             return True
 
         # Check toxic content
-        if (self.toxicity.prediction == ToxicityLevel.TOXIC and
-                self.toxicity.confidence >= thresholds.get(
-                    'toxicity_toxic',
-                    0.7)
-                ):
+        if (
+            self.toxicity.prediction == ToxicityLevel.TOXIC
+            and self.toxicity.confidence >= thresholds.get("toxicity_toxic", 0.7)
+        ):
             return True
 
         # Check threats
-        if (self.bullying.prediction == BullyingType.THREAT and
-                self.bullying.confidence >= thresholds.get(
-                    'bullying_threat',
-                    0.8)
-                ):
+        if (
+            self.bullying.prediction == BullyingType.THREAT
+            and self.bullying.confidence >= thresholds.get("bullying_threat", 0.8)
+        ):
             return True
 
         # Check harassment
-        if (self.bullying.prediction == BullyingType.HARASSMENT and
-                self.bullying.confidence >= thresholds.get(
-                    'bullying_harassment',
-                    0.7)
-                ):
+        if (
+            self.bullying.prediction == BullyingType.HARASSMENT
+            and self.bullying.confidence >= thresholds.get("bullying_harassment", 0.7)
+        ):
             return True
 
         # Check strong negative emotion
-        if (self.emotion.prediction == EmotionType.NEGATIVE and
-                self.emotion.strength >= 3 and
-                self.emotion.confidence >= thresholds.get(
-                    'emotion_negative_strong',
-                    0.8)
-                ):
+        if (
+            self.emotion.prediction == EmotionType.NEGATIVE
+            and self.emotion.strength >= 3
+            and self.emotion.confidence
+            >= thresholds.get("emotion_negative_strong", 0.8)
+        ):
             return True
 
         return False
@@ -354,7 +357,7 @@ class DetectionResult:
             "role": self.role.prediction.value,
             "high_risk": self.is_high_risk(),
             "context_used": self.context_used,
-            "model_version": self.model_version
+            "model_version": self.model_version,
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -378,7 +381,7 @@ class DetectionResult:
             "ensemble_weights": self.ensemble_weights,
             "context_used": self.context_used,
             "context_length": self.context_length,
-            "model_version": self.model_version
+            "model_version": self.model_version,
         }
 
     def to_json(self, indent: int = 2) -> str:
@@ -386,7 +389,7 @@ class DetectionResult:
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'DetectionResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "DetectionResult":
         """Create from dictionary."""
         return cls(
             text=data["text"],
@@ -407,11 +410,11 @@ class DetectionResult:
             ensemble_weights=data["ensemble_weights"],
             context_used=data.get("context_used", False),
             context_length=data.get("context_length", 0),
-            model_version=data.get("model_version", "1.0.0")
+            model_version=data.get("model_version", "1.0.0"),
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'DetectionResult':
+    def from_json(cls, json_str: str) -> "DetectionResult":
         """Create from JSON string."""
         data = json.loads(json_str)
         return cls.from_dict(data)
@@ -421,8 +424,7 @@ class ResultAggregator:
     """Utility class for aggregating detection results."""
 
     @staticmethod
-    def aggregate_batch_results(results: List[DetectionResult]) -> Dict[str,
-        Any]:
+    def aggregate_batch_results(results: List[DetectionResult]) -> Dict[str, Any]:
         """
         Aggregate statistics from a batch of results.
 
@@ -479,49 +481,47 @@ class ResultAggregator:
                 "toxicity": toxicity_counts,
                 "emotion": emotion_counts,
                 "bullying": bullying_counts,
-                "role": role_counts
+                "role": role_counts,
             },
             "confidence_statistics": {
                 "toxicity": {
                     "mean": np.mean(toxicity_confidences),
                     "std": np.std(toxicity_confidences),
                     "min": np.min(toxicity_confidences),
-                    "max": np.max(toxicity_confidences)
+                    "max": np.max(toxicity_confidences),
                 },
                 "emotion": {
                     "mean": np.mean(emotion_confidences),
                     "std": np.std(emotion_confidences),
                     "min": np.min(emotion_confidences),
-                    "max": np.max(emotion_confidences)
+                    "max": np.max(emotion_confidences),
                 },
                 "bullying": {
                     "mean": np.mean(bullying_confidences),
                     "std": np.std(bullying_confidences),
                     "min": np.min(bullying_confidences),
-                    "max": np.max(bullying_confidences)
+                    "max": np.max(bullying_confidences),
                 },
                 "role": {
                     "mean": np.mean(role_confidences),
                     "std": np.std(role_confidences),
                     "min": np.min(role_confidences),
-                    "max": np.max(role_confidences)
-                }
+                    "max": np.max(role_confidences),
+                },
             },
             "processing_time_statistics": {
                 "mean": np.mean(processing_times),
                 "std": np.std(processing_times),
                 "min": np.min(processing_times),
-                "max": np.max(processing_times)
+                "max": np.max(processing_times),
             },
             "high_risk_count": high_risk_count,
-            "high_risk_percentage": (high_risk_count / total_results) * 100
+            "high_risk_percentage": (high_risk_count / total_results) * 100,
         }
 
     @staticmethod
     def filter_results_by_confidence(
-        results: List[DetectionResult],
-        task: str,
-        min_confidence: float
+        results: List[DetectionResult], task: str, min_confidence: float
     ) -> List[DetectionResult]:
         """
         Filter results by minimum confidence for a specific task.
@@ -535,7 +535,7 @@ class ResultAggregator:
             Filtered results
         """
         filtered = []
-        valid_tasks = {'toxicity', 'emotion', 'bullying', 'role'}
+        valid_tasks = {"toxicity", "emotion", "bullying", "role"}
 
         if task not in valid_tasks:
             return filtered
@@ -549,8 +549,7 @@ class ResultAggregator:
 
     @staticmethod
     def get_top_risk_results(
-        results: List[DetectionResult],
-        top_k: int = 10
+        results: List[DetectionResult], top_k: int = 10
     ) -> List[DetectionResult]:
         """
         Get top K highest risk results.
@@ -562,6 +561,7 @@ class ResultAggregator:
         Returns:
             Top K highest risk results
         """
+
         # Calculate risk scores
         def calculate_risk_score(result: DetectionResult) -> float:
             score = 0.0
@@ -579,16 +579,17 @@ class ResultAggregator:
                 score += result.bullying.confidence * 2.0
 
             # Strong negative emotion contribution
-            if (result.emotion.prediction == EmotionType.NEGATIVE and
-                    result.emotion.strength >= 3):
+            if (
+                result.emotion.prediction == EmotionType.NEGATIVE
+                and result.emotion.strength >= 3
+            ):
                 score += result.emotion.confidence * 1.5
 
             return score
 
         # Sort by risk score
         results_with_scores = [
-            (result, calculate_risk_score(result))
-            for result in results
+            (result, calculate_risk_score(result)) for result in results
         ]
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
 
@@ -599,27 +600,10 @@ class ConfidenceThresholds:
     """Utility class for managing confidence thresholds."""
 
     DEFAULT_THRESHOLDS = {
-        'toxicity': {
-            'none': 0.6,
-            'toxic': 0.7,
-            'severe': 0.8
-        },
-        'emotion': {
-            'pos': 0.6,
-            'neu': 0.5,
-            'neg': 0.6
-        },
-        'bullying': {
-            'none': 0.6,
-            'harassment': 0.7,
-            'threat': 0.8
-        },
-        'role': {
-            'none': 0.5,
-            'perpetrator': 0.7,
-            'victim': 0.6,
-            'bystander': 0.6
-        }
+        "toxicity": {"none": 0.6, "toxic": 0.7, "severe": 0.8},
+        "emotion": {"pos": 0.6, "neu": 0.5, "neg": 0.6},
+        "bullying": {"none": 0.6, "harassment": 0.7, "threat": 0.8},
+        "role": {"none": 0.5, "perpetrator": 0.7, "victim": 0.6, "bystander": 0.6},
     }
 
     @classmethod
@@ -628,12 +612,7 @@ class ConfidenceThresholds:
         return cls.DEFAULT_THRESHOLDS.get(task, {}).get(prediction, 0.5)
 
     @classmethod
-    def update_thresholds(
-        cls,
-        new_thresholds: Dict[str,
-        Dict[str,
-        float]]
-    ) -> None:
+    def update_thresholds(cls, new_thresholds: Dict[str, Dict[str, float]]) -> None:
         """Update default thresholds."""
         for task, thresholds in new_thresholds.items():
             if task in cls.DEFAULT_THRESHOLDS:
@@ -642,12 +621,7 @@ class ConfidenceThresholds:
                 cls.DEFAULT_THRESHOLDS[task] = thresholds
 
     @classmethod
-    def validate_thresholds(
-        cls,
-        thresholds: Dict[str,
-        Dict[str,
-        float]]
-    ) -> bool:
+    def validate_thresholds(cls, thresholds: Dict[str, Dict[str, float]]) -> bool:
         """Validate threshold values are in valid range."""
         for task, task_thresholds in thresholds.items():
             for prediction, threshold in task_thresholds.items():

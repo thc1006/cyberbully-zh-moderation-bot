@@ -9,10 +9,10 @@ import sys
 import os
 
 # Set UTF-8 encoding for Windows console
-if os.name == 'nt':  # Windows
-    os.system('chcp 65001')
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+if os.name == "nt":  # Windows
+    os.system("chcp 65001")
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 
 def test_api():
@@ -31,11 +31,10 @@ def test_api():
 
     # Test analyze endpoint
     test_cases = [
-        {"te"
-            "xt": 
+        {"text": "你好世界", "description": "Friendly greeting (Chinese)"},
         {"text": "bendan", "description": "Mild insult (Pinyin)"},
         {"text": "qusi", "description": "Severe threat (Pinyin)"},
-        {"text": "I need help", "description": "Neutral request (English)"}
+        {"text": "I need help", "description": "Neutral request (English)"},
     ]
 
     print("Testing analyze endpoint...")
@@ -44,15 +43,12 @@ def test_api():
         print(f"Text: '{test_case['text']}'")
 
         try:
-            payload = {
-                "text": test_case["text"],
-                "context": None
-            }
+            payload = {"text": test_case["text"], "context": None}
 
             response = requests.post(
                 f"{base_url}/analyze",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
 
             print(f"Status: {response.status_code}")
@@ -63,8 +59,10 @@ def test_api():
                 print(f"Emotion: {result['emotion']}")
                 print(f"Bullying: {result['bullying']}")
                 print(f"Processing time: {result['processing_time_ms']}ms")
-                print(f"Important words: \
-                    {result['explanations']['important_words']}")
+                print(
+                    f"Important words: \
+                    {result['explanations']['important_words']}"
+                )
             else:
                 print(f"Error: {response.text}")
 
