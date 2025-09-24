@@ -1,0 +1,45 @@
+# CyberPuppy API Docker Compose 配置
+version: '3.8'
+
+services:
+  cyberpuppy-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONPATH=/app
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - cyberpuppy-network
+
+  # 可選：Redis for distributed rate limiting
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - cyberpuppy-network
+    profiles:
+      - with-redis  # 使用 docker-compose --profile with-redis up 啟動
+
+networks:
+  cyberpuppy-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

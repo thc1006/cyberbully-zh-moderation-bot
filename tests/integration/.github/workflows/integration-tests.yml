@@ -1,0 +1,440 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.9'
+  NODE_VERSION: '16'
+
+jobs:
+  # 基本整合測試
+  basic-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password_123
+          POSTGRES_USER: test_user
+          POSTGRES_DB: cyberpuppy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl wget jq
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Set up test environment
+      run: |
+        export TESTING=1
+        export LOG_LEVEL=INFO
+        export CUDA_VISIBLE_DEVICES=""
+        export REDIS_URL=redis://localhost:6379/0
+        export DATABASE_URL=postgresql://test_user:test_password_123@localhost:5432/cyberpuppy_test
+
+    - name: Wait for services
+      run: |
+        # Wait for Redis
+        timeout 30s bash -c 'until redis-cli ping; do sleep 1; done'
+
+        # Wait for PostgreSQL
+        timeout 30s bash -c 'until pg_isready -h localhost -p 5432; do sleep 1; done'
+
+    - name: Run unit tests first
+      run: |
+        pytest tests/ -v --tb=short --maxfail=5 \
+          --cov=src --cov=api --cov=bot \
+          --cov-report=xml \
+          -m "not integration and not slow"
+
+    - name: Start API server in background
+      run: |
+        cd api
+        python app.py &
+        API_PID=$!
+        echo "API_PID=$API_PID" >> $GITHUB_ENV
+
+        # Wait for API to be ready
+        timeout 60s bash -c 'until curl -f http://localhost:8000/healthz; do sleep 2; done'
+
+    - name: Start Bot server in background
+      env:
+        LINE_CHANNEL_ACCESS_TOKEN: test_token_1234567890_abcdefghijk_TESTONLY_DO_NOT_USE_IN_PRODUCTION
+        LINE_CHANNEL_SECRET: test_secret_1234567890_TESTONLY_DO_NOT_USE_IN_PRODUCTION
+        CYBERPUPPY_API_URL: http://localhost:8000
+      run: |
+        cd bot
+        python line_bot.py &
+        BOT_PID=$!
+        echo "BOT_PID=$BOT_PID" >> $GITHUB_ENV
+
+        # Wait for Bot to be ready
+        timeout 60s bash -c 'until curl -f http://localhost:8080/health; do sleep 2; done'
+
+    - name: Run API integration tests
+      run: |
+        pytest tests/integration/api/ -v --tb=short \
+          --junit-xml=test-results/api-integration.xml \
+          -m "api and not slow"
+
+    - name: Run Bot integration tests
+      run: |
+        pytest tests/integration/bot/ -v --tb=short \
+          --junit-xml=test-results/bot-integration.xml \
+          -m "bot and not slow"
+
+    - name: Run CLI integration tests
+      run: |
+        pytest tests/integration/cli/ -v --tb=short \
+          --junit-xml=test-results/cli-integration.xml \
+          -m "cli and not slow"
+
+    - name: Cleanup background processes
+      if: always()
+      run: |
+        if [ ! -z "$API_PID" ]; then kill $API_PID || true; fi
+        if [ ! -z "$BOT_PID" ]; then kill $BOT_PID || true; fi
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-basic
+        path: test-results/
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: coverage.xml
+        flags: integration
+
+  # 效能整合測試
+  performance-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: basic-integration
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Start services
+      run: |
+        # Start API
+        cd api && python app.py &
+        API_PID=$!
+
+        # Wait and verify
+        timeout 60s bash -c 'until curl -f http://localhost:8000/healthz; do sleep 2; done'
+        echo "API_PID=$API_PID" >> $GITHUB_ENV
+
+    - name: Run performance tests
+      run: |
+        pytest tests/integration/performance/ -v --tb=short \
+          --junit-xml=test-results/performance-integration.xml \
+          --benchmark-json=test-results/benchmark.json \
+          -m "performance and not slow"
+
+    - name: Analyze performance results
+      run: |
+        python -c "
+        import json
+        import sys
+
+        try:
+            with open('test-results/benchmark.json', 'r') as f:
+                data = json.load(f)
+
+            benchmarks = data.get('benchmarks', [])
+            failed_benchmarks = []
+
+            for bench in benchmarks:
+                stats = bench.get('stats', {})
+                mean_time = stats.get('mean', 0)
+
+                # Check if performance requirements are met
+                if mean_time > 2.0:  # 2 second limit
+                    failed_benchmarks.append({
+                        'name': bench.get('name', ''),
+                        'mean_time': mean_time
+                    })
+
+            if failed_benchmarks:
+                print('Performance regression detected:')
+                for bench in failed_benchmarks:
+                    print(f'  {bench[\"name\"]}: {bench[\"mean_time\"]:.3f}s')
+                sys.exit(1)
+            else:
+                print('All performance benchmarks passed')
+
+        except FileNotFoundError:
+            print('No benchmark results found')
+        except Exception as e:
+            print(f'Error analyzing benchmarks: {e}')
+        "
+
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ ! -z "$API_PID" ]; then kill $API_PID || true; fi
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: test-results/
+
+  # Docker 整合測試
+  docker-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: basic-integration
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker images
+      run: |
+        # Build API image
+        docker build -t cyberpuppy-api:test -f api/Dockerfile .
+
+        # Build Bot image
+        docker build -t cyberpuppy-bot:test -f bot/Dockerfile .
+
+    - name: Run Docker Compose tests
+      run: |
+        cd tests/integration/docker
+
+        # Start services
+        docker-compose -f docker-compose.test.yml up -d --build
+
+        # Wait for services
+        timeout 120s bash -c '
+          until docker-compose -f docker-compose.test.yml exec -T cyberpuppy-api-test curl -f http://localhost:8000/healthz; do
+            echo "Waiting for API..."
+            sleep 5
+          done
+        '
+
+        # Run integration tests in container
+        docker-compose -f docker-compose.test.yml run --rm integration-tests
+
+    - name: Get container logs
+      if: always()
+      run: |
+        cd tests/integration/docker
+        echo "=== API Logs ==="
+        docker-compose -f docker-compose.test.yml logs cyberpuppy-api-test
+        echo "=== Bot Logs ==="
+        docker-compose -f docker-compose.test.yml logs cyberpuppy-bot-test
+
+    - name: Cleanup Docker
+      if: always()
+      run: |
+        cd tests/integration/docker
+        docker-compose -f docker-compose.test.yml down -v
+
+    - name: Upload Docker test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: docker-test-results
+        path: test-results/
+
+  # 資料管道整合測試
+  pipeline-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: basic-integration
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Prepare test data
+      run: |
+        mkdir -p data/raw data/processed models
+
+        # Create sample test data
+        python -c "
+        import json
+
+        # Create sample dataset
+        sample_data = [
+            {'text': '你好，今天天氣很好', 'label': 'positive'},
+            {'text': '這個想法很不錯', 'label': 'positive'},
+            {'text': '你這個笨蛋', 'label': 'negative'},
+            {'text': '我要揍你', 'label': 'negative'},
+            {'text': '今天的會議如何？', 'label': 'neutral'},
+        ] * 20  # 100 samples
+
+        with open('data/raw/test_sample.jsonl', 'w', encoding='utf-8') as f:
+            for item in sample_data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        "
+
+    - name: Run pipeline integration tests
+      run: |
+        pytest tests/integration/pipeline/ -v --tb=short \
+          --junit-xml=test-results/pipeline-integration.xml \
+          -m "pipeline and not slow"
+
+    - name: Verify pipeline outputs
+      run: |
+        # Check if pipeline generated expected outputs
+        if [ -d "data/processed" ]; then
+          echo "Processed data directory exists"
+          ls -la data/processed/
+        fi
+
+        if [ -d "models" ]; then
+          echo "Models directory exists"
+          ls -la models/
+        fi
+
+    - name: Upload pipeline results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: pipeline-results
+        path: |
+          test-results/
+          data/processed/
+          models/
+
+  # 完整端到端測試（僅在 main 分支）
+  end-to-end:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.ref == 'refs/heads/main'
+    needs: [basic-integration, performance-integration, docker-integration, pipeline-integration]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install all dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run complete integration test suite
+      run: |
+        pytest tests/integration/ -v --tb=short --maxfail=10 \
+          --junit-xml=test-results/complete-integration.xml \
+          --cov=src --cov=api --cov=bot \
+          --cov-report=html:test-results/coverage-html \
+          --cov-report=xml:test-results/coverage.xml \
+          -m "integration"
+
+    - name: Upload complete test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: complete-integration-results
+        path: test-results/
+
+    - name: Deploy to staging (if all tests pass)
+      if: success()
+      run: |
+        echo "All integration tests passed. Ready for staging deployment."
+        # Add your deployment steps here
+
+  # 通知與報告
+  notify:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [basic-integration, performance-integration, docker-integration, pipeline-integration]
+
+    steps:
+    - name: Collect test results
+      run: |
+        echo "Integration test results:"
+        echo "Basic integration: ${{ needs.basic-integration.result }}"
+        echo "Performance integration: ${{ needs.performance-integration.result }}"
+        echo "Docker integration: ${{ needs.docker-integration.result }}"
+        echo "Pipeline integration: ${{ needs.pipeline-integration.result }}"
+
+    - name: Report to Slack (optional)
+      if: failure()
+      run: |
+        # Add Slack notification for failures
+        echo "Integration tests failed - notification would be sent to Slack"

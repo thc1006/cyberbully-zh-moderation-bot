@@ -1,0 +1,174 @@
+{
+  "test_metadata": {
+    "timestamp": "2025-09-24T15:40:46.269221",
+    "total_test_cases": 13,
+    "api_base_url": "http://localhost:8000"
+  },
+  "overall_results": {
+    "successful_requests": 0,
+    "failed_requests": 13,
+    "success_rate": 0.0,
+    "average_response_time_s": 0
+  },
+  "prediction_accuracy": {
+    "status": "no_successful_predictions"
+  },
+  "health_check": {
+    "endpoint": "health",
+    "status": "success",
+    "response_code": 200,
+    "data": {
+      "status": "healthy",
+      "timestamp": "2025-09-24T15:40:44.811271",
+      "version": "1.0.0",
+      "uptime_seconds": 1216.5,
+      "model_status": {
+        "models_loaded": true,
+        "device": "cpu",
+        "warmup_complete": true,
+        "total_predictions": 19,
+        "average_processing_time": 0.0
+      }
+    },
+    "model_status": {
+      "models_loaded": true,
+      "device": "cpu",
+      "warmup_complete": true,
+      "total_predictions": 19,
+      "average_processing_time": 0.0
+    }
+  },
+  "metrics": {
+    "endpoint": "metrics",
+    "status": "success",
+    "data": {
+      "total_predictions": 32,
+      "successful_predictions": 32,
+      "failed_predictions": 0,
+      "success_rate": 1.0,
+      "average_processing_time_ms": 0.06,
+      "total_processing_time_s": 0.0,
+      "startup_time_s": 0.0005829334259033203,
+      "cache_hits": 0,
+      "model_device": "cpu",
+      "models_loaded": true,
+      "warmup_complete": true,
+      "gpu_memory": null
+    }
+  },
+  "detailed_results": [
+    {
+      "text_description": "Positive greeting",
+      "input_text": "你好，今天天氣真好",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.015,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:44.826629\"}"
+    },
+    {
+      "text_description": "Neutral request for help",
+      "input_text": "我需要幫助解決這個問題",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.004,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:44.937903\"}"
+    },
+    {
+      "text_description": "Positive gratitude",
+      "input_text": "謝謝你的幫助，我很感激",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.004,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.058012\"}"
+    },
+    {
+      "text_description": "Mild insult - toxic",
+      "input_text": "你真是個笨蛋",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.175989\"}"
+    },
+    {
+      "text_description": "Offensive language - toxic",
+      "input_text": "滾開，白痴",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.004,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.287541\"}"
+    },
+    {
+      "text_description": "Derogatory language - toxic",
+      "input_text": "你這個廢物，沒用的東西",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.004,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.401159\"}"
+    },
+    {
+      "text_description": "Death threats - severe",
+      "input_text": "去死吧，我要殺死你",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.003,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.517268\"}"
+    },
+    {
+      "text_description": "Suicide suggestion - severe",
+      "input_text": "你不如自殺算了",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.004,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.629600\"}"
+    },
+    {
+      "text_description": "Social harassment",
+      "input_text": "沒有人喜歡你，你很討厭",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.732733\"}"
+    },
+    {
+      "text_description": "Intimidation threat",
+      "input_text": "如果你不聽話，你會後悔的",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.842956\"}"
+    },
+    {
+      "text_description": "Ambiguous expression",
+      "input_text": "呵呵呵呵呵",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:45.947213\"}"
+    },
+    {
+      "text_description": "Negative emotion but not toxic",
+      "input_text": "我今天心情不好",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:46.054101\"}"
+    },
+    {
+      "text_description": "Mixed polite + insult",
+      "input_text": "你好，但是你真的很笨",
+      "status": "failed",
+      "response_code": 500,
+      "response_time_s": 0.002,
+      "error": "{\"error\":true,\"message\":\"分析處理失敗，請稍後再試\",\"timestamp\":\"2025-09-24T15:40:46.160253\"}"
+    }
+  ],
+  "conclusion": {
+    "status": "major_issues",
+    "message": "Low API success rate - significant issues detected",
+    "recommendations": [
+      "Check API error logs",
+      "Verify request format",
+      "Review model loading"
+    ]
+  }
+}

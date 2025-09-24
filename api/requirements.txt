@@ -1,0 +1,31 @@
+# CyberPuppy API Dependencies
+# FastAPI 和相關元件
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 請求限制和安全
+slowapi==0.1.9
+redis==5.0.1  # 用於 slowapi 分散式限制（可選）
+
+# 驗證和序列化
+pydantic==2.5.0
+
+# HTTP 客戶端（用於健康檢查等）
+httpx==0.25.2
+
+# 日誌和監控
+python-multipart==0.0.6
+
+# 開發和測試
+pytest==7.4.3
+pytest-asyncio==0.21.1
+requests==2.31.0
+
+# 如果需要整合真實模型，取消註解以下依賴
+# torch==2.1.1
+# transformers==4.36.0
+# tokenizers==0.15.0
+# numpy==1.24.3
+# scikit-learn==1.3.2
+# opencc-python-reimplemented==0.1.7
+# ckip-transformers==0.3.2

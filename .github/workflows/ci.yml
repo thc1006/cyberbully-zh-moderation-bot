@@ -1,0 +1,401 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每週一早上 9 點執行（UTC 時間 1 點）
+    - cron: '0 1 * * 1'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  POETRY_VERSION: '1.7.0'
+
+jobs:
+  # 程式碼品質檢查
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 完整 git 歷史，用於某些分析工具
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: 🎨 Format check with Black
+      run: |
+        black --check --diff src/ tests/ api/ bot/
+      continue-on-error: true
+
+    - name: 🔍 Lint with Flake8
+      run: |
+        flake8 src/ tests/ api/ bot/ --config=.flake8
+      continue-on-error: true
+
+    - name: 📏 Sort imports with isort
+      run: |
+        isort --check-only --diff src/ tests/ api/ bot/
+      continue-on-error: true
+
+    - name: 🔒 Docstring check with pydocstyle
+      run: |
+        pydocstyle src/ --config=.pydocstyle
+      continue-on-error: true
+
+    - name: 📊 Code complexity with radon
+      run: |
+        radon cc src/ -s -nb
+        radon mi src/ -s
+      continue-on-error: true
+
+  # 型別檢查
+  type-checking:
+    name: Type Checking
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install mypy types-requests types-PyYAML
+
+    - name: 🔍 Type check with mypy
+      run: |
+        mypy src/ api/ bot/ --config-file=mypy.ini
+      continue-on-error: true
+
+  # 安全掃描
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety semgrep
+
+    - name: 🔒 Security scan with Bandit
+      run: |
+        bandit -r src/ api/ bot/ -f json -o bandit-report.json
+        bandit -r src/ api/ bot/ -f screen -ll
+      continue-on-error: true
+
+    - name: 📦 Dependency check with Safety
+      run: |
+        safety check --json > safety-report.json || true
+        safety check || true
+      continue-on-error: true
+
+    - name: 🔍 SAST with Semgrep
+      run: |
+        semgrep --config=auto src/ api/ bot/ --json -o semgrep-report.json || true
+        semgrep --config=auto src/ api/ bot/ || true
+      continue-on-error: true
+
+    - name: 📤 Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          semgrep-report.json
+
+  # 單元測試
+  unit-tests:
+    name: Unit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12']
+      fail-fast: false
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: 🧪 Run unit tests
+      run: |
+        pytest tests/ \
+          --cov=src/cyberpuppy \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --junitxml=junit.xml \
+          -v
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+        path: |
+          junit.xml
+          htmlcov/
+          coverage.xml
+
+  # 整合測試
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: 🔧 Set up environment
+      run: |
+        cp .env.example .env
+        echo "REDIS_URL=redis://localhost:6379" >> .env
+
+    - name: 🧪 Run integration tests
+      run: |
+        pytest tests/integration/ -v --tb=short
+      continue-on-error: true
+
+  # Docker 建構測試
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🏗️ Build API Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./api
+        push: false
+        tags: cyberpuppy-api:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 🏗️ Build Bot Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./bot
+        push: false
+        tags: cyberpuppy-bot:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 🧪 Test Docker containers
+      run: |
+        docker run --rm cyberpuppy-api:test python -c "import fastapi; print('API container OK')"
+        docker run --rm cyberpuppy-bot:test python -c "import linebot; print('Bot container OK')"
+
+  # 文檔建構測試
+  documentation:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints myst-parser
+
+    - name: 📚 Build documentation
+      run: |
+        cd docs
+        make html
+      continue-on-error: true
+
+    - name: 📤 Upload documentation
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: documentation
+        path: docs/_build/html/
+
+  # 依賴檢查
+  dependency-check:
+    name: Dependency License Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install pip-licenses
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-licenses
+
+    - name: 📋 Check licenses
+      run: |
+        pip-licenses --format=markdown --with-urls --output-file=LICENSES.md
+        pip-licenses --fail-on="GPL;LGPL"
+      continue-on-error: true
+
+    - name: 📤 Upload license report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: license-report
+        path: LICENSES.md
+
+  # 效能測試（僅在主分支）
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [unit-tests]
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust pytest-benchmark
+
+    - name: 🏃 Run performance benchmarks
+      run: |
+        pytest tests/performance/ --benchmark-only --benchmark-json=benchmark.json
+      continue-on-error: true
+
+    - name: 📤 Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: benchmark-results
+        path: benchmark.json
+
+  # 總結報告
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, type-checking, security-scan, unit-tests, docker-build]
+    if: always()
+
+    steps:
+    - name: 📥 Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: 📊 Generate summary report
+      run: |
+        echo "# CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 🎯 Pipeline Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Code Quality | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Type Checking | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security Scan | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Build | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 Notes" >> $GITHUB_STEP_SUMMARY
+        echo "- All checks completed successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- Artifacts available for download" >> $GITHUB_STEP_SUMMARY

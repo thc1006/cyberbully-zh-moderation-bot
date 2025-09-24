@@ -1,0 +1,182 @@
+# 主動學習配置文件
+
+# 不確定性採樣參數
+uncertainty:
+  entropy_threshold: 0.3           # 熵值閾值（高於此值視為不確定）
+  confidence_margin: 0.2           # 置信度邊界閾值
+  least_confidence_weight: 0.2     # 最小置信度權重
+
+# 爭議性檢測參數
+controversy:
+  threshold: 0.15                  # 爭議性閾值
+  min_models: 2                    # 最少需要幾個模型的預測
+  kl_weight: 0.4                   # KL散度權重
+  label_disagreement_weight: 0.6   # 標籤不一致權重
+
+# 多樣性採樣參數
+diversity:
+  weight: 0.3                      # 多樣性權重（與不確定性平衡）
+  metric: cosine                   # 距離度量方式 (cosine, euclidean)
+  min_distance: 0.1                # 最小距離閾值
+
+# 樣本選擇策略
+selection:
+  strategy_weights:
+    uncertainty: 0.4               # 不確定性採樣權重
+    margin: 0.2                    # 邊界採樣權重
+    controversy: 0.2               # 爭議採樣權重
+    diversity: 0.2                 # 多樣性採樣權重
+
+  max_samples_per_batch: 100      # 每批最大樣本數
+  min_samples_per_batch: 10       # 每批最小樣本數
+
+  # 各類別樣本配比
+  category_ratios:
+    high_uncertainty: 0.4          # 高不確定性樣本比例
+    controversial: 0.3             # 爭議性樣本比例
+    diverse: 0.3                   # 多樣性樣本比例
+
+# 再訓練觸發條件
+retraining:
+  min_samples: 500                 # 最少標註樣本數
+  max_samples: 10000               # 最大累積樣本數
+  interval_days: 7                 # 定期再訓練間隔（天）
+
+  # 性能閾值（低於此值強制再訓練）
+  performance_thresholds:
+    toxicity_f1: 0.75              # 毒性偵測 F1 閾值
+    emotion_f1: 0.82               # 情緒分類 F1 閾值
+
+  # 早停條件
+  early_stopping:
+    patience: 5                    # 早停耐心值
+    min_delta: 0.001               # 最小改進值
+
+# 樣本池管理
+sample_pool:
+  max_size: 50000                  # 樣本池最大容量
+  window_hours: 24                 # 收集窗口（小時）
+  deduplication: true              # 是否去重
+
+  # 樣本過濾
+  filters:
+    min_text_length: 5             # 最小文本長度
+    max_text_length: 512           # 最大文本長度
+    exclude_patterns:              # 排除模式
+      - "^\\s*$"                   # 空白文本
+      - "^[0-9\\s]+$"              # 純數字
+
+# 標註任務配置
+annotation:
+  output_format: csv               # 輸出格式 (csv, jsonl)
+  include_metadata: true           # 是否包含元數據
+  include_predictions: true        # 是否包含預測結果
+  include_embeddings: false        # 是否包含嵌入向量
+
+  # CSV 欄位配置
+  csv_fields:
+    - sample_id                    # 樣本ID
+    - text                         # 文本內容
+    - predicted_toxicity           # 預測毒性
+    - toxicity_confidence          # 毒性置信度
+    - predicted_emotion            # 預測情緒
+    - emotion_confidence           # 情緒置信度
+    - selection_reasons            # 選擇原因
+    - timestamp                    # 時間戳
+    - true_toxicity                # 真實毒性（待標註）
+    - true_emotion                 # 真實情緒（待標註）
+    - annotator                    # 標註者
+    - annotation_notes             # 標註備註
+
+# 模型整合
+models:
+  ensemble_models:                 # 整合模型列表
+    - name: "chinese-macbert-base"
+      weight: 0.4
+      path: "models/macbert"
+    - name: "chinese-roberta-wwm"
+      weight: 0.3
+      path: "models/roberta"
+    - name: "chinese-bert-base"
+      weight: 0.3
+      path: "models/bert"
+
+  voting_method: soft              # 投票方式 (soft, hard)
+
+  # 不確定性校準
+  calibration:
+    method: temperature            # 校準方法 (temperature, isotonic)
+    temperature: 1.5               # 溫度參數
+
+# 資料存儲
+storage:
+  base_dir: "./data/active_learning"
+
+  # 子目錄
+  directories:
+    raw: "raw"                     # 原始預測
+    selected: "selected"           # 選中樣本
+    annotations: "annotations"     # 標註結果
+    retrain: "retrain_data"        # 再訓練數據
+    archive: "archive"             # 歸檔數據
+
+  # 檔案命名
+  file_naming:
+    use_timestamp: true            # 使用時間戳
+    date_format: "%Y%m%d_%H%M%S"  # 日期格式
+    prefix: "al"                  # 檔案前綴
+
+# 監控與日誌
+monitoring:
+  log_level: INFO                  # 日誌級別
+  log_file: "logs/active_learning.log"
+
+  # 指標追蹤
+  metrics:
+    track_selection_stats: true    # 追蹤選擇統計
+    track_annotation_progress: true # 追蹤標註進度
+    track_model_agreement: true    # 追蹤模型一致性
+
+  # 報告生成
+  reporting:
+    generate_daily_report: true    # 生成日報
+    generate_weekly_report: true   # 生成週報
+    report_format: html            # 報告格式 (html, pdf, markdown)
+
+# 通知設定
+notifications:
+  enabled: true                    # 啟用通知
+
+  # 通知觸發條件
+  triggers:
+    - event: "batch_ready"         # 批次準備完成
+      threshold: 50                # 樣本數閾值
+    - event: "retrain_needed"      # 需要再訓練
+      threshold: 500               # 樣本數閾值
+    - event: "performance_drop"    # 性能下降
+      threshold: 0.05              # 下降幅度
+
+  # 通知管道
+  channels:
+    email:
+      enabled: false
+      recipients: []
+    slack:
+      enabled: false
+      webhook_url: ""
+    line_notify:
+      enabled: false
+      token: ""
+
+# 實驗追蹤
+experiment:
+  track_experiments: true          # 追蹤實驗
+  mlflow_uri: null                 # MLflow URI（可選）
+  wandb_project: null              # W&B 專案（可選）
+
+  # 追蹤內容
+  track_items:
+    - selection_distribution       # 選擇分佈
+    - annotation_quality           # 標註品質
+    - model_improvements           # 模型改進
+    - sample_diversity             # 樣本多樣性
