@@ -349,12 +349,9 @@ class TestSessionLevelEvaluator(unittest.TestCase):
         # Create a session with escalation pattern
         escalation_session = SessionContext("escalation_session")
         escalation_messages = [
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
+            {"text": "Start of conversation", "toxicity": "none", "timestamp": 1},
+            {"text": "Getting a bit annoyed", "toxicity": "toxic", "timestamp": 2},
+            {"text": "This is severe escalation", "toxicity": "severe", "timestamp": 3},
         ]
 
         for msg in escalation_messages:

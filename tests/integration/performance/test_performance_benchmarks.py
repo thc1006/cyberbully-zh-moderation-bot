@@ -345,8 +345,7 @@ except Exception as e:
                         key, value = line.split(":", 1)
                         if "MB" in value:
                             try:
-                                memory_info[key.strip()] = float(value.replace("M"
-                                    "B", 
+                                memory_info[key.strip()] = float(value.replace("MB", "").strip())
                             except ValueError:
                                 pass
 

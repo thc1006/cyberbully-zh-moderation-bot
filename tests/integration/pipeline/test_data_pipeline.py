@@ -257,14 +257,10 @@ class TestModelTrainingPipeline:
         """建立訓練資料"""
         data = []
         patterns = [
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
+            {"text": "This is a normal text", "toxicity": "none", "emotion": "neu"},
+            {"text": "This is toxic content", "toxicity": "toxic", "emotion": "neg"},
+            {"text": "Happy positive message", "toxicity": "none", "emotion": "pos"},
+            {"text": "Severe bullying text", "toxicity": "severe", "emotion": "neg"},
         ]
 
         for i in range(count):

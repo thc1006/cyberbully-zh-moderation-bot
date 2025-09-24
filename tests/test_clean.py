@@ -12,8 +12,7 @@ import unittest
 from pathlib import Path
 
 # 添加專案路徑到系統路徑
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "."
-    ".")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from scripts.clean_normalize import (
     DatasetCleaner, TextNormalizer  # noqa: E402
@@ -73,12 +72,10 @@ class TestTextNormalizer(unittest.TestCase):
         """測試URL替換"""
         test_cases = [
             ("Visit https://www.google.com for more", "Visit [URL] for more"),
-            ("Check http://example.c"
-                "om and https://test.org", 
+            ("Check http://example.com and https://test.org", "Check [URL] and [URL]"),
             ("IP: 192.168.1.1:8080", "IP: [URL]"),
             ("No URL here", "No URL here"),
-            ("複雜URL: https://example.c"
-                "om/path?query=123#anchor", 
+            ("複雜URL: https://example.com/path?query=123#anchor", "複雜URL: [URL]"), 
         ]
 
         for text, expected in test_cases:
@@ -92,8 +89,7 @@ class TestTextNormalizer(unittest.TestCase):
             ("Hello @user123", "Hello [MENTION]"),
             ("@測試用戶 你好", "[MENTION] 你好"),
             ("Multiple @user1 @user2", "Multiple [MENTION] [MENTION]"),
-            ("Email: test"
-                "@example.com", 
+            ("Email: test@example.com", "Email: [EMAIL]"), 
         ]
 
         for text, expected in test_cases:
@@ -118,8 +114,7 @@ class TestTextNormalizer(unittest.TestCase):
         """測試Email去識別化"""
         test_cases = [
             ("Contact: john@example.com", "Contact: [EMAIL]"),
-            ("Emails: a@b.com a"
-                "nd test@gmail.com", 
+            ("Emails: a@b.com and test@gmail.com", "Emails: [EMAIL] and [EMAIL]"), 
             ("No email here", "No email here"),
         ]
 
@@ -294,10 +289,8 @@ class TestDatasetCleaner(unittest.TestCase):
         """測試mapping儲存"""
         # 添加一些測試mapping
         self.cleaner.mapping_data = [
-            {"raw"
-                "_id": 
-            {"raw"
-                "_id": 
+            {"raw_id": "test_1", "processed_id": "proc_abc123", "text": "測試1"},
+            {"raw_id": "test_2", "processed_id": "proc_def456", "text": "測試2"},
         ]
 
         # 儲存mapping
