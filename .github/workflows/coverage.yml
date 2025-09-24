@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  PYTHON_VERSION: '3.9'
+  PYTHON_VERSION: '3.11'
   COVERAGE_THRESHOLD: 80
   CORE_MODULE_THRESHOLD: 90
 
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.10', '3.11', '3.12']
       fail-fast: false
 
     steps:
@@ -181,7 +181,7 @@ jobs:
     - name: Download coverage artifacts
       uses: actions/download-artifact@v4
       with:
-        name: coverage-report-3.9
+        name: coverage-report-3.11
         path: ./coverage/
 
     - name: Store coverage trend data

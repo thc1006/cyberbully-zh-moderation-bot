@@ -245,29 +245,49 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v6
+
+    - name: 📋 List context files
+      run: |
+        echo "API context files:"
+        ls -la ./api/
+        echo "Bot context files:"
+        ls -la ./bot/
+        echo "Root requirements files:"
+        ls -la requirements*.txt
 
     - name: 🏗️ Build API Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: ./api
         push: false
         tags: cyberpuppy-api:test
+        load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: 🏗️ Build Bot Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: ./bot
         push: false
         tags: cyberpuppy-bot:test
+        load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+
+    - name: 🔍 List built Docker images
+      run: docker images | grep -E "(cyberpuppy|REPOSITORY)"
 
     - name: 🧪 Test Docker containers
       run: |
+        echo "Testing API container..."
         docker run --rm cyberpuppy-api:test python -c "import fastapi; print('API container OK')"
+        echo "Testing Bot container..."
         docker run --rm cyberpuppy-bot:test python -c "import linebot; print('Bot container OK')"
 
   # 文檔建構測試
