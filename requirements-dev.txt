@@ -10,7 +10,7 @@ pytest-watch>=4.2.0,<5.0.0
 pytest-mock>=3.12.0,<4.0.0
 pytest-timeout>=2.2.0,<3.0.0
 pytest-xdist>=3.5.0,<4.0.0  # 平行測試
-hypothesis>=6.92.0,<7.0.0   # 屬性基礎測試
+hypothesis>=6.92.0,<6.150.0   # Property-based testing
 
 # 額外程式碼品質工具 (基本工具在 requirements.txt)
 flake8-docstrings==1.7.0
@@ -21,13 +21,13 @@ isort==5.13.2        # import 排序
 autopep8==2.0.4      # PEP8 自動修正
 
 # 型別檢查擴展
-types-requests>=2.31.0.20,<3.0.0  # Latest Sep 2025, requires urllib3>=2
+types-requests>=2.31.0,<2.33.0  # Stable version range
 types-PyYAML==6.0.12.20250822  # Latest (Aug 22, 2025)
 types-python-dateutil==2.9.0.20250822  # Latest (Aug 22, 2025)
 
 # 安全掃描 (2025年9月最新兼容版本)
 bandit[toml]>=1.7.6,<1.8.0  # Allow minor version updates for compatibility
-safety>=3.3.0,<4.0.0  # Latest CLI 3 with Pydantic V2 support, avoid conflicts
+safety>=3.2.0,<3.4.0  # Security scanning with narrower range
 semgrep>=1.137.0,<2.0.0  # Latest version (Sep 24, 2025) with urllib3 2.x support
 
 # 文檔工具
