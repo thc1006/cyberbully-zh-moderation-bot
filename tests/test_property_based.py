@@ -57,8 +57,7 @@ class TestPropertyBasedConfig(unittest.TestCase):
     @given(st.text(min_size=1, max_size=100))
     @settings(max_examples=50, deadline=1000)
     def test_settings_model_name_property(self, model_name):
-        ""
-            ""
+        """Test that model name property handles various inputs correctly."""
         assume(model_name.strip())  # Non-empty after stripping
         assume(
             not any(char in model_name for char in ['/',
@@ -247,15 +246,12 @@ class TestFallbackPropertyTesting(unittest.TestCase):
             # Empty text
             {"text": "", "toxicity_label": 0, "toxicity_confidence": 0.5},
             # Very long text
-            {"te"
-                "xt": 
+            {"text": "a" * 1000, "toxicity_label": 0, "toxicity_confidence": 0.5},
             # Unicode text
             {"text": "測試🤖", "toxicity_label": 0, "toxicity_confidence": 0.3},
             # Extreme confidence values
-            {"te"
-                "xt": 
-            {"te"
-                "xt": 
+            {"text": "test", "toxicity_label": 0, "toxicity_confidence": 0.0},
+            {"text": "test", "toxicity_label": 1, "toxicity_confidence": 1.0},
         ]
 
         for case in edge_cases:
@@ -405,8 +401,10 @@ class TestInvariantValidation(unittest.TestCase):
 
         # This should hold for serialized version too
         serialized = base_result.to_dict()
-        self.assertGreater(serialized["toxicity_"
-            "confidence"], serialized[
+        self.assertGreater(
+            serialized["toxicity_confidence"],
+            serialized["bullying_confidence"]
+        )
 
     def test_label_confidence_consistency(self):
         """Test consistency between labels and confidence values"""

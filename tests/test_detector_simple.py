@@ -12,7 +12,7 @@ import torch
 
 
 # Import our actual classes
-from src.cyberpuppy.models.result import (
+from cyberpuppy.models.result import (
     DetectionResult, ToxicityResult, EmotionResult, BullyingResult, RoleResult,
     ToxicityLevel, EmotionType, BullyingType, RoleType,
     ExplanationResult, ModelPrediction, ResultAggregator, ConfidenceThresholds
@@ -354,7 +354,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_initialization_without_models(self, detector_config):
         """Test detector can be initialized without loading models."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -365,7 +365,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_input_validation(self, detector_config):
         """Test detector validates inputs correctly."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -387,7 +387,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_preprocessing(self, detector_config):
         """Test text preprocessing functionality."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -412,7 +412,7 @@ class TestCyberPuppyDetectorSimple:
         }
 
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(
                 unnormalized_config,
@@ -426,7 +426,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_confidence_calibration(self, detector_config):
         """Test confidence calibration logic."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -452,7 +452,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_performance_tracking(self, detector_config):
         """Test performance statistics tracking."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -469,7 +469,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_context_manager(self, detector_config):
         """Test detector can be used as context manager."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             with CyberPuppyDetector(
                 detector_config,
@@ -482,7 +482,7 @@ class TestCyberPuppyDetectorSimple:
     def test_detector_model_info(self, detector_config):
         """Test model information retrieval."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 

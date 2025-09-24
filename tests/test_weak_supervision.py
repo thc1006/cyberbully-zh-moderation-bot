@@ -26,12 +26,12 @@ import pandas as pd
 import pytest
 import torch
 
-from src.cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
+from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
                                                RoleType, ToxicityLevel,
                                                UnifiedLabel)
-from src.cyberpuppy.models.baselines import BaselineModel, ModelConfig
+from cyberpuppy.models.baselines import BaselineModel, ModelConfig
 # Import project modules
-from src.cyberpuppy.models.weak_supervision import (ChineseLabelingFunction,
+from cyberpuppy.models.weak_supervision import (ChineseLabelingFunction,
                                                     LabelingFunctionSet,
                                                     UncertaintyQuantifier,
                                                     WeakSupervisionConfig,
@@ -51,8 +51,7 @@ class TestWeakSupervisionConfig:
         assert config.min_coverage == 0.1
         assert config.max_abstains == 0.5
         assert config.uncertainty_threshold == 0.7
-        assert config.ensemble_weights == {"weak_sup"
-            "ervision": 0.6, 
+        assert config.ensemble_weights == {"weak_supervision": 0.6, "strong_supervision": 0.4}
         assert config.use_class_balance is True
         assert config.cardinality == 3
         assert len(config.task_weights) == 5
@@ -66,23 +65,19 @@ class TestWeakSupervisionConfig:
         assert config.min_coverage == 0.2
 
         # Invalid coverage - should raise ValueError
-        with pytest.raises(ValueError, match="min_coverage must "
-            "be between 0 and 1"):
+        with pytest.raises(ValueError, match="min_coverage must be between 0 and 1"):
             WeakSupervisionConfig(min_coverage=1.5)
 
-        with pytest.raises(ValueError, match="max_abstains must "
-            "be between 0 and 1"):
+        with pytest.raises(ValueError, match="max_abstains must be between 0 and 1"):
             WeakSupervisionConfig(max_abstains=-0.1)
 
-        with pytest.raises(ValueError, match="uncertainty_threshold "
-            "must be between 0 and 1"):
+        with pytest.raises(ValueError, match="uncertainty_threshold must be between 0 and 1"):
             WeakSupervisionConfig(uncertainty_threshold=2.0)
 
     def test_config_serialization(self):
         """Test config serialization to/from dictionary"""
         config = WeakSupervisionConfig(
-            label_model_type="MajorityL"
-                "abelVoter", min_coverage=0.15, cardinality=2
+            label_model_type="MajorityLabelVoter", min_coverage=0.15, cardinality=2
         )
 
         config_dict = config.to_dict()
@@ -101,8 +96,7 @@ class TestChineseLabelingFunction:
         profanity_words = ["笨蛋", "白痴", "滚开"]
 
         lf = ChineseLabelingFunction.create_profanity_lf(
-            name="profani"
-                "ty_basic", profanity_words=profanity_words, threshold=0.5
+            name="profanity_basic", profanity_words=profanity_words, threshold=0.5
         )
 
         assert lf.name == "profanity_basic"
@@ -208,10 +202,12 @@ class TestLabelingFunctionSet:
         lf_set = LabelingFunctionSet()
 
         # Add multiple LFs
-        profanity_lf = ChineseLabelingFunction.create_profanity_lf("prof"
-            "anity", [
-        threat_lf = ChineseLabelingFunction.create_threat_pattern_lf("thr"
-            "eats", [r
+        profanity_lf = ChineseLabelingFunction.create_profanity_lf(
+            "profanity", ["笨蛋", "白痴"]
+        )
+        threat_lf = ChineseLabelingFunction.create_threat_pattern_lf(
+            "threats", [r"打你", r"揍你"]
+        )
 
         lf_set.add_function(profanity_lf)
         lf_set.add_function(threat_lf)
@@ -224,8 +220,7 @@ class TestLabelingFunctionSet:
 
         # Check specific labels
         assert labels_matrix[0, 0] == 1  # First text triggers profanity LF
-        assert labels_matrix[1, 1] ==
-            1  # Second text triggers threat LF (toxic, not severe)
+        assert labels_matrix[1, 1] == 1  # Second text triggers threat LF (toxic, not severe)
         assert labels_matrix[2, 0] == -1  # Third text abstains on profanity
 
     def test_coverage_analysis(self):
@@ -357,8 +352,7 @@ class TestWeakSupervisionModel:
         def custom_lf(text: str) -> int:
             return 1 if "custom_trigger" in text else -1
 
-        lf = ChineseLabelingFunction("custo"
-            "m_test", custom_lf, 
+        lf = ChineseLabelingFunction("custom_test", custom_lf)
         model.add_labeling_function(lf)
 
         assert len(model.lf_set.functions) == 1
@@ -487,13 +481,11 @@ class TestWeakSupervisionModel:
 
             # Check uncertainty scores
             uncertainties = predictions["uncertainty_scores"]
-            assert uncertainties[1] > uncertainties[0]  # More uncertain for
-                middle sample
+            assert uncertainties[1] > uncertainties[0]  # More uncertain for middle sample
 
     def test_multi_task_predictions(self, sample_config):
         """Test multi-task predictions (toxicity, emotion, bullying, role)"""
-        with patch("src.cyberpuppy.models.we"
-            "ak_supervision.LabelModel") as mock_label_model:
+        with patch("src.cyberpuppy.models.weak_supervision.LabelModel") as mock_label_model:
             mock_model_instance = Mock()
             mock_label_model.return_value = mock_model_instance
 
@@ -548,13 +540,11 @@ class TestWeakSupervisionModel:
             # For successful cases, test loading
             if save_succeeded:
                 loaded_model = WeakSupervisionModel.load_model(str(save_path))
-                assert loaded_model.config.min_coverage ==
-                    sample_config.min_coverage
+                assert loaded_model.config.min_coverage == sample_config.min_coverage
             else:
                 # Test manual config loading
                 loaded_model = WeakSupervisionModel(config=sample_config)
-                assert loaded_model.config.min_coverage ==
-                    sample_config.min_coverage
+                assert loaded_model.config.min_coverage == sample_config.min_coverage
 
     def test_error_handling_invalid_input(self, sample_config):
         """Test error handling for invalid inputs"""
@@ -728,8 +718,7 @@ class TestIntegrationWithBaselines:
 
     def test_fallback_to_baseline(self, baseline_model):
         """Test fallback to baseline model when weak supervision fails"""
-        ws_config = WeakSupervisionConfig(uncertainty_threshold=0.1)  # Very
-            low threshold
+        ws_config = WeakSupervisionConfig(uncertainty_threshold=0.1)  # Very low threshold
 
         ws_model = WeakSupervisionModel(
             config=ws_config,

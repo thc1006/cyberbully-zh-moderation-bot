@@ -10,7 +10,7 @@ from datetime import datetime
 import torch
 
 # Import result classes that don't depend on ML models
-from src.cyberpuppy.models.result import (
+from cyberpuppy.models.result import (
     DetectionResult, ToxicityResult, EmotionResult, BullyingResult, RoleResult,
     ExplanationResult, ModelPrediction, ToxicityLevel, EmotionType,
     BullyingType, RoleType, ResultAggregator, ConfidenceThresholds
@@ -186,8 +186,7 @@ class TestResultClasses:
         # Test aggregation
         stats = ResultAggregator.aggregate_batch_results(results)
         assert stats['total_results'] == 3
-        assert stats['high_risk_count'] == 2  # high_risk and
-            medium_risk should be flagged
+        assert stats['high_risk_count'] == 2  # high_risk and medium_risk should be flagged
         assert stats['high_risk_percentage'] == (2 / 3) * 100
 
         # Test confidence filtering
@@ -225,14 +224,12 @@ class TestResultClasses:
         valid_thresholds = {
             'toxicity': {'none': 0.5, 'toxic': 0.7}
         }
-        assert ConfidenceThresholds.validate_thresholds(valid_thresholds) is
-            True
+        assert ConfidenceThresholds.validate_thresholds(valid_thresholds) is True
 
         invalid_thresholds = {
             'toxicity': {'none': 1.5}  # Invalid: > 1.0
         }
-        assert ConfidenceThresholds.validate_thresholds(invalid_thresholds) is
-            False
+        assert ConfidenceThresholds.validate_thresholds(invalid_thresholds) is False
 
     def test_detection_result_validation(self):
         """Test DetectionResult input validation."""
@@ -297,8 +294,7 @@ class TestResultClasses:
         assert isinstance(restored.predictions['task1'], torch.Tensor)
         assert torch.allclose(
             restored.predictions['task1'],
-            torch.tensor([0.2,
-            0.8])
+            torch.tensor([0.2, 0.8])
         )
 
     def test_edge_cases_and_error_handling(self):

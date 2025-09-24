@@ -11,14 +11,14 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.cyberpuppy.labeling.label_map import (
+from cyberpuppy.labeling.label_map import (
     BullyingLevel,
     EmotionType,
     RoleType,
     ToxicityLevel,
     UnifiedLabel,
 )
-from src.cyberpuppy.models.baselines import (
+from cyberpuppy.models.baselines import (
     BaselineModel,
     FocalLoss,
     ModelConfig,

@@ -12,6 +12,34 @@ from typing import Any, Dict, List, Optional, Union
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class TaskLabelConfig:
+    """Task label configuration for a specific task."""
+
+    name: str
+    labels: List[str]
+    label_to_id: Dict[str, int]
+    id_to_label: Dict[int, str]
+
+    def __post_init__(self):
+        """Validate the configuration."""
+        # Ensure labels match the mappings
+        if len(self.labels) != len(self.label_to_id) or len(self.labels) != len(self.id_to_label):
+            raise ValueError("Inconsistent label configuration")
+
+        # Validate label_to_id and id_to_label are consistent
+        for label, id_val in self.label_to_id.items():
+            if label not in self.labels:
+                raise ValueError(f"Label '{label}' in label_to_id but not in labels list")
+            if self.id_to_label.get(id_val) != label:
+                raise ValueError(f"Inconsistent mapping for label '{label}' and id {id_val}")
+
+    @property
+    def num_classes(self) -> int:
+        """Get number of classes in this task."""
+        return len(self.labels)
+
+
 class ToxicityLevel(Enum):
     """毒性等級"""
 
@@ -99,6 +127,14 @@ class UnifiedLabel:
 
 class LabelMapper:
     """標籤映射器"""
+
+    def __init__(self, task_configs: Optional[Dict[str, TaskLabelConfig]] = None):
+        """Initialize LabelMapper with task configurations.
+
+        Args:
+            task_configs: Dictionary mapping task names to TaskLabelConfig objects
+        """
+        self.task_configs = task_configs or {}
 
     # COLD 資料集映射規則
     COLD_MAPPING = {
@@ -542,17 +578,31 @@ class LabelMapper:
         return [self.from_sentiment_to_unified(label) for label in labels]
 
     def get_label_statistics(
-        self, labels: List[UnifiedLabel]
-    ) -> Dict[str, Dict[str, int]]:
+        self, task_or_labels: Union[str, List[UnifiedLabel]]
+    ) -> Dict[str, Any]:
         """
         獲取標籤統計資訊
 
         Args:
-            labels: UnifiedLabel 物件列表
+            task_or_labels: Task name (string) or UnifiedLabel 物件列表
 
         Returns:
             統計資訊字典
         """
+        # If it's a string, treat as task name
+        if isinstance(task_or_labels, str):
+            task = task_or_labels
+            if task not in self.task_configs:
+                raise KeyError(f"Task '{task}' not found in task configs")
+
+            task_config = self.task_configs[task]
+            return {
+                "num_classes": task_config.num_classes,
+                "labels": task_config.labels,
+            }
+
+        # Otherwise, treat as list of UnifiedLabel objects
+        labels = task_or_labels
         stats = {
             "toxicity": {},
             "bullying": {},
@@ -578,6 +628,131 @@ class LabelMapper:
             stats["emotion"][emotion_val] = stats["emotion"].get(emotion_val, 0) + 1
 
         return stats
+
+    def label_to_id(self, task: str, label: str) -> int:
+        """Convert label to ID for a specific task.
+
+        Args:
+            task: Task name (e.g., 'toxicity', 'emotion')
+            label: Label string
+
+        Returns:
+            Label ID
+
+        Raises:
+            KeyError: If task or label not found
+        """
+        if task not in self.task_configs:
+            raise KeyError(f"Task '{task}' not found in task configs")
+
+        task_config = self.task_configs[task]
+        if label not in task_config.label_to_id:
+            raise KeyError(f"Label '{label}' not found for task '{task}'")
+
+        return task_config.label_to_id[label]
+
+    def id_to_label(self, task: str, id_val: int) -> str:
+        """Convert ID to label for a specific task.
+
+        Args:
+            task: Task name (e.g., 'toxicity', 'emotion')
+            id_val: Label ID
+
+        Returns:
+            Label string
+
+        Raises:
+            KeyError: If task or ID not found
+        """
+        if task not in self.task_configs:
+            raise KeyError(f"Task '{task}' not found in task configs")
+
+        task_config = self.task_configs[task]
+        if id_val not in task_config.id_to_label:
+            raise KeyError(f"ID '{id_val}' not found for task '{task}'")
+
+        return task_config.id_to_label[id_val]
+
+    def labels_to_ids(self, task: str, labels: List[str]) -> List[int]:
+        """Convert list of labels to IDs for a specific task.
+
+        Args:
+            task: Task name
+            labels: List of label strings
+
+        Returns:
+            List of label IDs
+        """
+        return [self.label_to_id(task, label) for label in labels]
+
+    def ids_to_labels(self, task: str, ids: List[int]) -> List[str]:
+        """Convert list of IDs to labels for a specific task.
+
+        Args:
+            task: Task name
+            ids: List of label IDs
+
+        Returns:
+            List of label strings
+        """
+        return [self.id_to_label(task, id_val) for id_val in ids]
+
+    def get_task_info(self, task: str) -> Dict[str, Any]:
+        """Get information about a specific task.
+
+        Args:
+            task: Task name
+
+        Returns:
+            Dictionary with task information
+
+        Raises:
+            KeyError: If task not found
+        """
+        if task not in self.task_configs:
+            raise KeyError(f"Task '{task}' not found in task configs")
+
+        task_config = self.task_configs[task]
+        return {
+            "name": task_config.name,
+            "labels": task_config.labels,
+            "num_classes": task_config.num_classes,
+            "label_to_id": task_config.label_to_id,
+            "id_to_label": task_config.id_to_label,
+        }
+
+    def is_valid_task(self, task: str) -> bool:
+        """Check if task is valid.
+
+        Args:
+            task: Task name
+
+        Returns:
+            True if task is valid, False otherwise
+        """
+        return task in self.task_configs
+
+    def is_valid_label(self, task: str, label: str) -> bool:
+        """Check if label is valid for a task.
+
+        Args:
+            task: Task name
+            label: Label string
+
+        Returns:
+            True if label is valid for task, False otherwise
+        """
+        if task not in self.task_configs:
+            return False
+        return label in self.task_configs[task].label_to_id
+
+    def get_all_tasks(self) -> List[str]:
+        """Get list of all available tasks.
+
+        Returns:
+            List of task names
+        """
+        return list(self.task_configs.keys())
 
 
 # 便利函式

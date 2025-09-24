@@ -618,8 +618,7 @@ def get_dataset_statistics():
 
         # 毒性統計
         toxicity = expected["toxicity"]
-        stats["by_to"
-            "xicity"][toxicity] = stats[
+        stats["by_toxicity"][toxicity] = stats["by_toxicity"].get(toxicity, 0) + 1
 
         # 情緒統計
         emotion = expected["emotion"]
@@ -631,12 +630,10 @@ def get_dataset_statistics():
 
         # 霸凌統計
         bullying = expected["bullying"]
-        stats["by_bu"
-            "llying"][bullying] = stats[
+        stats["by_bullying"][bullying] = stats["by_bullying"].get(bullying, 0) + 1
 
         # 類別統計
-        stats["categ"
-            "ories"][category] = stats[
+        stats["categories"][category] = stats["categories"].get(category, 0) + 1
 
     return stats
 

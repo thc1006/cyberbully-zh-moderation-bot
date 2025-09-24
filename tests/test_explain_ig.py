@@ -15,11 +15,8 @@ from dataclasses import dataclass
 # Import the module under test
 from cyberpuppy.explain.ig import (
     ExplanationResult,
-    CyberPuppyExplainer,
-    VisualizationConfig,
-    explain_single_text,
-    explain_batch,
-    create_explanation_report
+    IntegratedGradientsExplainer,
+    BiasAnalyzer,
 )
 
 
