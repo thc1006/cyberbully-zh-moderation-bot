@@ -268,7 +268,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v6
+      uses: docker/setup-buildx-action@v3
 
     - name: 📋 List context files
       run: |
@@ -280,7 +280,7 @@ jobs:
         ls -la requirements*.txt
 
     - name: 🏗️ Build API Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v5
       with:
         context: ./api
         push: false
@@ -292,7 +292,7 @@ jobs:
           BUILDKIT_INLINE_CACHE=1
 
     - name: 🏗️ Build Bot Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v5
       with:
         context: ./bot
         push: false
