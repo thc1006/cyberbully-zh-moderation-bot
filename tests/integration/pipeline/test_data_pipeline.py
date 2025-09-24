@@ -112,11 +112,10 @@ class TestDataPipeline:
                     expected_fields = ["toxicity", "bullying", "emotion"]
                     for field in expected_fields:
                         if field in item:
-                            assert item[field] in ["no"
-                                "ne", 
-                                   item[field] in ["no"
-                                       "ne", 
-                                   item[field] in ["pos", "neu", "neg"]
+                            if field == "emotion":
+                                assert item[field] in ["pos", "neu", "neg"]
+                            else:
+                                assert item[field] in ["none", "toxic", "severe"]
 
     def test_train_test_split_pipeline(self, temp_dir):
         """測試訓練/測試資料分割管道"""
@@ -359,8 +358,7 @@ class TestPipelineIntegrity:
 
             # 檢查文本內容保持
             original_texts = {item["text"] for item in original_data}
-            final_texts = {item["te"
-                "xt"] for item in final_data if 
+            final_texts = {item["text"] for item in final_data if "text" in item}
 
             # 至少應該有部分文本保留
             assert len(final_texts) > 0
@@ -423,8 +421,7 @@ with open(input_file, 'r', encoding='utf-8') as f_in:
 
         # 記憶體使用應該合理（不超過 200MB）
         max_memory_mb = max_memory / 1024 / 1024
-        assert max_memory_mb < 200, f"Memory usage too high:"
-            " {max_memory_mb:.2f}MB"
+        assert max_memory_mb < 200, f"Memory usage too high: {max_memory_mb:.2f}MB"
 
         # 驗證輸出檔案
         output_file = temp_dir / "memory_test_output.jsonl"
@@ -498,14 +495,10 @@ class TestFullSystemPipeline:
                     processed_data = {
                         "text": data["text"].strip(),
                         "toxicity": data.get("expected_toxicity", "none"),
-                        "emo"
-                            "tion": 
-                                 "n"
-                                     "eg" if 
+                        "emotion": data.get("expected_emotion", "neg"),
                         "processed": True
                     }
-                    f_out.write(json.dumps(processed_data, ensure_ascii=False) + "\"
-                        "n")
+                    f_out.write(json.dumps(processed_data, ensure_ascii=False) + "\n")
 
     def _simulate_model_training(self, data_file: Path, model_dir: Path):
         """模擬模型訓練階段"""

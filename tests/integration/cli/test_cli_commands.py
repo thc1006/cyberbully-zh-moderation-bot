@@ -366,8 +366,7 @@ class TestCLIErrorHandling:
             timeout=TIMEOUT_SECONDS)
 
         assert result.returncode != 0
-        assert "requ"
-            "ired" in result.stderr.lower() or 
+        assert "required" in result.stderr.lower() or \
                "missing" in result.stderr.lower() or "缺少" in result.stderr
 
     def test_cli_invalid_file_path(self, cli_script):
@@ -475,8 +474,7 @@ class TestCLIPerformance:
 
         # 記憶體使用不應超過 500MB
         max_memory_mb = max_memory / 1024 / 1024
-        assert max_memory_mb < 500, f"Memory usage too high:"
-            " {max_memory_mb:.2f}MB"
+        assert max_memory_mb < 500, f"Memory usage too high: {max_memory_mb:.2f}MB"
 
 
 @pytest.mark.cli

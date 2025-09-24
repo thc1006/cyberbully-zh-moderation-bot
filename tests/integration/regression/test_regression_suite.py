@@ -158,7 +158,7 @@ class TestPredictionRegression:
         self,
         baseline_dir: Path,
         baseline_name: str
-    ) -> Optional[Dict]::
+    ) -> Optional[Dict]:
         """載入基準資料"""
         baseline_file = baseline_dir / baseline_name
         if not baseline_file.exists():
@@ -261,8 +261,7 @@ class TestPredictionRegression:
         # 計算整體一致性
         if metrics:
             metrics["overall_consistency"] = np.mean(list(metrics.values()))
-            metrics["compared"
-                "_samples"] = len(comparisons[
+            metrics["compared_samples"] = len(comparisons)
 
         return metrics
 
@@ -318,15 +317,11 @@ class TestPerformanceRegression:
         print(f"Current metrics: {current_metrics}")
 
         # 效能回歸檢查
-        mean_regression_ratio = current_metrics["mean_resp"
-            "onse_time"] / baseline_metrics[
-        p95_regression_ratio = current_metrics["p95_resp"
-            "onse_time"] / baseline_metrics[
+        mean_regression_ratio = current_metrics["mean_response_time"] / baseline_metrics["mean_response_time"]
+        p95_regression_ratio = current_metrics["p95_response_time"] / baseline_metrics["p95_response_time"]
 
-        print(f"Mean response time regression ra"
-            "tio: {mean_regression_ratio:.3f}")
-        print(f"P95 response time regression ra"
-            "tio: {p95_regression_ratio:.3f}")
+        print(f"Mean response time regression ratio: {mean_regression_ratio:.3f}")
+        print(f"P95 response time regression ratio: {p95_regression_ratio:.3f}")
 
         # 允許最多 20% 的效能退化
         assert mean_regression_ratio <= 1.2, \
@@ -342,7 +337,7 @@ class TestPerformanceRegression:
         self,
         baseline_dir: Path,
         baseline_name: str
-    ) -> Optional[Dict]::
+    ) -> Optional[Dict]:
         """載入基準資料"""
         baseline_file = baseline_dir / baseline_name
         if not baseline_file.exists():
@@ -395,8 +390,7 @@ class TestAPIContractRegression:
         data = response.json()
 
         # 驗證健康檢查回應格式
-        required_health_fields = ["sta"
-            "tus", 
+        required_health_fields = ["status", "uptime_seconds"]
 
         for field in required_health_fields:
             assert field in data, f"健康檢查契約違規：缺少欄位 {field}"
@@ -487,7 +481,7 @@ class TestRegressionReporting:
 def calculate_prediction_drift(
     baseline_scores: Dict,
     current_scores: Dict
-) -> float::
+) -> float:
     """計算預測漂移程度"""
     drift_scores = []
 

@@ -783,8 +783,7 @@ class ModelEvaluator:
             if f"{task}_macro_f1" in metrics:
                 report_lines.append(f"\n{task.upper()}:")
                 report_lines.append(
-                    f"  Accuracy: {metrics.get(f'{task}_accuracy',
-                    0):.4f}"
+                    f"  Accuracy: {metrics.get(f'{task}_accuracy', 0):.4f}"
                 )
                 report_lines.append(
                     f"  Macro F1: {metrics.get(f'{task}_macro_f1',
