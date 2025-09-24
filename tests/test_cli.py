@@ -9,7 +9,7 @@ import tempfile
 import os
 from unittest.mock import Mock, patch
 
-from src.cyberpuppy.cli import (
+from cyberpuppy.cli import (
     CyberPuppyCLI,
     AnalyzeCommand,
     TrainCommand,
@@ -772,7 +772,7 @@ class TestCLIProgressBars:
             mock_progress.add_task.return_value = mock_task
 
             # This would be called from within a command
-            from src.cyberpuppy.cli import create_progress_bar
+            from cyberpuppy.cli import create_progress_bar
 
             progress = create_progress_bar("Processing files")
             progress.add_task("test", total=100)
@@ -790,7 +790,7 @@ class TestCLIOutputFormatting:
             mock_table = Mock()
             mock_table_class.return_value = mock_table
 
-            from src.cyberpuppy.cli import format_analysis_result_table
+            from cyberpuppy.cli import format_analysis_result_table
 
             result = {"toxicity": "toxic", "confidence": 0.85, "emotion": "neg"}
 
@@ -806,7 +806,7 @@ class TestCLIOutputFormatting:
             "analysis": {"toxicity": "none", "confidence": 0.92},
         }
 
-        from src.cyberpuppy.cli import format_json_output
+        from cyberpuppy.cli import format_json_output
 
         json_output = format_json_output(result)
 

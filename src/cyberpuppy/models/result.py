@@ -249,40 +249,192 @@ class DetectionResult:
 
     # Input text and metadata
     text: str
-    timestamp: datetime
-    processing_time: float
+    timestamp: Optional[datetime] = None
+    processing_time: float = 0.0
 
-    # Task-specific results
-    toxicity: ToxicityResult
-    emotion: EmotionResult
-    bullying: BullyingResult
-    role: RoleResult
+    # Task-specific results (can be None for backwards compatibility)
+    toxicity: Optional[ToxicityResult] = None
+    emotion: Optional[EmotionResult] = None
+    bullying: Optional[BullyingResult] = None
+    role: Optional[RoleResult] = None
 
     # Explanations and interpretability
-    explanations: Dict[str, ExplanationResult]
+    explanations: Optional[Dict[str, ExplanationResult]] = None
 
     # Model ensemble information
-    model_predictions: Dict[str, ModelPrediction]
-    ensemble_weights: Dict[str, float]
+    model_predictions: Optional[Dict[str, ModelPrediction]] = None
+    ensemble_weights: Optional[Dict[str, float]] = None
 
     # Additional metadata
     context_used: bool = False
     context_length: int = 0
     model_version: str = "1.0.0"
+    metadata: Optional[Dict[str, Any]] = None
 
-    def __post_init__(self):
+    # Simple parameters for test compatibility
+    toxicity_label: Optional[int] = None
+    toxicity_confidence: Optional[float] = None
+    emotion_label: Optional[int] = None
+    emotion_confidence: Optional[float] = None
+    bullying_label: Optional[int] = None
+    bullying_confidence: Optional[float] = None
+    role_label: Optional[int] = None
+    role_confidence: Optional[float] = None
+    explanation: Optional[Dict[str, Any]] = None
+
+    def __init__(
+        self,
+        text: str,
+        # Traditional detailed parameters
+        toxicity: Optional[ToxicityResult] = None,
+        emotion: Optional[EmotionResult] = None,
+        bullying: Optional[BullyingResult] = None,
+        role: Optional[RoleResult] = None,
+        timestamp: Optional[datetime] = None,
+        processing_time: float = 0.0,
+        explanations: Optional[Dict[str, ExplanationResult]] = None,
+        model_predictions: Optional[Dict[str, ModelPrediction]] = None,
+        ensemble_weights: Optional[Dict[str, float]] = None,
+        context_used: bool = False,
+        context_length: int = 0,
+        model_version: str = "1.0.0",
+        metadata: Optional[Dict[str, Any]] = None,
+        # Simple parameters for test compatibility
+        toxicity_label: Optional[int] = None,
+        toxicity_confidence: Optional[float] = None,
+        emotion_label: Optional[int] = None,
+        emotion_confidence: Optional[float] = None,
+        bullying_label: Optional[int] = None,
+        bullying_confidence: Optional[float] = None,
+        role_label: Optional[int] = None,
+        role_confidence: Optional[float] = None,
+        explanation: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ):
+        """Initialize DetectionResult with flexible parameter support.
+
+        Supports both the original detailed format and simplified test format.
+        """
+        self.text = text
+        self.timestamp = timestamp or datetime.now()
+        self.processing_time = processing_time
+        self.context_used = context_used
+        self.context_length = context_length
+        self.model_version = model_version
+        self.metadata = metadata or {}
+        self.explanation = explanation
+
+        # Store simple parameters for test compatibility
+        self.toxicity_label = toxicity_label
+        self.toxicity_confidence = toxicity_confidence
+        self.emotion_label = emotion_label
+        self.emotion_confidence = emotion_confidence
+        self.bullying_label = bullying_label
+        self.bullying_confidence = bullying_confidence
+        self.role_label = role_label
+        self.role_confidence = role_confidence
+
+        # Handle complex objects or create from simple parameters
+        if toxicity is not None:
+            self.toxicity = toxicity
+        elif toxicity_label is not None and toxicity_confidence is not None:
+            # Create ToxicityResult from simple parameters
+            prediction = ToxicityLevel.NONE
+            if toxicity_label == 1:
+                prediction = ToxicityLevel.TOXIC
+            elif toxicity_label == 2:
+                prediction = ToxicityLevel.SEVERE
+
+            self.toxicity = ToxicityResult(
+                prediction=prediction,
+                confidence=toxicity_confidence,
+                raw_scores={prediction.value: toxicity_confidence},
+                threshold_met=toxicity_confidence > 0.5
+            )
+        else:
+            self.toxicity = None
+
+        if emotion is not None:
+            self.emotion = emotion
+        elif emotion_label is not None and emotion_confidence is not None:
+            # Create EmotionResult from simple parameters
+            prediction = EmotionType.NEUTRAL
+            if emotion_label == 0:
+                prediction = EmotionType.POSITIVE
+            elif emotion_label == 2:
+                prediction = EmotionType.NEGATIVE
+
+            self.emotion = EmotionResult(
+                prediction=prediction,
+                confidence=emotion_confidence,
+                strength=2,  # Default neutral strength
+                raw_scores={prediction.value: emotion_confidence},
+                threshold_met=emotion_confidence > 0.5
+            )
+        else:
+            self.emotion = None
+
+        if bullying is not None:
+            self.bullying = bullying
+        elif bullying_label is not None and bullying_confidence is not None:
+            # Create BullyingResult from simple parameters
+            prediction = BullyingType.NONE
+            if bullying_label == 1:
+                prediction = BullyingType.HARASSMENT
+            elif bullying_label == 2:
+                prediction = BullyingType.THREAT
+
+            self.bullying = BullyingResult(
+                prediction=prediction,
+                confidence=bullying_confidence,
+                raw_scores={prediction.value: bullying_confidence},
+                threshold_met=bullying_confidence > 0.5
+            )
+        else:
+            self.bullying = None
+
+        if role is not None:
+            self.role = role
+        elif role_label is not None and role_confidence is not None:
+            # Create RoleResult from simple parameters
+            prediction = RoleType.NONE
+            if role_label == 1:
+                prediction = RoleType.PERPETRATOR
+            elif role_label == 2:
+                prediction = RoleType.VICTIM
+            elif role_label == 3:
+                prediction = RoleType.BYSTANDER
+
+            self.role = RoleResult(
+                prediction=prediction,
+                confidence=role_confidence,
+                raw_scores={prediction.value: role_confidence},
+                threshold_met=role_confidence > 0.5
+            )
+        else:
+            self.role = None
+
+        # Set other attributes
+        self.explanations = explanations or {}
+        self.model_predictions = model_predictions or {}
+        self.ensemble_weights = ensemble_weights or {}
+
+        # Call validation after construction
+        self._validate()
+
+    def _validate(self):
         """Validate detection result after initialization."""
-        # Validate confidence scores
+        # Validate confidence scores for non-None results
         for result in [self.toxicity, self.emotion, self.bullying, self.role]:
-            if not 0.0 <= result.confidence <= 1.0:
+            if result is not None and not 0.0 <= result.confidence <= 1.0:
                 raise ValueError(
-                    f"Confidence must be in [0,1" "], got {result.confidence}"
+                    f"Confidence must be in [0,1], got {result.confidence}"
                 )
 
         # Validate processing time
         if self.processing_time < 0:
             raise ValueError(
-                f"Processing time must be non-nega" "tive, got {self.processing_time}"
+                f"Processing time must be non-negative, got {self.processing_time}"
             )
 
     def is_high_risk(self, thresholds: Optional[Dict[str, float]] = None) -> bool:
@@ -306,35 +458,40 @@ class DetectionResult:
 
         # Check severe toxicity
         if (
-            self.toxicity.prediction == ToxicityLevel.SEVERE
+            self.toxicity is not None
+            and self.toxicity.prediction == ToxicityLevel.SEVERE
             and self.toxicity.confidence >= thresholds.get("toxicity_severe", 0.8)
         ):
             return True
 
         # Check toxic content
         if (
-            self.toxicity.prediction == ToxicityLevel.TOXIC
+            self.toxicity is not None
+            and self.toxicity.prediction == ToxicityLevel.TOXIC
             and self.toxicity.confidence >= thresholds.get("toxicity_toxic", 0.7)
         ):
             return True
 
         # Check threats
         if (
-            self.bullying.prediction == BullyingType.THREAT
+            self.bullying is not None
+            and self.bullying.prediction == BullyingType.THREAT
             and self.bullying.confidence >= thresholds.get("bullying_threat", 0.8)
         ):
             return True
 
         # Check harassment
         if (
-            self.bullying.prediction == BullyingType.HARASSMENT
+            self.bullying is not None
+            and self.bullying.prediction == BullyingType.HARASSMENT
             and self.bullying.confidence >= thresholds.get("bullying_harassment", 0.7)
         ):
             return True
 
         # Check strong negative emotion
         if (
-            self.emotion.prediction == EmotionType.NEGATIVE
+            self.emotion is not None
+            and self.emotion.prediction == EmotionType.NEGATIVE
             and self.emotion.strength >= 3
             and self.emotion.confidence
             >= thresholds.get("emotion_negative_strong", 0.8)
@@ -345,44 +502,72 @@ class DetectionResult:
 
     def get_summary(self) -> Dict[str, Any]:
         """Get a summary of the detection results."""
-        return {
+        summary = {
             "text_preview": self.text[:100] + ("..." if len(self.text) > 100 else ""),
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "processing_time": self.processing_time,
-            "toxicity": self.toxicity.prediction.value,
-            "toxicity_confidence": self.toxicity.confidence,
-            "emotion": self.emotion.prediction.value,
-            "emotion_strength": self.emotion.strength,
-            "bullying": self.bullying.prediction.value,
-            "role": self.role.prediction.value,
             "high_risk": self.is_high_risk(),
             "context_used": self.context_used,
             "model_version": self.model_version,
         }
 
+        # Add task results if available
+        if self.toxicity is not None:
+            summary["toxicity"] = self.toxicity.prediction.value
+            summary["toxicity_confidence"] = self.toxicity.confidence
+
+        if self.emotion is not None:
+            summary["emotion"] = self.emotion.prediction.value
+            summary["emotion_strength"] = self.emotion.strength
+
+        if self.bullying is not None:
+            summary["bullying"] = self.bullying.prediction.value
+
+        if self.role is not None:
+            summary["role"] = self.role.prediction.value
+
+        return summary
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert complete result to dictionary."""
-        return {
+        result = {
             "text": self.text,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "processing_time": self.processing_time,
-            "toxicity": self.toxicity.to_dict(),
-            "emotion": self.emotion.to_dict(),
-            "bullying": self.bullying.to_dict(),
-            "role": self.role.to_dict(),
-            "explanations": {
-                task: explanation.to_dict()
-                for task, explanation in self.explanations.items()
-            },
-            "model_predictions": {
-                model: prediction.to_dict()
-                for model, prediction in self.model_predictions.items()
-            },
-            "ensemble_weights": self.ensemble_weights,
             "context_used": self.context_used,
             "context_length": self.context_length,
             "model_version": self.model_version,
         }
+
+        # Add task results if available
+        if self.toxicity is not None:
+            result["toxicity"] = self.toxicity.to_dict()
+        if self.emotion is not None:
+            result["emotion"] = self.emotion.to_dict()
+        if self.bullying is not None:
+            result["bullying"] = self.bullying.to_dict()
+        if self.role is not None:
+            result["role"] = self.role.to_dict()
+
+        # Add optional fields
+        if self.explanations:
+            result["explanations"] = {
+                task: explanation.to_dict()
+                for task, explanation in self.explanations.items()
+            }
+        if self.model_predictions:
+            result["model_predictions"] = {
+                model: prediction.to_dict()
+                for model, prediction in self.model_predictions.items()
+            }
+        if self.ensemble_weights:
+            result["ensemble_weights"] = self.ensemble_weights
+        if self.metadata:
+            result["metadata"] = self.metadata
+        if self.explanation:
+            result["explanation"] = self.explanation
+
+        return result
 
     def to_json(self, indent: int = 2) -> str:
         """Convert to JSON string."""
@@ -628,3 +813,399 @@ class ConfidenceThresholds:
                 if not 0.0 <= threshold <= 1.0:
                     return False
         return True
+
+
+"""
+Missing classes for CyberPuppy models module.
+
+These classes are needed for test compatibility but were missing from result.py.
+This is a temporary file - these should be integrated into the main result.py file.
+"""
+
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Any, Union
+import torch
+import torch.nn.functional as F
+from datetime import datetime
+
+
+@dataclass
+class ModelOutput:
+    """Raw model output containing logits for all tasks.
+
+    This class represents the direct output from neural network models,
+    containing raw logits before softmax normalization for different tasks.
+    """
+
+    toxicity_logits: Optional[torch.Tensor] = None
+    emotion_logits: Optional[torch.Tensor] = None
+    bullying_logits: Optional[torch.Tensor] = None
+    role_logits: Optional[torch.Tensor] = None
+
+    def __post_init__(self):
+        """Validate tensor shapes and dimensions."""
+        tensors = [
+            ('toxicity', self.toxicity_logits),
+            ('emotion', self.emotion_logits),
+            ('bullying', self.bullying_logits),
+            ('role', self.role_logits)
+        ]
+
+        for name, tensor in tensors:
+            if tensor is not None:
+                if not isinstance(tensor, torch.Tensor):
+                    raise TypeError(f"{name}_logits must be torch.Tensor, got {type(tensor)}")
+                if len(tensor.shape) != 2:
+                    raise ValueError(f"{name}_logits must be 2D tensor (batch_size, num_classes), got shape {tensor.shape}")
+
+    def get_probabilities(self) -> Dict[str, torch.Tensor]:
+        """Convert logits to probabilities using softmax."""
+        probs = {}
+
+        if self.toxicity_logits is not None:
+            probs['toxicity'] = F.softmax(self.toxicity_logits, dim=1)
+        if self.emotion_logits is not None:
+            probs['emotion'] = F.softmax(self.emotion_logits, dim=1)
+        if self.bullying_logits is not None:
+            probs['bullying'] = F.softmax(self.bullying_logits, dim=1)
+        if self.role_logits is not None:
+            probs['role'] = F.softmax(self.role_logits, dim=1)
+
+        return probs
+
+    def get_predictions(self) -> Dict[str, torch.Tensor]:
+        """Get class predictions from logits (argmax)."""
+        predictions = {}
+
+        if self.toxicity_logits is not None:
+            predictions['toxicity'] = torch.argmax(self.toxicity_logits, dim=1)
+        if self.emotion_logits is not None:
+            predictions['emotion'] = torch.argmax(self.emotion_logits, dim=1)
+        if self.bullying_logits is not None:
+            predictions['bullying'] = torch.argmax(self.bullying_logits, dim=1)
+        if self.role_logits is not None:
+            predictions['role'] = torch.argmax(self.role_logits, dim=1)
+
+        return predictions
+
+    def get_confidence_scores(self) -> Dict[str, torch.Tensor]:
+        """Get maximum probability as confidence score for each task."""
+        probs = self.get_probabilities()
+        confidences = {}
+
+        for task, prob_tensor in probs.items():
+            # Get max probability along class dimension
+            confidences[task] = torch.max(prob_tensor, dim=1)[0]
+
+        return confidences
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'toxicity_logits': self.toxicity_logits.tolist() if self.toxicity_logits is not None else None,
+            'emotion_logits': self.emotion_logits.tolist() if self.emotion_logits is not None else None,
+            'bullying_logits': self.bullying_logits.tolist() if self.bullying_logits is not None else None,
+            'role_logits': self.role_logits.tolist() if self.role_logits is not None else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ModelOutput":
+        """Create ModelOutput from dictionary."""
+        return cls(
+            toxicity_logits=torch.tensor(data['toxicity_logits']) if data.get('toxicity_logits') is not None else None,
+            emotion_logits=torch.tensor(data['emotion_logits']) if data.get('emotion_logits') is not None else None,
+            bullying_logits=torch.tensor(data['bullying_logits']) if data.get('bullying_logits') is not None else None,
+            role_logits=torch.tensor(data['role_logits']) if data.get('role_logits') is not None else None
+        )
+
+
+@dataclass
+class ExplanationOutput:
+    """Output from explainability methods like Integrated Gradients or SHAP.
+
+    This class encapsulates the results of model explanation techniques,
+    providing both raw attribution scores and human-readable explanations.
+    """
+
+    method: str  # 'integrated_gradients', 'shap', 'attention', etc.
+    attributions: List[float]  # Attribution scores per token
+    tokens: List[str]  # Corresponding tokens
+    target_class: Optional[str] = None  # Which class was explained
+    target_task: Optional[str] = None  # Which task was explained
+    baseline_score: Optional[float] = None  # Baseline prediction score
+    explained_score: Optional[float] = None  # Score with current input
+    convergence_delta: Optional[float] = None  # For IG, convergence check
+
+    def __post_init__(self):
+        """Validate explanation output."""
+        if len(self.attributions) != len(self.tokens):
+            raise ValueError(
+                f"Attributions length ({len(self.attributions)}) must match "
+                f"tokens length ({len(self.tokens)})"
+            )
+
+        # Validate method
+        valid_methods = {'integrated_gradients', 'shap', 'attention', 'gradient', 'lime'}
+        if self.method not in valid_methods:
+            print(f"Warning: Unknown explanation method '{self.method}'. "
+                  f"Valid methods: {valid_methods}")
+
+    def get_top_contributing_tokens(self, k: int = 5, absolute: bool = True) -> List[tuple]:
+        """Get top K contributing tokens.
+
+        Args:
+            k: Number of top tokens to return
+            absolute: If True, use absolute values for ranking
+
+        Returns:
+            List of (token, attribution_score) tuples sorted by importance
+        """
+        if not self.tokens or not self.attributions:
+            return []
+
+        token_attr_pairs = list(zip(self.tokens, self.attributions))
+
+        if absolute:
+            # Sort by absolute attribution values
+            token_attr_pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+        else:
+            # Sort by raw attribution values (positive first)
+            token_attr_pairs.sort(key=lambda x: x[1], reverse=True)
+
+        return token_attr_pairs[:k]
+
+    def get_explanation_text(self, threshold: float = 0.1) -> str:
+        """Generate human-readable explanation text.
+
+        Args:
+            threshold: Minimum attribution threshold to include in explanation
+
+        Returns:
+            Human-readable explanation string
+        """
+        if not self.tokens or not self.attributions:
+            return "No explanation available."
+
+        # Get significant contributions
+        significant = [
+            (token, attr) for token, attr in zip(self.tokens, self.attributions)
+            if abs(attr) >= threshold
+        ]
+
+        if not significant:
+            return f"No tokens met the significance threshold of {threshold}."
+
+        # Sort by absolute contribution
+        significant.sort(key=lambda x: abs(x[1]), reverse=True)
+
+        explanation_parts = []
+
+        # Separate positive and negative contributions
+        positive_tokens = [(token, attr) for token, attr in significant if attr > 0]
+        negative_tokens = [(token, attr) for token, attr in significant if attr < 0]
+
+        if positive_tokens:
+            pos_tokens_str = ", ".join([f"'{token}'" for token, _ in positive_tokens[:3]])
+            explanation_parts.append(f"Positive contributors: {pos_tokens_str}")
+
+        if negative_tokens:
+            neg_tokens_str = ", ".join([f"'{token}'" for token, _ in negative_tokens[:3]])
+            explanation_parts.append(f"Negative contributors: {neg_tokens_str}")
+
+        # Add method and target information
+        method_info = f"Method: {self.method}"
+        if self.target_task and self.target_class:
+            method_info += f" (Task: {self.target_task}, Class: {self.target_class})"
+        explanation_parts.insert(0, method_info)
+
+        return "; ".join(explanation_parts)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'method': self.method,
+            'attributions': self.attributions,
+            'tokens': self.tokens,
+            'target_class': self.target_class,
+            'target_task': self.target_task,
+            'baseline_score': self.baseline_score,
+            'explained_score': self.explained_score,
+            'convergence_delta': self.convergence_delta,
+            'top_contributing_tokens': self.get_top_contributing_tokens(),
+            'explanation_text': self.get_explanation_text()
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ExplanationOutput":
+        """Create ExplanationOutput from dictionary."""
+        return cls(
+            method=data['method'],
+            attributions=data['attributions'],
+            tokens=data['tokens'],
+            target_class=data.get('target_class'),
+            target_task=data.get('target_task'),
+            baseline_score=data.get('baseline_score'),
+            explained_score=data.get('explained_score'),
+            convergence_delta=data.get('convergence_delta')
+        )
+
+
+class BatchResults:
+    """Container for batch processing results with aggregation capabilities.
+
+    This class manages collections of DetectionResult objects and provides
+    methods for filtering, aggregation, and batch-level statistics.
+    """
+
+    def __init__(self, results=None):
+        """Initialize BatchResults.
+
+        Args:
+            results: Initial list of detection results
+        """
+        self.results = results or []
+        self._cached_stats = None
+        self._stats_dirty = True
+
+    def add_result(self, result) -> None:
+        """Add a single result to the batch."""
+        self.results.append(result)
+        self._invalidate_cache()
+
+    def add_results(self, results) -> None:
+        """Add multiple results to the batch."""
+        self.results.extend(results)
+        self._invalidate_cache()
+
+    def clear(self) -> None:
+        """Clear all results."""
+        self.results.clear()
+        self._invalidate_cache()
+
+    def _invalidate_cache(self) -> None:
+        """Invalidate cached statistics."""
+        self._stats_dirty = True
+        self._cached_stats = None
+
+    def __len__(self) -> int:
+        """Return number of results."""
+        return len(self.results)
+
+    def __iter__(self):
+        """Iterate over results."""
+        return iter(self.results)
+
+    def __getitem__(self, index):
+        """Get result by index or slice."""
+        return self.results[index]
+
+    def get_summary_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive summary statistics for the batch.
+
+        Returns:
+            Dictionary containing various statistics about the batch
+        """
+        if not self._stats_dirty and self._cached_stats is not None:
+            return self._cached_stats
+
+        if not self.results:
+            return {
+                'total_samples': 0,
+                'toxicity_distribution': {},
+                'emotion_distribution': {},
+                'bullying_distribution': {},
+                'role_distribution': {},
+                'average_confidence': {},
+                'high_risk_count': 0,
+                'high_risk_percentage': 0.0,
+                'processing_time_stats': {}
+            }
+
+        # Basic statistics
+        stats = {
+            'total_samples': len(self.results),
+            'batch_size': len(self.results)
+        }
+
+        # If we have results, compute more detailed statistics
+        if self.results:
+            # Try to get timestamps if available
+            try:
+                timestamps = [r.timestamp for r in self.results if hasattr(r, 'timestamp')]
+                if timestamps:
+                    stats['timestamp_range'] = {
+                        'earliest': min(timestamps).isoformat(),
+                        'latest': max(timestamps).isoformat()
+                    }
+            except:
+                pass
+
+            # Try to get confidence distributions
+            try:
+                toxicity_confidences = []
+                for r in self.results:
+                    if hasattr(r, 'toxicity') and hasattr(r.toxicity, 'confidence'):
+                        toxicity_confidences.append(r.toxicity.confidence)
+
+                if toxicity_confidences:
+                    stats['toxicity_distribution'] = {
+                        'mean': float(sum(toxicity_confidences) / len(toxicity_confidences)),
+                        'min': float(min(toxicity_confidences)),
+                        'max': float(max(toxicity_confidences))
+                    }
+            except:
+                pass
+
+        # Cache the statistics
+        self._cached_stats = stats
+        self._stats_dirty = False
+
+        return stats
+
+    def filter_by_confidence(self, task: str, min_confidence: float) -> 'BatchResults':
+        """Filter results by minimum confidence threshold for a specific task.
+
+        Args:
+            task: Task name (e.g., 'toxicity', 'emotion', 'bullying')
+            min_confidence: Minimum confidence threshold (0.0-1.0)
+
+        Returns:
+            New BatchResults instance with filtered results
+        """
+        filtered_results = []
+
+        for result in self.results:
+            try:
+                # Handle different result formats
+                if isinstance(result, dict):
+                    if result.get('confidence', 0) >= min_confidence:
+                        filtered_results.append(result)
+                elif hasattr(result, task):
+                    task_result = getattr(result, task)
+                    if hasattr(task_result, 'confidence') and task_result.confidence >= min_confidence:
+                        filtered_results.append(result)
+                elif hasattr(result, 'confidence') and result.confidence >= min_confidence:
+                    filtered_results.append(result)
+            except (AttributeError, TypeError):
+                # Skip malformed results
+                continue
+
+        return BatchResults(filtered_results)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert batch to dictionary."""
+        return {
+            'results': [result.to_dict() if hasattr(result, 'to_dict') else str(result) for result in self.results],
+            'summary_statistics': self.get_summary_statistics(),
+            'batch_metadata': {
+                'size': len(self.results),
+                'created_at': datetime.now().isoformat()
+            }
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'BatchResults':
+        """Create BatchResults from dictionary."""
+        # This is a simplified implementation - would need proper DetectionResult deserialization
+        results = data.get('results', [])
+        return cls(results)

@@ -8,12 +8,12 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.cyberpuppy.safety.human_review import (
+from cyberpuppy.safety.human_review import (
     HumanReviewInterface,
     ReviewAction,
     ReviewPriority,
 )
-from src.cyberpuppy.safety.rules import (
+from cyberpuppy.safety.rules import (
     AppealManager,
     AppealStatus,
     PIIHandler,

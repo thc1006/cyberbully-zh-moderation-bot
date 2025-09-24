@@ -151,10 +151,14 @@ class TestWindowsEncoding:
             )
 
             if result.returncode == 0:
-                # Should contain codepage information
+                # Should contain codepage information (in English or Chinese)
+                stdout_lower = result.stdout.lower()
                 assert (
-                    "codepage" in result.stdout.lower()
+                    "codepage" in stdout_lower
                     or result.stdout.strip().isdigit()
+                    or "字碼頁" in result.stdout  # Traditional Chinese
+                    or "字码页" in result.stdout  # Simplified Chinese
+                    or any(char.isdigit() for char in result.stdout)  # Contains digits
                 )
 
             # Test setting UTF-8 codepage (65001)

@@ -115,10 +115,12 @@ cyberpuppy = ["*.yaml", "*.json"]
 minversion = "7.0"
 testpaths = ["tests"]
 pythonpath = ["src"]
-# Windows: Handle encoding issues in test output
+# 2025 best practices: Use importlib import mode for better compatibility
 addopts = [
     "-ra",
     "--strict-markers",
+    "--strict-config",
+    "--import-mode=importlib",
     "--cov=cyberpuppy",
     "--cov-branch",
     "--cov-report=term-missing",
@@ -136,6 +138,9 @@ markers = [
     "performance: marks tests as performance tests",
     "gpu: marks tests as GPU tests",
     "windows: marks tests as Windows-specific tests",
+    "cli: marks tests as CLI tests",
+    "docker: marks tests as Docker integration tests",
+    "regression: marks tests as regression tests",
 ]
 
 [tool.black]

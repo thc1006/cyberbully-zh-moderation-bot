@@ -10,10 +10,10 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
+from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
                                                RoleType, ToxicityLevel,
                                                UnifiedLabel)
-from src.cyberpuppy.models.contextual import (ContextualInput, ContextualModel,
+from cyberpuppy.models.contextual import (ContextualInput, ContextualModel,
                                               ContextualOutput,
                                               ContrastiveLearningModule,
                                               EventFeatureExtractor,

@@ -218,7 +218,7 @@ class TestCyberPuppyDetector:
     def test_detector_initialization(self, detector_config):
         """Test CyberPuppyDetector initializes with proper configuration."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models') as mock_load:
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -235,7 +235,7 @@ class TestCyberPuppyDetector:
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models') as mock_load:
             mock_load.side_effect = FileNotFoundError("Model file not found")
 
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             with pytest.raises(RuntimeError, match="Model loading failed"):
                 CyberPuppyDetector(detector_config)
@@ -243,7 +243,7 @@ class TestCyberPuppyDetector:
     def test_text_preprocessing_pipeline(self, detector_config):
         """Test text preprocessing handles various input formats."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -269,7 +269,7 @@ class TestCyberPuppyDetector:
     def test_ensemble_prediction_logic(self, detector_config):
         """Test ensemble prediction combines model outputs correctly."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
@@ -312,7 +312,7 @@ class TestCyberPuppyDetector:
     def test_confidence_calibration(self, mock_models, detector_config):
         """Test confidence scores are properly calibrated."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -337,7 +337,7 @@ class TestCyberPuppyDetector:
     def test_explanation_generation(self, mock_models, detector_config):
         """Test explanation generation with attribution scores."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -371,7 +371,7 @@ class TestCyberPuppyDetector:
                 'src.cyberpuppy.models.detector.DetectionResult',
                 mock_detection_result
             ):
-                from src.cyberpuppy.models.detector import CyberPuppyDetector
+                from cyberpuppy.models.detector import CyberPuppyDetector
 
                 detector = CyberPuppyDetector(detector_config)
                 detector.models = mock_models
@@ -405,7 +405,7 @@ class TestCyberPuppyDetector:
                 'src.cyberpuppy.models.detector.DetectionResult',
                 mock_detection_result
             ):
-                from src.cyberpuppy.models.detector import CyberPuppyDetector
+                from cyberpuppy.models.detector import CyberPuppyDetector
 
                 detector = CyberPuppyDetector(detector_config)
                 detector.models = mock_models
@@ -425,7 +425,7 @@ class TestCyberPuppyDetector:
     def test_invalid_input_handling(self, mock_models, detector_config):
         """Test error handling for invalid inputs."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -445,7 +445,7 @@ class TestCyberPuppyDetector:
     def test_timeout_handling(self, mock_models, detector_config):
         """Test timeout handling for long-running predictions."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
             import time
 
             detector = CyberPuppyDetector(detector_config)
@@ -464,7 +464,7 @@ class TestCyberPuppyDetector:
     def test_performance_requirements(self, mock_models, detector_config):
         """Test performance requirements are met."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
             import time
 
             detector = CyberPuppyDetector(detector_config)
@@ -485,7 +485,7 @@ class TestCyberPuppyDetector:
     def test_context_handling(self, mock_models, detector_config):
         """Test contextual information handling."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -507,7 +507,7 @@ class TestCyberPuppyDetector:
     def test_memory_usage_optimization(self, mock_models, detector_config):
         """Test memory usage is optimized for large inputs."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -531,7 +531,7 @@ class TestCyberPuppyDetector:
     ):
         """Test ensemble weights can be configured and applied correctly."""
         with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from src.cyberpuppy.models.detector import CyberPuppyDetector
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             # Custom weights configuration
             custom_config = detector_config.copy()

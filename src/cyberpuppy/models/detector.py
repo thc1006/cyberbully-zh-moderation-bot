@@ -11,6 +11,7 @@ import logging
 import warnings
 from typing import Dict, List, Optional, Tuple, Union, Any
 from datetime import datetime
+from dataclasses import dataclass
 
 # from pathlib import Path  # Unused import commented out
 import torch
@@ -866,3 +867,113 @@ class CyberPuppyDetector:
         if self.device.startswith("cuda"):
             torch.cuda.empty_cache()
         logger.info("CyberPuppyDetector resources cleaned up")
+
+
+
+@dataclass
+class EnsembleConfig:
+    """Configuration for ensemble model setup."""
+
+    models: List[str] = None
+    weights: List[float] = None
+    voting_strategy: str = "weighted"  # "weighted", "majority", "average"
+
+    def __post_init__(self):
+        """Validate ensemble configuration."""
+        if self.models is None:
+            self.models = ["baseline", "contextual", "weak_supervision"]
+
+        if self.weights is None:
+            # Default equal weights
+            self.weights = [1.0 / len(self.models)] * len(self.models)
+
+        if len(self.models) != len(self.weights):
+            raise ValueError(f"Number of models ({len(self.models)}) must match number of weights ({len(self.weights)})")
+
+        # Normalize weights to sum to 1.0
+        total_weight = sum(self.weights)
+        if abs(total_weight - 1.0) > 1e-6:
+            self.weights = [w / total_weight for w in self.weights]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "models": self.models,
+            "weights": self.weights,
+            "voting_strategy": self.voting_strategy
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EnsembleConfig":
+        """Create from dictionary."""
+        config = cls()
+        config.models = data.get("models", ["baseline", "contextual", "weak_supervision"])
+        config.weights = data.get("weights", [1.0/len(config.models)] * len(config.models))
+        config.voting_strategy = data.get("voting_strategy", "weighted")
+        config.__post_init__()  # Re-validate
+        return config
+
+    def is_valid(self) -> bool:
+        """Validate configuration."""
+        try:
+            if not self.models:
+                return False
+            if not self.weights:
+                return False
+            if len(self.models) != len(self.weights):
+                return False
+            if abs(sum(self.weights) - 1.0) > 1e-6:
+                return False
+            if self.voting_strategy not in ["weighted", "majority", "average"]:
+                return False
+            return True
+        except:
+            return False
+
+
+@dataclass
+class PreprocessingConfig:
+    """Configuration for text preprocessing."""
+
+    normalize_unicode: bool = True
+    remove_urls: bool = False
+    remove_mentions: bool = False
+    convert_traditional_to_simplified: bool = True
+    max_length: int = 512
+    clean_whitespace: bool = True
+    lowercase: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "normalize_unicode": self.normalize_unicode,
+            "remove_urls": self.remove_urls,
+            "remove_mentions": self.remove_mentions,
+            "convert_traditional_to_simplified": self.convert_traditional_to_simplified,
+            "max_length": self.max_length,
+            "clean_whitespace": self.clean_whitespace,
+            "lowercase": self.lowercase
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PreprocessingConfig":
+        """Create from dictionary."""
+        return cls(
+            normalize_unicode=data.get("normalize_unicode", True),
+            remove_urls=data.get("remove_urls", False),
+            remove_mentions=data.get("remove_mentions", False),
+            convert_traditional_to_simplified=data.get("convert_traditional_to_simplified", True),
+            max_length=data.get("max_length", 512),
+            clean_whitespace=data.get("clean_whitespace", True),
+            lowercase=data.get("lowercase", False)
+        )
+
+    def is_valid(self) -> bool:
+        """Validate configuration."""
+        try:
+            if self.max_length <= 0 or self.max_length > 10000:
+                return False
+            return True
+        except:
+            return False
+

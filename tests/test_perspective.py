@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from src.cyberpuppy.arbiter.perspective import (PerspectiveAPI,
+from cyberpuppy.arbiter.perspective import (PerspectiveAPI,
                                                 PerspectiveResult,
                                                 UncertaintyDetector,
                                                 UncertaintyReason)

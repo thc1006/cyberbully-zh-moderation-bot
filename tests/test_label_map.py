@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cyberpuppy.labeling import (
+from cyberpuppy.labeling import (
     BullyingLevel,
     EmotionType,
     LabelMapper,

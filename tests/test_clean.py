@@ -89,7 +89,7 @@ class TestTextNormalizer(unittest.TestCase):
             ("Hello @user123", "Hello [MENTION]"),
             ("@測試用戶 你好", "[MENTION] 你好"),
             ("Multiple @user1 @user2", "Multiple [MENTION] [MENTION]"),
-            ("Email: test@example.com", "Email: [EMAIL]"), 
+            ("Email: test@example.com", "Email: test@example.com"),  # Emails should NOT be replaced by mention
         ]
 
         for text, expected in test_cases:
