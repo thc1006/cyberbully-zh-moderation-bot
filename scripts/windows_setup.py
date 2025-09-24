@@ -16,24 +16,29 @@ def set_windows_encoding():
     """Configure Windows encoding to handle Chinese text properly"""
     if platform.system() == "Windows":
         # Set console output encoding to UTF-8
-        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ["PYTHONIOENCODING"] = "utf-8"
 
         # Try to set console codepage to UTF-8
         try:
-            subprocess.run(['chcp', '65001'], shell=True, check=False,
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["chcp", "65001"],
+                shell=True,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         except Exception:
             pass
 
         # Set locale encoding
         try:
-            locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+            locale.setlocale(locale.LC_ALL, "C.UTF-8")
         except locale.Error:
             try:
-                locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+                locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
             except locale.Error:
                 # Fallback to system default
-                locale.setlocale(locale.LC_ALL, '')
+                locale.setlocale(locale.LC_ALL, "")
 
 
 def check_python_version():
@@ -49,14 +54,19 @@ def check_python_version():
 def check_pip_version():
     """Ensure pip is up to date"""
     try:
-        result = subprocess.run([sys.executable, '-m', 'pip', '--version'],
-                              capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         print(f"✅ pip version: {result.stdout.strip()}")
 
         # Upgrade pip
         print("🔄 Upgrading pip...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'],
-                      check=True)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True
+        )
     except subprocess.CalledProcessError as e:
         print(f"❌ Error checking pip: {e}")
         sys.exit(1)
@@ -65,16 +75,13 @@ def check_pip_version():
 def install_build_tools():
     """Install essential build tools for Windows"""
     print("🔧 Installing build tools...")
-    build_tools = [
-        'wheel',
-        'setuptools>=68.0.0',
-        'pip-tools>=7.3.0'
-    ]
+    build_tools = ["wheel", "setuptools>=68.0.0", "pip-tools>=7.3.0"]
 
     for tool in build_tools:
         try:
-            subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', tool],
-                          check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", tool], check=True
+            )
             print(f"✅ Installed: {tool}")
         except subprocess.CalledProcessError as e:
             print(f"⚠️  Warning: Failed to install {tool}: {e}")
@@ -87,15 +94,22 @@ def install_precompiled_packages():
     # Install numpy first (many packages depend on it)
     numpy_versions = [
         'numpy>=1.24.4,<2.0.0; python_version < "3.12"',
-        'numpy>=1.26.2,<2.0.0; python_version >= "3.12"'
+        'numpy>=1.26.2,<2.0.0; python_version >= "3.12"',
     ]
 
     for numpy_spec in numpy_versions:
         try:
-            subprocess.run([
-                sys.executable, '-m', 'pip', 'install',
-                '--only-binary=numpy', numpy_spec
-            ], check=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--only-binary=numpy",
+                    numpy_spec,
+                ],
+                check=True,
+            )
             print(f"✅ Installed NumPy (pre-compiled)")
             break
         except subprocess.CalledProcessError:
@@ -103,16 +117,16 @@ def install_precompiled_packages():
 
     # Install other commonly problematic packages
     precompiled_packages = [
-        '--only-binary=scipy scipy',
-        '--only-binary=pandas pandas>=2.1.0',
-        '--only-binary=scikit-learn scikit-learn>=1.3.0',
-        '--only-binary=matplotlib matplotlib>=3.8.0',
-        '--only-binary=Pillow Pillow',
+        "--only-binary=scipy scipy",
+        "--only-binary=pandas pandas>=2.1.0",
+        "--only-binary=scikit-learn scikit-learn>=1.3.0",
+        "--only-binary=matplotlib matplotlib>=3.8.0",
+        "--only-binary=Pillow Pillow",
     ]
 
     for pkg_spec in precompiled_packages:
         try:
-            args = [sys.executable, '-m', 'pip', 'install'] + pkg_spec.split()
+            args = [sys.executable, "-m", "pip", "install"] + pkg_spec.split()
             subprocess.run(args, check=True)
             print(f"✅ Installed: {pkg_spec.split()[-1]} (pre-compiled)")
         except subprocess.CalledProcessError as e:
@@ -123,11 +137,20 @@ def install_pytorch_cpu():
     """Install PyTorch CPU version for Windows to avoid CUDA compilation issues"""
     print("🔥 Installing PyTorch (CPU version)...")
     try:
-        subprocess.run([
-            sys.executable, '-m', 'pip', 'install',
-            'torch', 'torchvision', 'torchaudio',
-            '--index-url', 'https://download.pytorch.org/whl/cpu'
-        ], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "torch",
+                "torchvision",
+                "torchaudio",
+                "--index-url",
+                "https://download.pytorch.org/whl/cpu",
+            ],
+            check=True,
+        )
         print("✅ Installed PyTorch CPU version")
     except subprocess.CalledProcessError as e:
         print(f"⚠️  Warning: Failed to install PyTorch: {e}")
@@ -139,13 +162,13 @@ def install_chinese_nlp_packages():
     print("🀄 Installing Chinese NLP packages...")
 
     chinese_packages = [
-        'jieba>=0.42.1',
-        'opencc-python-reimplemented>=0.1.7',  # Avoid C++ compilation
+        "jieba>=0.42.1",
+        "opencc-python-reimplemented>=0.1.7",  # Avoid C++ compilation
     ]
 
     for pkg in chinese_packages:
         try:
-            subprocess.run([sys.executable, '-m', 'pip', 'install', pkg], check=True)
+            subprocess.run([sys.executable, "-m", "pip", "install", pkg], check=True)
             print(f"✅ Installed: {pkg}")
         except subprocess.CalledProcessError as e:
             print(f"⚠️  Warning: Failed to install {pkg}: {e}")
@@ -155,20 +178,25 @@ def install_requirements():
     """Install main requirements with Windows-specific handling"""
     print("📋 Installing requirements...")
 
-    requirements_file = Path(__file__).parent.parent / 'requirements.txt'
+    requirements_file = Path(__file__).parent.parent / "requirements.txt"
     if not requirements_file.exists():
         print(f"❌ Requirements file not found: {requirements_file}")
         return
 
     try:
         # Use constraints file for Windows compatibility
-        constraints_file = Path(__file__).parent.parent / 'constraints.txt'
+        constraints_file = Path(__file__).parent.parent / "constraints.txt"
         cmd = [
-            sys.executable, '-m', 'pip', 'install',
-            '--constraint', str(constraints_file),
-            '--requirement', str(requirements_file),
-            '--prefer-binary',  # Prefer wheels over source
-            '--no-compile'      # Skip compilation step
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--constraint",
+            str(constraints_file),
+            "--requirement",
+            str(requirements_file),
+            "--prefer-binary",  # Prefer wheels over source
+            "--no-compile",  # Skip compilation step
         ]
 
         subprocess.run(cmd, check=True)
@@ -179,11 +207,18 @@ def install_requirements():
 
         # Fallback: install without constraints
         try:
-            subprocess.run([
-                sys.executable, '-m', 'pip', 'install',
-                '--requirement', str(requirements_file),
-                '--prefer-binary'
-            ], check=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--requirement",
+                    str(requirements_file),
+                    "--prefer-binary",
+                ],
+                check=True,
+            )
             print("✅ Requirements installed (fallback)")
         except subprocess.CalledProcessError as e2:
             print(f"❌ Fallback installation also failed: {e2}")
@@ -194,12 +229,12 @@ def test_imports():
     print("🧪 Testing critical imports...")
 
     test_imports = [
-        ('numpy', 'NumPy'),
-        ('pandas', 'Pandas'),
-        ('torch', 'PyTorch'),
-        ('sklearn', 'scikit-learn'),
-        ('jieba', 'Jieba'),
-        ('opencc', 'OpenCC'),
+        ("numpy", "NumPy"),
+        ("pandas", "Pandas"),
+        ("torch", "PyTorch"),
+        ("sklearn", "scikit-learn"),
+        ("jieba", "Jieba"),
+        ("opencc", "OpenCC"),
     ]
 
     failed_imports = []
@@ -233,7 +268,7 @@ def test_chinese_text_processing():
         print(f"✅ Jieba segmentation: {' / '.join(words)}")
 
         # Test OpenCC conversion
-        cc = OpenCC('s2t')  # Simplified to Traditional
+        cc = OpenCC("s2t")  # Simplified to Traditional
         converted = cc.convert(test_text)
         print(f"✅ OpenCC conversion: {test_text} → {converted}")
 
@@ -282,5 +317,5 @@ def main():
     print("3. Follow the main README.md for further setup instructions")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

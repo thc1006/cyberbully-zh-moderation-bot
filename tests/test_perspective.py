@@ -28,10 +28,14 @@ class TestUncertaintyDetector:
     def test_borderline_score_detection(self, detector):
         """測試邊界分數檢測"""
         prediction_scores = {
-            "sco"
-                "res": {
-            "toxicity": "none",
-            "emotion": "neu",
+            "scores": {
+                "toxicity": {"none": 0.45, "toxic": 0.55},
+                "emotion": {"pos": 0.3, "neu": 0.4, "neg": 0.3}
+            },
+            "predictions": {
+                "toxicity": "none",
+                "emotion": "neu",
+            }
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -43,10 +47,14 @@ class TestUncertaintyDetector:
     def test_high_confidence_no_uncertainty(self, detector):
         """測試高信心度無不確定性"""
         prediction_scores = {
-            "sco"
-                "res": {
-            "toxicity": "none",
-            "emotion": "neu",
+            "scores": {
+                "toxicity": {"none": 0.9, "toxic": 0.1},
+                "emotion": {"pos": 0.1, "neu": 0.8, "neg": 0.1}
+            },
+            "predictions": {
+                "toxicity": "none",
+                "emotion": "neu",
+            }
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -58,11 +66,15 @@ class TestUncertaintyDetector:
     def test_conflicting_signals_detection(self, detector):
         """測試衝突信號檢測"""
         prediction_scores = {
-            "sco"
-                "res": {
-            "toxicity": "none",
-            "emotion": "neg",
-            "emotion_strength": 4,
+            "scores": {
+                "toxicity": {"none": 0.6, "toxic": 0.4},
+                "emotion": {"pos": 0.1, "neu": 0.2, "neg": 0.7}
+            },
+            "predictions": {
+                "toxicity": "none",
+                "emotion": "neg",
+                "emotion_strength": 4,
+            }
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -74,10 +86,14 @@ class TestUncertaintyDetector:
     def test_low_confidence_gap(self, detector):
         """測試低信心度差距"""
         prediction_scores = {
-            "sco"
-                "res": {
-            "toxicity": "none",
-            "emotion": "neu",
+            "scores": {
+                "toxicity": {"none": 0.52, "toxic": 0.48},
+                "emotion": {"pos": 0.33, "neu": 0.34, "neg": 0.33}
+            },
+            "predictions": {
+                "toxicity": "none",
+                "emotion": "neu",
+            }
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)

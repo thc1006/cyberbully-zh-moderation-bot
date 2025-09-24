@@ -18,12 +18,13 @@ from .result import (
     BullyingType,
     RoleType,
     ResultAggregator,
-    ConfidenceThresholds
+    ConfidenceThresholds,
 )
 
 # Import detector only if dependencies are available
 try:
     from .detector import CyberPuppyDetector  # noqa: F401
+
     __all__ = [
         "DetectionResult",
         "ToxicityResult",
@@ -38,7 +39,7 @@ try:
         "RoleType",
         "ResultAggregator",
         "ConfidenceThresholds",
-        "CyberPuppyDetector"
+        "CyberPuppyDetector",
     ]
 except ImportError:
     # Allow imports without detector if dependencies not available
@@ -55,5 +56,5 @@ except ImportError:
         "BullyingType",
         "RoleType",
         "ResultAggregator",
-        "ConfidenceThresholds"
+        "ConfidenceThresholds",
     ]

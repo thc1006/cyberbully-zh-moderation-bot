@@ -1,6 +1,7 @@
 """
 Test critical module imports to verify dependency resolution.
 """
+
 import sys
 import importlib
 import traceback
@@ -18,7 +19,6 @@ def test_critical_imports() -> Dict[str, Tuple[bool, str]]:
         "cyberpuppy.explain",
         "cyberpuppy.safety",
         "cyberpuppy.labeling",
-
         # Core ML/DL libraries
         "torch",
         "transformers",
@@ -26,34 +26,28 @@ def test_critical_imports() -> Dict[str, Tuple[bool, str]]:
         "sklearn",
         "numpy",
         "pandas",
-
         # Chinese NLP
         "jieba",
         "opencc",
-
         # API & Web
         "fastapi",
         "uvicorn",
         "pydantic",
         "pydantic.v1",  # Test V1 compatibility
         "pydantic_settings",
-
         # Explainability
         "captum",
         "shap",
-
         # Testing
         "pytest",
-
         # Development tools
         "black",
         "mypy",
-
         # Utilities
         "requests",
         "tqdm",
         "rich",
-        "loguru"
+        "loguru",
     ]
 
     results = {}
@@ -80,14 +74,14 @@ def test_pydantic_v2_compatibility():
 
         # Test basic V2 model
         class TestModel(BaseModel):
-            model_config = ConfigDict(extra='forbid')
+            model_config = ConfigDict(extra="forbid")
 
             name: str = Field(..., description="Test name")
             value: int = Field(default=0, ge=0)
 
         # Test settings
         class TestSettings(BaseSettings):
-            model_config = ConfigDict(env_prefix='TEST_')
+            model_config = ConfigDict(env_prefix="TEST_")
 
             debug: bool = False
             port: int = 8000
@@ -121,7 +115,9 @@ def main():
         if success:
             success_count += 1
 
-    print(f"\n[STATS] Import Results: {success_count}/{total_count} modules imported successfully")
+    print(
+        f"\n[STATS] Import Results: {success_count}/{total_count} modules imported successfully"
+    )
 
     # Test Pydantic V2 compatibility
     print("\n[INFO] Testing Pydantic V2 Compatibility...")

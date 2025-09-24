@@ -108,8 +108,7 @@ class WeakSupervisionConfig:
     # Coverage and abstention thresholds
     min_coverage: float = 0.1  # Minimum fraction of data that LFs must cover
     max_abstains: float = 0.5  # Maximum fraction of abstentions allowed
-    uncertainty_threshold: float = \
-        0.7  # Threshold for high uncertainty predictions
+    uncertainty_threshold: float = 0.7  # Threshold for high uncertainty predictions
 
     # Multi-task configuration
     enable_multi_task: bool = False
@@ -150,8 +149,7 @@ class WeakSupervisionConfig:
             total_weight = sum(self.ensemble_weights.values())
             if total_weight > 0:
                 self.ensemble_weights = {
-                    k: v / total_weight for k, v in
-                        self.ensemble_weights.items()
+                    k: v / total_weight for k, v in self.ensemble_weights.items()
                 }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -174,11 +172,7 @@ class ChineseLabelingFunction:
     """
 
     def __init__(
-        self,
-        name: str,
-        function: Callable[[str],
-        int],
-        description: str = ""
+        self, name: str, function: Callable[[str], int], description: str = ""
     ):
         """Initialize labeling function.
 
@@ -195,8 +189,7 @@ class ChineseLabelingFunction:
         self.converter = None
         if OPENCC_AVAILABLE:
             try:
-                self.converter = \
-                    opencc.OpenCC("t2s")  # Traditional to Simplified
+                self.converter = opencc.OpenCC("t2s")  # Traditional to Simplified
             except Exception as e:
                 logger.warning(f"Failed to initialize OpenCC: {e}")
 
@@ -254,8 +247,7 @@ class ChineseLabelingFunction:
             text_lower = text.lower()
 
             # Count profanity words
-            profanity_count = \
-                sum(1 for word in profanity_words if word in text_lower)
+            profanity_count = sum(1 for word in profanity_words if word in text_lower)
             total_chars = len(text)
 
             if total_chars == 0:
@@ -270,14 +262,14 @@ class ChineseLabelingFunction:
 
             return ABSTAIN
 
-        description = (
-            f"Detects profanity using {len(profanity_words)} words with \
+        description = f"Detects profanity using {len(profanity_words)} words with \
                 threshold {threshold}"
-        )
         return cls(name, profanity_function, description)
 
     @classmethod
-    def create_threat_pattern_lf(cls, name: str, patterns: List[str]) -> "ChineseLabelingFunction":
+    def create_threat_pattern_lf(
+        cls, name: str, patterns: List[str]
+    ) -> "ChineseLabelingFunction":
         """Create a threat pattern-based labeling function.
 
         Args:
@@ -287,9 +279,7 @@ class ChineseLabelingFunction:
         Returns:
             ChineseLabelingFunction for threat detection
         """
-        compiled_patterns = [re.compile(
-            pattern,
-            re.IGNORECASE) for pattern in patterns]
+        compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
 
         def threat_function(text: str) -> int:
             if not text:
@@ -343,15 +333,12 @@ class ChineseLabelingFunction:
                     # Check context around the indicator
                     idx = text_lower.find(indicator)
                     start = max(0, idx - context_window // 2)
-                    end = min(
-                        len(text),
-                        idx + len(indicator) + context_window // 2)
+                    end = min(len(text), idx + len(indicator) + context_window // 2)
                     context = text[start:end]
 
                     # Look for intensifying words in context
                     intensifiers = ["一直", "总是", "不断", "反复", "持续"]
-                    if any(intensifier in context for intensifier in
-                        intensifiers):
+                    if any(intensifier in context for intensifier in intensifiers):
                         harassment_score += 1
 
             if harassment_score >= 2:
@@ -366,8 +353,7 @@ class ChineseLabelingFunction:
 
     @classmethod
     def create_emotion_correlation_lf(
-        cls, name: str, negative_emotions: List[str], intensity_threshold:
-            float = 0.6
+        cls, name: str, negative_emotions: List[str], intensity_threshold: float = 0.6
     ) -> "ChineseLabelingFunction":
         """Create emotion-based toxicity correlation function.
 
@@ -389,9 +375,9 @@ class ChineseLabelingFunction:
             text_lower = text.lower()
 
             # Count negative emotions
-            emotion_count = \
-                sum(1 for emotion in negative_emotions if emotion in
-                    text_lower)
+            emotion_count = sum(
+                1 for emotion in negative_emotions if emotion in text_lower
+            )
 
             # Look for intensity amplifiers
             amplifiers = ["非常", "极其", "特别", "超级", "很", "太", "十分"]
@@ -399,8 +385,7 @@ class ChineseLabelingFunction:
 
             # Calculate emotional intensity
             text_length = max(1, len(text.split()))
-            emotion_intensity = \
-                (emotion_count + amplifier_count * 0.5) / text_length
+            emotion_intensity = (emotion_count + amplifier_count * 0.5) / text_length
 
             if emotion_intensity >= intensity_threshold and emotion_count > 0:
                 return TOXIC
@@ -441,11 +426,7 @@ class LabelingFunctionSet:
         if not texts or not self.functions:
             return np.array([])
 
-        label_matrix = np.full(
-            (len(texts),
-            len(self.functions)),
-            ABSTAIN,
-            dtype=int)
+        label_matrix = np.full((len(texts), len(self.functions)), ABSTAIN, dtype=int)
 
         for i, text in enumerate(texts):
             for j, lf in enumerate(self.functions):
@@ -453,15 +434,16 @@ class LabelingFunctionSet:
                     label = lf.function(text)
                     label_matrix[i, j] = label
                 except Exception as e:
-                    logger.warning(f"Error in labeling function {lf.name}: \
-                        {e}")
+                    logger.warning(
+                        f"Error in labeling function {lf.name}: \
+                        {e}"
+                    )
                     label_matrix[i, j] = ABSTAIN
 
         return label_matrix
 
     def get_coverage(
-        self,
-        label_matrix: Optional[np.ndarray] = None
+        self, label_matrix: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
         """Calculate coverage statistics for labeling functions.
 
@@ -496,9 +478,9 @@ class WeakSupervisionDataset(Dataset):
         self.texts = texts
         self.labels_matrix = labels_matrix
 
-        assert len(
-            texts) == labels_matrix.shape[0], \
-            "Number of texts must match label matrix rows"
+        assert (
+            len(texts) == labels_matrix.shape[0]
+        ), "Number of texts must match label matrix rows"
 
     def __len__(self) -> int:
         """Return dataset size."""
@@ -528,8 +510,7 @@ class WeakSupervisionDataset(Dataset):
         sample_coverage = np.mean(self.labels_matrix != ABSTAIN, axis=1)
         keep_mask = sample_coverage >= min_coverage
 
-        filtered_texts = \
-            [text for i, text in enumerate(self.texts) if keep_mask[i]]
+        filtered_texts = [text for i, text in enumerate(self.texts) if keep_mask[i]]
         filtered_labels = self.labels_matrix[keep_mask]
 
         return WeakSupervisionDataset(filtered_texts, filtered_labels)
@@ -582,10 +563,7 @@ class UncertaintyQuantifier:
 
         return uncertainty
 
-    def get_high_uncertainty_mask(
-        self,
-        uncertainty_scores: np.ndarray
-    ) -> np.ndarray:
+    def get_high_uncertainty_mask(self, uncertainty_scores: np.ndarray) -> np.ndarray:
         """Get mask for high uncertainty predictions.
 
         Args:
@@ -607,8 +585,9 @@ class WeakSupervisionModel:
     """
 
     def __init__(
-        self, config: WeakSupervisionConfig, baseline_model:
-            Optional[BaselineModel] = None
+        self,
+        config: WeakSupervisionConfig,
+        baseline_model: Optional[BaselineModel] = None,
     ):
         """Initialize weak supervision model.
 
@@ -627,8 +606,10 @@ class WeakSupervisionModel:
         # Statistics tracking
         self.training_stats: Dict[str, Any] = {}
 
-        logger.info(f"Initialized WeakSupervisionModel with config: \
-            {config.label_model_type}")
+        logger.info(
+            f"Initialized WeakSupervisionModel with config: \
+            {config.label_model_type}"
+        )
 
     def setup_default_labeling_functions(self):
         """Set up default Chinese labeling functions for toxicity detection."""
@@ -664,11 +645,28 @@ class WeakSupervisionModel:
         ]
 
         # Harassment indicators
-        harassment_indicators = \
-            ["骚扰", "跟踪", "纠缠", "恶心", "讨厌", "烦人", "滚蛋", "闭嘴"]
+        harassment_indicators = [
+            "骚扰",
+            "跟踪",
+            "纠缠",
+            "恶心",
+            "讨厌",
+            "烦人",
+            "滚蛋",
+            "闭嘴",
+        ]
 
         # Negative emotions for correlation
-        negative_emotions = ["愤怒", "讨厌", "恶心", "愤恨", "憎恨", "厌恶", "气愤", "恼火"]
+        negative_emotions = [
+            "愤怒",
+            "讨厌",
+            "恶心",
+            "愤恨",
+            "憎恨",
+            "厌恶",
+            "气愤",
+            "恼火",
+        ]
 
         # Create labeling functions
         self.lf_set.add_function(
@@ -679,8 +677,8 @@ class WeakSupervisionModel:
 
         self.lf_set.add_function(
             ChineseLabelingFunction.create_threat_pattern_lf(
-                "threat_patterns",
-                threat_patterns)
+                "threat_patterns", threat_patterns
+            )
         )
 
         self.lf_set.add_function(
@@ -695,8 +693,10 @@ class WeakSupervisionModel:
             )
         )
 
-        logger.info(f"Set up {len(self.lf_set.functions)} default labeling \
-            functions")
+        logger.info(
+            f"Set up {len(self.lf_set.functions)} default labeling \
+            functions"
+        )
 
     def add_labeling_function(self, lf: ChineseLabelingFunction):
         """Add a custom labeling function.
@@ -720,7 +720,7 @@ class WeakSupervisionModel:
         if len(self.lf_set.functions) == 0:
             raise ValueError(
                 "No labeling functions available. Call s"
-                    "etup_default_labeling_functions() first."
+                "etup_default_labeling_functions() first."
             )
 
         logger.info(f"Fitting weak supervision model on {len(texts)} texts")
@@ -731,20 +731,21 @@ class WeakSupervisionModel:
         # Filter by coverage if needed
         if self.config.min_coverage > 0:
             dataset = WeakSupervisionDataset(texts, label_matrix)
-            filtered_dataset = \
-                dataset.filter_by_coverage(self.config.min_coverage)
+            filtered_dataset = dataset.filter_by_coverage(self.config.min_coverage)
             label_matrix = filtered_dataset.labels_matrix
             texts = filtered_dataset.texts
-            logger.info(f"Filtered to {len(texts)} texts with sufficient \
-                coverage")
+            logger.info(
+                f"Filtered to {len(texts)} texts with sufficient \
+                coverage"
+            )
 
         # Initialize and fit Snorkel LabelModel
         if self.config.label_model_type == "MajorityLabelVoter":
             self.label_model = MajorityLabelVoter()
         else:
             self.label_model = LabelModel(
-                cardinality=self.config.cardinality,
-                verbose=verbose)
+                cardinality=self.config.cardinality, verbose=verbose
+            )
 
             # Fit the model
             self.label_model.fit(
@@ -767,9 +768,7 @@ class WeakSupervisionModel:
         logger.info("Weak supervision model fitting completed")
 
     def predict(
-        self,
-        texts: List[str],
-        use_ensemble: bool = False
+        self, texts: List[str], use_ensemble: bool = False
     ) -> Dict[str, np.ndarray]:
         """Make predictions on new texts.
 
@@ -800,8 +799,7 @@ class WeakSupervisionModel:
         confidences = np.max(probs, axis=1)
 
         # Calculate uncertainty scores
-        uncertainty_scores = \
-            self.uncertainty_quantifier.compute_uncertainty(probs)
+        uncertainty_scores = self.uncertainty_quantifier.compute_uncertainty(probs)
 
         results = {
             "toxicity_pred": preds,
@@ -814,8 +812,8 @@ class WeakSupervisionModel:
         if use_ensemble and self.baseline_model is not None:
             baseline_results = self._get_baseline_predictions(texts)
             ensemble_probs = self._compute_ensemble_probabilities(
-                probs,
-                baseline_results)
+                probs, baseline_results
+            )
 
             results["ensemble_probs"] = ensemble_probs
             results["ensemble_pred"] = np.argmax(ensemble_probs, axis=1)
@@ -835,8 +833,8 @@ class WeakSupervisionModel:
         if not self.config.enable_multi_task:
             raise ValueError("Multi-task prediction not enabled in config")
 
-        # For now, use the same weak supervision model for all tasks
-        # In a full implementation, you would have separate LF sets for each
+            # For now, use the same weak supervision model for all tasks
+            # In a full implementation, you would have separate LF sets for each
             task
         base_predictions = self.predict(texts)
 
@@ -864,9 +862,7 @@ class WeakSupervisionModel:
 
         # Emotion prediction (3 classes: positive, neutral, negative)
         emotion_probs = np.random.rand(n_samples, 3)
-        emotion_probs = emotion_probs / emotion_probs.sum(
-            axis=1,
-            keepdims=True)
+        emotion_probs = emotion_probs / emotion_probs.sum(axis=1, keepdims=True)
         results["emotion_pred"] = np.argmax(emotion_probs, axis=1)
         results["emotion_probs"] = emotion_probs
 
@@ -889,8 +885,9 @@ class WeakSupervisionModel:
         uncertainty_scores = ws_results["uncertainty_scores"]
 
         # Identify high uncertainty samples
-        high_uncertainty = \
-            self.uncertainty_quantifier.get_high_uncertainty_mask(uncertainty_scores)
+        high_uncertainty = self.uncertainty_quantifier.get_high_uncertainty_mask(
+            uncertainty_scores
+        )
 
         # Get baseline predictions for high uncertainty samples
         fallback_used = np.zeros(len(texts), dtype=bool)
@@ -901,10 +898,12 @@ class WeakSupervisionModel:
             baseline_results = self._get_baseline_predictions(texts)
 
             # Replace high uncertainty predictions with baseline predictions
-            final_preds[high_uncertainty] = \
-                baseline_results["toxicity_pred"][high_uncertainty]
-            final_probs[high_uncertainty] = \
-                baseline_results["toxicity_probs"][high_uncertainty]
+            final_preds[high_uncertainty] = baseline_results["toxicity_pred"][
+                high_uncertainty
+            ]
+            final_probs[high_uncertainty] = baseline_results["toxicity_probs"][
+                high_uncertainty
+            ]
             fallback_used[high_uncertainty] = True
 
         return {
@@ -914,10 +913,7 @@ class WeakSupervisionModel:
             "fallback_used": fallback_used,
         }
 
-    def _get_baseline_predictions(
-        self,
-        texts: List[str]
-    ) -> Dict[str, np.ndarray]:
+    def _get_baseline_predictions(self, texts: List[str]) -> Dict[str, np.ndarray]:
         """Get predictions from baseline model.
 
         Args:
@@ -934,9 +930,7 @@ class WeakSupervisionModel:
         input_ids = torch.randint(0, 1000, (len(texts), 128))
         attention_mask = torch.ones(len(texts), 128)
 
-        baseline_results = self.baseline_model.predict(
-            input_ids,
-            attention_mask)
+        baseline_results = self.baseline_model.predict(input_ids, attention_mask)
 
         return baseline_results
 
@@ -957,13 +951,10 @@ class WeakSupervisionModel:
         ws_weight = self.config.ensemble_weights["weak_supervision"]
         baseline_weight = self.config.ensemble_weights["baseline"]
 
-        ensemble_probs = \
-            ws_weight * ws_probs + baseline_weight * baseline_probs
+        ensemble_probs = ws_weight * ws_probs + baseline_weight * baseline_probs
 
         # Normalize probabilities
-        ensemble_probs = ensemble_probs / ensemble_probs.sum(
-            axis=1,
-            keepdims=True)
+        ensemble_probs = ensemble_probs / ensemble_probs.sum(axis=1, keepdims=True)
 
         return ensemble_probs
 
@@ -991,10 +982,7 @@ class WeakSupervisionModel:
 
         # Save training statistics
         if self.training_stats:
-            with open(
-                save_path / "training_stats.json",
-                "w",
-                encoding="utf-8") as f:
+            with open(save_path / "training_stats.json", "w", encoding="utf-8") as f:
                 json.dump(self.training_stats, f, indent=2, ensure_ascii=False)
 
         logger.info(f"Weak supervision model saved to {save_path}")
@@ -1139,13 +1127,13 @@ def create_default_chinese_labeling_functions() -> List[ChineseLabelingFunction]
 
     functions.append(
         ChineseLabelingFunction.create_threat_pattern_lf(
-            "severe_threats",
-            severe_threats)
+            "severe_threats", severe_threats
+        )
     )
 
     functions.append(
-        ChineseLabelingFunction.create_threat_pattern_lf("mild_threats",
-        mild_threats))
+        ChineseLabelingFunction.create_threat_pattern_lf("mild_threats", mild_threats)
+    )
 
     functions.append(
         ChineseLabelingFunction.create_harassment_context_lf(
@@ -1164,9 +1152,7 @@ def create_default_chinese_labeling_functions() -> List[ChineseLabelingFunction]
 
 if __name__ == "__main__":
     # Example usage and testing
-    config = WeakSupervisionConfig(
-        min_coverage=0.15,
-        uncertainty_threshold=0.8)
+    config = WeakSupervisionConfig(min_coverage=0.15, uncertainty_threshold=0.8)
     model = WeakSupervisionModel(config)
 
     # Setup default labeling functions
@@ -1182,6 +1168,8 @@ if __name__ == "__main__":
         "你真是个白痴",
     ]
 
-    print(f"Created model with {len(model.lf_set.functions)} labeling \
-        functions")
+    print(
+        f"Created model with {len(model.lf_set.functions)} labeling \
+        functions"
+    )
     print("Sample predictions would be made after fitting the model...")

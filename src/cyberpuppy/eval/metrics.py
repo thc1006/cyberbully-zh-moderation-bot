@@ -14,10 +14,18 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
+
 # 評估指標相關
-from sklearn.metrics import (accuracy_score, average_precision_score,
-                             classification_report, confusion_matrix, f1_score,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +43,7 @@ class MetricResult:
             "name": self.name,
             "value": self.value,
             "metadata": self.metadata,
-        } 
+        }
 
 
 @dataclass
@@ -105,23 +113,13 @@ class MetricsCalculator:
 
         metrics["precision"] = MetricResult(
             name=f"{task_name}_precision_{average}",
-            value=precision_score(
-                y_true,
-                y_pred,
-                average=average,
-                zero_division=0
-            ),
+            value=precision_score(y_true, y_pred, average=average, zero_division=0),
             metadata={"average": average},
         )
 
         metrics["recall"] = MetricResult(
             name=f"{task_name}_recall_{average}",
-            value=recall_score(
-                y_true,
-                y_pred,
-                average=average,
-                zero_division=0
-            ),
+            value=recall_score(y_true, y_pred, average=average, zero_division=0),
             metadata={"average": average},
         )
 
@@ -137,8 +135,7 @@ class MetricsCalculator:
         if task_name in self.label_mapping:
             labels = self.label_mapping[task_name]
             report = classification_report(
-                y_true, y_pred, target_names=labels, output_dict=True,
-                    zero_division=0
+                y_true, y_pred, target_names=labels, output_dict=True, zero_division=0
             )
 
             for label in labels:
@@ -152,8 +149,7 @@ class MetricsCalculator:
         return metrics
 
     def calculate_probability_metrics(
-        self, y_true: np.ndarray, y_prob: np.ndarray, task_name: str = "toxi"
-            "city"
+        self, y_true: np.ndarray, y_prob: np.ndarray, task_name: str = "toxi" "city"
     ) -> Dict[str, MetricResult]:
         """
         計算機率相關指標
@@ -200,21 +196,24 @@ class MetricsCalculator:
                 # 多類別 AP
                 aucpr_scores = []
                 for i in range(y_prob.shape[1]):
-                    if len(
-                        np.unique(y_true[:,
-                        i] if len(y_true.shape) > 1 else (y_true == i))
-                    ) > 1:
+                    if (
+                        len(
+                            np.unique(
+                                y_true[:, i] if len(y_true.shape) > 1 else (y_true == i)
+                            )
+                        )
+                        > 1
+                    ):
                         ap = average_precision_score(
-                            y_true[:, i] if len(y_true.shape) > 1 else (y_true
-                                == i), y_prob[:, i]
+                            y_true[:, i] if len(y_true.shape) > 1 else (y_true == i),
+                            y_prob[:, i],
                         )
                         aucpr_scores.append(ap)
                 aucpr = np.mean(aucpr_scores) if aucpr_scores else 0.0
             else:
                 # 二元分類
                 aucpr = average_precision_score(
-                    y_true[:, 1] if len(y_true.shape) > 1 else y_true,
-                        y_prob[:, 1]
+                    y_true[:, 1] if len(y_true.shape) > 1 else y_true, y_prob[:, 1]
                 )
 
             metrics["aucpr"] = MetricResult(
@@ -265,8 +264,8 @@ class MetricsCalculator:
         # 會話持續時間
         durations = [s.get_duration() for s in sessions]
         metrics["avg_session_duration"] = MetricResult(
-            name="avg_session_du"
-                "ration_seconds", value=np.mean(durations) if durations else 0.0
+            name="avg_session_du" "ration_seconds",
+            value=np.mean(durations) if durations else 0.0,
         )
 
         # 毒性升級率（會話內毒性增加的比例）
@@ -297,15 +296,13 @@ class MetricsCalculator:
 
         metrics["escalation_rate"] = MetricResult(
             name=f"{task_name}_escalation_rate",
-            value=escalation_count / total_sessions if total_sessions > 0 else
-                0.0,
+            value=escalation_count / total_sessions if total_sessions > 0 else 0.0,
             metadata={"escalated_sessions": escalation_count},
         )
 
         metrics["de_escalation_rate"] = MetricResult(
             name=f"{task_name}_de_escalation_rate",
-            value=de_escalation_count / total_sessions if total_sessions > 0
-                else 0.0,
+            value=de_escalation_count / total_sessions if total_sessions > 0 else 0.0,
             metadata={"de_escalated_sessions": de_escalation_count},
         )
 
@@ -319,8 +316,9 @@ class MetricsCalculator:
                     intervention_total += 1
                     # 檢查下一條訊息的毒性是否降低
                     current_score = msg.get("scores", {}).get(task_name, 0)
-                    next_score = session.messages[i + 1].get("sco"
-                        "res", {}).get(task_name, 0)
+                    next_score = (
+                        session.messages[i + 1].get("sco" "res", {}).get(task_name, 0)
+                    )
 
                     if isinstance(current_score, dict):
                         current_score = max(current_score.values())
@@ -332,8 +330,11 @@ class MetricsCalculator:
 
         metrics["intervention_success_rate"] = MetricResult(
             name="intervention_success_rate",
-            value=intervention_success /
-                intervention_total if intervention_total > 0 else 0.0,
+            value=(
+                intervention_success / intervention_total
+                if intervention_total > 0
+                else 0.0
+            ),
             metadata={
                 "successful_interventions": intervention_success,
                 "total_interventions": intervention_total,
@@ -346,11 +347,7 @@ class MetricsCalculator:
 class OnlineMonitor:
     """線上收斂監控器"""
 
-    def __init__(
-        self,
-        window_size: int = 100,
-        checkpoint_interval: int = 1000
-    ):
+    def __init__(self, window_size: int = 100, checkpoint_interval: int = 1000):
         """
         初始化監控器
 
@@ -387,8 +384,7 @@ class OnlineMonitor:
         self.start_time = time.time()
 
     def update(
-        self, loss: float, accuracy: float, f1_score: float, learning_rate:
-            float = 0.0
+        self, loss: float, accuracy: float, f1_score: float, learning_rate: float = 0.0
     ) -> Dict[str, Any]:
         """
         更新監控指標
@@ -425,7 +421,7 @@ class OnlineMonitor:
             "learning_rate": learning_rate,
             "converged": converged,
             "improvem"
-                "ent_count": self.convergence_patience - self.no_improvement_count,
+            "ent_count": self.convergence_patience - self.no_improvement_count,
             "elapsed_time": time.time() - self.start_time,
         }
 
@@ -461,11 +457,9 @@ class OnlineMonitor:
             "current_loss_avg": np.mean(self.loss_window),
             "current_accuracy_avg": np.mean(self.accuracy_window),
             "current_f1_avg": np.mean(self.f1_window),
-            "conv"
-                "erged": self.no_improvement_count >= self.convergence_patience,
+            "conv" "erged": self.no_improvement_count >= self.convergence_patience,
             "training_time": time.time() - self.start_time,
-            "steps_pe"
-                "r_second": self.total_steps / (time.time() - self.start_time),
+            "steps_pe" "r_second": self.total_steps / (time.time() - self.start_time),
         }
 
     def export_history(self) -> Dict[str, List]:
@@ -476,11 +470,7 @@ class OnlineMonitor:
 class PrometheusExporter:
     """Prometheus 指標匯出器"""
 
-    def __init__(
-        self,
-        job_name: str = "cyberpuppy",
-        instance: str = "localhost:8000"
-    ):
+    def __init__(self, job_name: str = "cyberpuppy", instance: str = "localhost:8000"):
         """
         初始化 Prometheus 匯出器
 
@@ -493,11 +483,7 @@ class PrometheusExporter:
         self.metrics = {}
 
     def update_metric(
-        self,
-        name: str,
-        value: float,
-        labels: Optional[Dict[str,
-        str]] = None
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
     ):
         """更新指標"""
         key = self._generate_key(name, labels)
@@ -698,9 +684,7 @@ class EvaluationReport:
         # 計算機率指標
         if y_prob is not None:
             prob_metrics = self.calculator.calculate_probability_metrics(
-                y_true,
-                y_prob,
-                task_name
+                y_true, y_prob, task_name
             )
             self.results[f"{task_name}_probability"] = prob_metrics
 
@@ -727,10 +711,7 @@ class EvaluationReport:
         if self.sessions:
             session_metrics = self.calculator.calculate_session_metrics(self.sessions)
             report["session_metrics"] = {
-                name: result.to_dict(
-                    ) for name,
-                    result in session_metrics.items(
-                )
+                name: result.to_dict() for name, result in session_metrics.items()
             }
 
         # 生成摘要
@@ -752,9 +733,7 @@ class EvaluationReport:
         # 會話統計
         if self.sessions:
             summary["total_sessions"] = len(self.sessions)
-            summary["total_messages"] = sum(
-                len(s.messages) for s in self.sessions
-            )
+            summary["total_messages"] = sum(len(s.messages) for s in self.sessions)
 
         return summary
 
@@ -781,8 +760,7 @@ def example_usage():
 
     # 計算指標
     calculator = MetricsCalculator()
-    metrics = calculator.calculate_classification_metrics(y_true, y_pred, "toxi"
-        "city")
+    metrics = calculator.calculate_classification_metrics(y_true, y_pred, "toxi" "city")
 
     for name, result in metrics.items():
         if name != "toxicity_confusion_matrix":

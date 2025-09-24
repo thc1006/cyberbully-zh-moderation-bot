@@ -11,6 +11,7 @@ import logging
 import warnings
 from typing import Dict, List, Optional, Tuple, Union, Any
 from datetime import datetime
+
 # from pathlib import Path  # Unused import commented out
 import torch
 import numpy as np
@@ -20,18 +21,28 @@ import threading
 import opencc
 
 from .result import (
-    DetectionResult, ToxicityResult, EmotionResult, BullyingResult, RoleResult,
-    ExplanationResult, ModelPrediction, ToxicityLevel, EmotionType,
-    BullyingType, RoleType, ConfidenceThresholds
+    DetectionResult,
+    ToxicityResult,
+    EmotionResult,
+    BullyingResult,
+    RoleResult,
+    ExplanationResult,
+    ModelPrediction,
+    ToxicityLevel,
+    EmotionType,
+    BullyingType,
+    RoleType,
+    ConfidenceThresholds,
 )
 from .baselines import BaselineModel, ModelConfig
 from .contextual import ContextualModel
 from .weak_supervision import WeakSupervisionModel
 from ..explain.ig import IntegratedGradientsExplainer
+
 # from ..config import Config  # Unused import commented out
 
 # Suppress warnings for cleaner output
-warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +60,7 @@ class CyberPuppyDetector:
         self,
         config: Dict[str, Any],
         device: Optional[str] = None,
-        load_models: bool = True
+        load_models: bool = True,
     ):
         """
         Initialize the CyberPuppy detector.
@@ -63,8 +74,7 @@ class CyberPuppyDetector:
         self.config = config
         self.device = self._setup_device(device)
         self.ensemble_weights = self._normalize_weights(
-            config.get('ensemble_weights',
-            {})
+            config.get("ensemble_weights", {})
         )
 
         # Initialize text preprocessing components
@@ -91,31 +101,24 @@ class CyberPuppyDetector:
         if device == "auto" or device is None:
             if torch.cuda.is_available():
                 return "cuda"
-            elif hasattr(
-                torch.backends,
-                'mps') and torch.backends.mps.is_available(
-            ):
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                 return "mps"
             else:
                 return "cpu"
         return device
 
-    def _normalize_weights(
-        self,
-        weights: Dict[str,
-        float]
-    ) -> Dict[str, float]:
+    def _normalize_weights(self, weights: Dict[str, float]) -> Dict[str, float]:
         """Normalize ensemble weights to sum to 1.0."""
         if not weights:
             # Default equal weights
-            return {'baseline': 0.4, 'contextual': 0.35, 'weak_supervision':
-                0.25}
+            return {"baseline": 0.4, "contextual": 0.35, "weak_supervision": 0.25}
 
         total_weight = sum(weights.values())
         if abs(total_weight - 1.0) > 1e-6:
-            logger.warning(f"Ensemble weights sum to {total_weight}, normalizing to 1.0")
-            return {model: weight / total_weight for model, weight in
-                weights.items()}
+            logger.warning(
+                f"Ensemble weights sum to {total_weight}, normalizing to 1.0"
+            )
+            return {model: weight / total_weight for model, weight in weights.items()}
 
         return weights
 
@@ -123,16 +126,14 @@ class CyberPuppyDetector:
         """Initialize text preprocessing components."""
         try:
             # Traditional to Simplified Chinese converter
-            self.converter = opencc.OpenCC('t2s')
-            self.preprocessing_config = self.config.get('preprocessing', {})
-            self.max_length = self.preprocessing_config.get('max_length', 512)
+            self.converter = opencc.OpenCC("t2s")
+            self.preprocessing_config = self.config.get("preprocessing", {})
+            self.max_length = self.preprocessing_config.get("max_length", 512)
             self.normalize_unicode = self.preprocessing_config.get(
-                'normalize_unicode',
-                True
+                "normalize_unicode", True
             )
             self.convert_traditional = self.preprocessing_config.get(
-                'convert_traditional',
-                True
+                "convert_traditional", True
             )
             logger.info("Text preprocessing components initialized")
         except Exception as e:
@@ -149,59 +150,56 @@ class CyberPuppyDetector:
             RuntimeError: If models fail to load
         """
         try:
-            model_paths = self.config.get('model_paths', {})
+            model_paths = self.config.get("model_paths", {})
 
             # Load baseline model
             logger.info("Loading baseline model...")
             model_config = ModelConfig(
-                model_name=self.config.get(
-                    'base_model',
-                    'hfl/chinese-macbert-base'
-                ),
+                model_name=self.config.get("base_model", "hfl/chinese-macbert-base"),
                 num_toxicity_classes=3,
                 num_emotion_classes=3,
                 num_bullying_classes=3,
-                num_role_classes=4
+                num_role_classes=4,
             )
-            self.models['baseline'] = BaselineModel(model_config)
-            if 'baseline' in model_paths:
-                self.models['baseline'].load_state_dict(torch.load(
-                    model_paths['baseline'], map_location=self.device
-                ))
+            self.models["baseline"] = BaselineModel(model_config)
+            if "baseline" in model_paths:
+                self.models["baseline"].load_state_dict(
+                    torch.load(model_paths["baseline"], map_location=self.device)
+                )
 
             # Load contextual model
             logger.info("Loading contextual model...")
-            self.models['contextual'] = ContextualModel(
+            self.models["contextual"] = ContextualModel(
                 base_model_name=self.config.get(
-                    'base_model',
-                    'hfl/chinese-macbert-base'
+                    "base_model", "hfl/chinese-macbert-base"
                 ),
-                device=self.device
+                device=self.device,
             )
-            if 'contextual' in model_paths:
-                self.models['contextual'].load_state_dict(torch.load(
-                    model_paths['contextual'], map_location=self.device
-                ))
+            if "contextual" in model_paths:
+                self.models["contextual"].load_state_dict(
+                    torch.load(model_paths["contextual"], map_location=self.device)
+                )
 
             # Load weak supervision model
             logger.info("Loading weak supervision model...")
-            self.models['weak_supervision'] = WeakSupervisionModel(
+            self.models["weak_supervision"] = WeakSupervisionModel(
                 base_model_name=self.config.get(
-                    'base_model',
-                    'hfl/chinese-macbert-base'
+                    "base_model", "hfl/chinese-macbert-base"
                 ),
-                device=self.device
+                device=self.device,
             )
-            if 'weak_supervision' in model_paths:
-                self.models['weak_supervision'].load_state_dict(torch.load(
-                    model_paths['weak_supervision'], map_location=self.device
-                ))
+            if "weak_supervision" in model_paths:
+                self.models["weak_supervision"].load_state_dict(
+                    torch.load(
+                        model_paths["weak_supervision"], map_location=self.device
+                    )
+                )
 
             # Load explainer
             logger.info("Loading explainer...")
             self.explainer = IntegratedGradientsExplainer(
-                model=self.models['baseline'],  # Use baseline for explanations
-                device=self.device
+                model=self.models["baseline"],  # Use baseline for explanations
+                device=self.device,
             )
 
             # Set models to evaluation mode
@@ -241,30 +239,28 @@ class CyberPuppyDetector:
         # Unicode normalization
         if self.normalize_unicode:
             import unicodedata
-            text = unicodedata.normalize('NFKC', text)
+
+            text = unicodedata.normalize("NFKC", text)
 
         # Traditional to Simplified conversion
         if self.convert_traditional and self.converter:
             try:
                 text = self.converter.convert(text)
             except Exception as e:
-                logger.warning(f"Traditional to Simplifie"
-                    "d conversion failed: {e}")
+                logger.warning(f"Traditional to Simplifie" "d conversion failed: {e}")
 
         # Truncate if too long
         if len(text) > self.max_length:
-            text = text[:self.max_length]
+            text = text[: self.max_length]
             logger.debug(f"Text truncated to {self.max_length} characters")
 
         # Clean whitespace
-        text = ' '.join(text.split())
+        text = " ".join(text.split())
 
         return text
 
     def _get_individual_predictions(
-        self,
-        text: str,
-        context: Optional[List[str]] = None
+        self, text: str, context: Optional[List[str]] = None
     ) -> Dict[str, Dict[str, torch.Tensor]]:
         """
         Get predictions from individual models.
@@ -281,12 +277,12 @@ class CyberPuppyDetector:
         # Get baseline predictions
         try:
             start_time = time.time()
-            baseline_pred = self.models['baseline'].predict(text)
+            baseline_pred = self.models["baseline"].predict(text)
             baseline_time = time.time() - start_time
 
-            predictions['baseline'] = {
-                'predictions': baseline_pred,
-                'processing_time': baseline_time
+            predictions["baseline"] = {
+                "predictions": baseline_pred,
+                "processing_time": baseline_time,
             }
         except Exception as e:
             logger.error(f"Baseline model prediction failed: {e}")
@@ -295,41 +291,37 @@ class CyberPuppyDetector:
         # Get contextual predictions
         try:
             start_time = time.time()
-            contextual_pred = self.models['contextual'].predict(
-                text, context=context
-            )
+            contextual_pred = self.models["contextual"].predict(text, context=context)
             contextual_time = time.time() - start_time
 
-            predictions['contextual'] = {
-                'predictions': contextual_pred,
-                'processing_time': contextual_time
+            predictions["contextual"] = {
+                "predictions": contextual_pred,
+                "processing_time": contextual_time,
             }
         except Exception as e:
             logger.error(f"Contextual model prediction failed: {e}")
             # Fall back to baseline predictions
-            predictions['contextual'] = predictions['baseline'].copy()
+            predictions["contextual"] = predictions["baseline"].copy()
 
         # Get weak supervision predictions
         try:
             start_time = time.time()
-            weak_pred = self.models['weak_supervision'].predict(text)
+            weak_pred = self.models["weak_supervision"].predict(text)
             weak_time = time.time() - start_time
 
-            predictions['weak_supervision'] = {
-                'predictions': weak_pred,
-                'processing_time': weak_time
+            predictions["weak_supervision"] = {
+                "predictions": weak_pred,
+                "processing_time": weak_time,
             }
         except Exception as e:
             logger.error(f"Weak supervision model prediction failed: {e}")
             # Fall back to baseline predictions
-            predictions['weak_supervision'] = predictions['baseline'].copy()
+            predictions["weak_supervision"] = predictions["baseline"].copy()
 
         return predictions
 
     def _ensemble_predict(
-        self,
-        text: str,
-        model_predictions: Dict[str, Dict[str, Any]]
+        self, text: str, model_predictions: Dict[str, Dict[str, Any]]
     ) -> Dict[str, torch.Tensor]:
         """
         Combine predictions from multiple models using ensemble weights.
@@ -341,7 +333,7 @@ class CyberPuppyDetector:
         Returns:
             Ensemble predictions for each task
         """
-        tasks = ['toxicity', 'emotion', 'bullying', 'role']
+        tasks = ["toxicity", "emotion", "bullying", "role"]
         ensemble_results = {}
 
         for task in tasks:
@@ -350,8 +342,8 @@ class CyberPuppyDetector:
 
             for model_name, result in model_predictions.items():
                 weight = self.ensemble_weights.get(model_name, 0.0)
-                if weight > 0 and task in result['predictions']:
-                    pred = result['predictions'][task]
+                if weight > 0 and task in result["predictions"]:
+                    pred = result["predictions"][task]
                     if isinstance(pred, torch.Tensor):
                         weighted_predictions.append(pred * weight)
                         total_weight += weight
@@ -364,33 +356,27 @@ class CyberPuppyDetector:
 
                 ensemble_results[task] = ensemble_pred
             else:
-                logger.warning(f"No valid predictions for t"
-                    "ask {task}, using baseline")
+                logger.warning(
+                    f"No valid predictions for t" "ask {task}, using baseline"
+                )
                 # Fallback to baseline
                 if (
-                    'baseline' in model_predictions
-                    and task in model_predictions['baseline']['predictions']
+                    "baseline" in model_predictions
+                    and task in model_predictions["baseline"]["predictions"]
                 ):
-                    ensemble_results[task] = model_predictions['baseline']['predictions'][task]
+                    ensemble_results[task] = model_predictions["baseline"][
+                        "predictions"
+                    ][task]
                 else:
                     # Generate dummy prediction
-                    if task == 'role':
-                        ensemble_results[task] = torch.tensor(
-                            [0.7,
-                            0.1,
-                            0.1,
-                            0.1]
-                        )
+                    if task == "role":
+                        ensemble_results[task] = torch.tensor([0.7, 0.1, 0.1, 0.1])
                     else:
                         ensemble_results[task] = torch.tensor([0.7, 0.2, 0.1])
 
         return ensemble_results
 
-    def _calibrate_confidence(
-        self,
-        prediction: torch.Tensor,
-        task: str
-    ) -> float:
+    def _calibrate_confidence(self, prediction: torch.Tensor, task: str) -> float:
         """
         Calibrate confidence score using temperature scaling and uncertainty.
 
@@ -418,23 +404,18 @@ class CyberPuppyDetector:
 
         # Task-specific calibration (can be learned from validation data)
         task_calibration = {
-            'toxicity': 0.95,   # Slightly conservative
-            'emotion': 1.0,     # No adjustment
-            'bullying': 0.9,    # Conservative for safety
-            'role': 1.05        # Slightly optimistic
+            "toxicity": 0.95,  # Slightly conservative
+            "emotion": 1.0,  # No adjustment
+            "bullying": 0.9,  # Conservative for safety
+            "role": 1.05,  # Slightly optimistic
         }
 
-        calibrated_conf = uncertainty_adjusted_conf * task_calibration.get(
-            task,
-            1.0
-        )
+        calibrated_conf = uncertainty_adjusted_conf * task_calibration.get(task, 1.0)
 
         return max(0.0, min(1.0, calibrated_conf))  # Clamp to [0,1]
 
     def _convert_prediction_to_label(
-        self,
-        prediction: torch.Tensor,
-        task: str
+        self, prediction: torch.Tensor, task: str
     ) -> Tuple[str, Dict[str, float]]:
         """
         Convert prediction tensor to label and raw scores.
@@ -451,10 +432,10 @@ class CyberPuppyDetector:
 
         # Task-specific label mapping
         label_mappings = {
-            'toxicity': ['none', 'toxic', 'severe'],
-            'emotion': ['pos', 'neu', 'neg'],
-            'bullying': ['none', 'harassment', 'threat'],
-            'role': ['none', 'perpetrator', 'victim', 'bystander']
+            "toxicity": ["none", "toxic", "severe"],
+            "emotion": ["pos", "neu", "neg"],
+            "bullying": ["none", "harassment", "threat"],
+            "role": ["none", "perpetrator", "victim", "bystander"],
         }
 
         labels = label_mappings.get(task, [])
@@ -463,7 +444,7 @@ class CyberPuppyDetector:
         if predicted_idx < len(labels):
             predicted_label = labels[predicted_idx]
         else:
-            predicted_label = labels[0] if labels else 'unknown'
+            predicted_label = labels[0] if labels else "unknown"
 
         # Create raw scores dictionary
         raw_scores = {}
@@ -474,10 +455,7 @@ class CyberPuppyDetector:
         return predicted_label, raw_scores
 
     def _create_task_result(
-        self,
-        prediction: torch.Tensor,
-        task: str,
-        thresholds: Dict[str, float]
+        self, prediction: torch.Tensor, task: str, thresholds: Dict[str, float]
     ) -> Union[ToxicityResult, EmotionResult, BullyingResult, RoleResult]:
         """
         Create task-specific result object.
@@ -491,56 +469,50 @@ class CyberPuppyDetector:
             Task-specific result object
         """
         predicted_label, raw_scores = self._convert_prediction_to_label(
-            prediction,
-            task
+            prediction, task
         )
         confidence = self._calibrate_confidence(prediction, task)
         threshold = thresholds.get(predicted_label, 0.5)
         threshold_met = confidence >= threshold
 
-        if task == 'toxicity':
+        if task == "toxicity":
             return ToxicityResult(
                 prediction=ToxicityLevel(predicted_label),
                 confidence=confidence,
                 raw_scores=raw_scores,
-                threshold_met=threshold_met
+                threshold_met=threshold_met,
             )
-        elif task == 'emotion':
+        elif task == "emotion":
             # Calculate emotion strength based on confidence and prediction
             strength = self._calculate_emotion_strength(
-                prediction,
-                predicted_label,
-                confidence
+                prediction, predicted_label, confidence
             )
             return EmotionResult(
                 prediction=EmotionType(predicted_label),
                 confidence=confidence,
                 strength=strength,
                 raw_scores=raw_scores,
-                threshold_met=threshold_met
+                threshold_met=threshold_met,
             )
-        elif task == 'bullying':
+        elif task == "bullying":
             return BullyingResult(
                 prediction=BullyingType(predicted_label),
                 confidence=confidence,
                 raw_scores=raw_scores,
-                threshold_met=threshold_met
+                threshold_met=threshold_met,
             )
-        elif task == 'role':
+        elif task == "role":
             return RoleResult(
                 prediction=RoleType(predicted_label),
                 confidence=confidence,
                 raw_scores=raw_scores,
-                threshold_met=threshold_met
+                threshold_met=threshold_met,
             )
         else:
             raise ValueError(f"Unknown task: {task}")
 
     def _calculate_emotion_strength(
-        self,
-        prediction: torch.Tensor,
-        predicted_label: str,
-        confidence: float
+        self, prediction: torch.Tensor, predicted_label: str, confidence: float
     ) -> int:
         """
         Calculate emotion strength on 0-4 scale.
@@ -553,7 +525,7 @@ class CyberPuppyDetector:
         Returns:
             Emotion strength (0-4)
         """
-        if predicted_label == 'neu':
+        if predicted_label == "neu":
             return 0  # Neutral has no strength
 
         # Use max probability and confidence to determine strength
@@ -574,9 +546,7 @@ class CyberPuppyDetector:
             return 4
 
     def _generate_explanations(
-        self,
-        text: str,
-        predictions: Dict[str, torch.Tensor]
+        self, text: str, predictions: Dict[str, torch.Tensor]
     ) -> Dict[str, ExplanationResult]:
         """
         Generate explanations for predictions using integrated gradients.
@@ -592,50 +562,45 @@ class CyberPuppyDetector:
 
         try:
             if self.explainer is None:
-                logger.warning("Explainer not available"
-                    ", skipping explanations")
+                logger.warning("Explainer not available" ", skipping explanations")
                 return explanations
 
             for task, prediction in predictions.items():
                 try:
                     explanation = self.explainer.explain(
-                        text=text,
-                        task=task,
-                        target_class=prediction.argmax().item()
+                        text=text, task=task, target_class=prediction.argmax().item()
                     )
 
                     # Extract top contributing words
                     top_words = []
-                    if 'attributions' in explanation and 'tokens' in explanation:
-                        word_attrs = list(zip(
-                            explanation['tokens'],
-                            explanation['attributions']
-                        ))
+                    if "attributions" in explanation and "tokens" in explanation:
+                        word_attrs = list(
+                            zip(explanation["tokens"], explanation["attributions"])
+                        )
                         word_attrs.sort(key=lambda x: abs(x[1]), reverse=True)
-                        top_words = [(
-                            word,
-                            float(attr)
-                        ) for word, attr in word_attrs[:5]]
+                        top_words = [
+                            (word, float(attr)) for word, attr in word_attrs[:5]
+                        ]
 
                     explanations[task] = ExplanationResult(
-                        attributions=explanation.get('attributions', []),
-                        tokens=explanation.get('tokens', []),
-                        explanation_text=explanation.get('explanation', ''),
+                        attributions=explanation.get("attributions", []),
+                        tokens=explanation.get("tokens", []),
+                        explanation_text=explanation.get("explanation", ""),
                         top_contributing_words=top_words,
-                        method='integrated_gradients'
+                        method="integrated_gradients",
                     )
 
                 except Exception as e:
-                    logger.error(f"Explanation generation fa"
-                        "iled for task {task}: {e}")
+                    logger.error(
+                        f"Explanation generation fa" "iled for task {task}: {e}"
+                    )
                     # Create empty explanation as fallback
                     explanations[task] = ExplanationResult(
                         attributions=[],
                         tokens=[],
-                        explanation_text=f"Explanation generat"
-                            "ion failed: {str(e)}",
+                        explanation_text=f"Explanation generat" "ion failed: {str(e)}",
                         top_contributing_words=[],
-                        method='integrated_gradients'
+                        method="integrated_gradients",
                     )
 
         except Exception as e:
@@ -647,7 +612,7 @@ class CyberPuppyDetector:
         self,
         text: str,
         context: Optional[List[str]] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> DetectionResult:
         """
         Analyze text for toxicity, emotion, bullying, and role.
@@ -691,8 +656,7 @@ class CyberPuppyDetector:
 
             # Get confidence thresholds
             thresholds = self.config.get(
-                'confidence_thresholds',
-                ConfidenceThresholds.DEFAULT_THRESHOLDS
+                "confidence_thresholds", ConfidenceThresholds.DEFAULT_THRESHOLDS
             )
 
             # Create task-specific results
@@ -713,12 +677,12 @@ class CyberPuppyDetector:
             for model_name, result in model_predictions.items():
                 model_prediction_results[model_name] = ModelPrediction(
                     model_name=model_name,
-                    predictions=result['predictions'],
+                    predictions=result["predictions"],
                     confidence_scores={
                         task: self._calibrate_confidence(pred, task)
-                        for task, pred in result['predictions'].items()
+                        for task, pred in result["predictions"].items()
                     },
-                    processing_time=result.get('processing_time', 0.0)
+                    processing_time=result.get("processing_time", 0.0),
                 )
 
             return task_results, explanations, model_prediction_results
@@ -734,7 +698,9 @@ class CyberPuppyDetector:
             except FutureTimeoutError:
                 raise TimeoutError(f"Analysis timed out after {timeout} seconds")
         else:
-            task_results, explanations, model_prediction_results = _analyze_with_timeout()
+            task_results, explanations, model_prediction_results = (
+                _analyze_with_timeout()
+            )
 
         # Calculate processing time
         processing_time = time.time() - start_time
@@ -749,16 +715,16 @@ class CyberPuppyDetector:
             text=text,
             timestamp=datetime.now(),
             processing_time=processing_time,
-            toxicity=task_results['toxicity'],
-            emotion=task_results['emotion'],
-            bullying=task_results['bullying'],
-            role=task_results['role'],
+            toxicity=task_results["toxicity"],
+            emotion=task_results["emotion"],
+            bullying=task_results["bullying"],
+            role=task_results["role"],
             explanations=explanations,
             model_predictions=model_prediction_results,
             ensemble_weights=self.ensemble_weights,
             context_used=context is not None,
             context_length=len(context) if context else 0,
-            model_version=self.config.get('model_version', '1.0.0')
+            model_version=self.config.get("model_version", "1.0.0"),
         )
 
         logger.debug(f"Analysis completed in {processing_time:.3f}s")
@@ -769,7 +735,7 @@ class CyberPuppyDetector:
         texts: List[str],
         context: Optional[List[List[str]]] = None,
         batch_size: int = 8,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> List[DetectionResult]:
         """
         Analyze multiple texts in batch.
@@ -806,11 +772,7 @@ class CyberPuppyDetector:
 
             for i, text in enumerate(batch_texts):
                 text_context = batch_context[i] if batch_context else None
-                result = self.analyze(
-                    text,
-                    context=text_context,
-                    timeout=timeout
-                )
+                result = self.analyze(text, context=text_context, timeout=timeout)
                 results.append(result)
 
         return results
@@ -831,18 +793,18 @@ class CyberPuppyDetector:
         with self._lock:
             if self._prediction_count == 0:
                 return {
-                    'total_predictions': 0,
-                    'average_processing_time': 0.0,
-                    'total_processing_time': 0.0
+                    "total_predictions": 0,
+                    "average_processing_time": 0.0,
+                    "total_processing_time": 0.0,
                 }
 
             return {
-                'total_predictions': self._prediction_count,
-                'average_processing_time': self._total_processing_time /
-                    self._prediction_count,
-                'total_processing_time': self._total_processing_time,
-                'device': self.device,
-                'models_loaded': self._models_loaded
+                "total_predictions": self._prediction_count,
+                "average_processing_time": self._total_processing_time
+                / self._prediction_count,
+                "total_processing_time": self._total_processing_time,
+                "device": self.device,
+                "models_loaded": self._models_loaded,
             }
 
     def reset_performance_stats(self) -> None:
@@ -864,9 +826,9 @@ class CyberPuppyDetector:
     def is_ready(self) -> bool:
         """Check if detector is ready for inference."""
         return (
-            self._models_loaded and
-            all(model is not None for model in self.models.values()) and
-            self.explainer is not None
+            self._models_loaded
+            and all(model is not None for model in self.models.values())
+            and self.explainer is not None
         )
 
     def get_model_info(self) -> Dict[str, Any]:
@@ -878,17 +840,18 @@ class CyberPuppyDetector:
             "status": "ready",
             "device": self.device,
             "ensemble_weights": self.ensemble_weights,
-            "models": {}
+            "models": {},
         }
 
         for name, model in self.models.items():
             info["models"][name] = {
                 "type": type(model).__name__,
-                "device": str(getattr(model, 'device', 'unknown')),
+                "device": str(getattr(model, "device", "unknown")),
                 "parameters": sum(
-                    p.numel() for p in model.parameters()
-                    if hasattr(model, 'parameters')
-                )
+                    p.numel()
+                    for p in model.parameters()
+                    if hasattr(model, "parameters")
+                ),
             }
 
         return info
@@ -900,6 +863,6 @@ class CyberPuppyDetector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - cleanup resources."""
         # Clear GPU memory if using CUDA
-        if self.device.startswith('cuda'):
+        if self.device.startswith("cuda"):
             torch.cuda.empty_cache()
         logger.info("CyberPuppyDetector resources cleaned up")

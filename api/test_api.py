@@ -28,92 +28,87 @@ TEST_TEXTS = [
         "text": "你好，今天天氣真好",
         "expected_toxicity": "none",
         "expected_emotion": "pos",
-        "description": "Positive greeting"
+        "description": "Positive greeting",
     },
     {
         "text": "我需要幫助解決這個問題",
         "expected_toxicity": "none",
         "expected_emotion": "neu",
-        "description": "Neutral request for help"
+        "description": "Neutral request for help",
     },
     {
         "text": "謝謝你的幫助，我很感激",
         "expected_toxicity": "none",
         "expected_emotion": "pos",
-        "description": "Positive gratitude"
+        "description": "Positive gratitude",
     },
-
     # Toxic examples
     {
         "text": "你真是個笨蛋",
         "expected_toxicity": "toxic",
         "expected_emotion": "neg",
-        "description": "Mild insult - toxic"
+        "description": "Mild insult - toxic",
     },
     {
         "text": "滾開，白痴",
         "expected_toxicity": "toxic",
         "expected_emotion": "neg",
-        "description": "Offensive language - toxic"
+        "description": "Offensive language - toxic",
     },
     {
         "text": "你這個廢物，沒用的東西",
         "expected_toxicity": "toxic",
         "expected_emotion": "neg",
-        "description": "Derogatory language - toxic"
+        "description": "Derogatory language - toxic",
     },
-
     # Severe toxic examples
     {
         "text": "去死吧，我要殺死你",
         "expected_toxicity": "severe",
         "expected_emotion": "neg",
-        "description": "Death threats - severe"
+        "description": "Death threats - severe",
     },
     {
         "text": "你不如自殺算了",
         "expected_toxicity": "severe",
         "expected_emotion": "neg",
-        "description": "Suicide suggestion - severe"
+        "description": "Suicide suggestion - severe",
     },
-
     # Bullying examples
     {
         "text": "沒有人喜歡你，你很討厭",
         "expected_toxicity": "toxic",
         "expected_bullying": "harassment",
         "expected_emotion": "neg",
-        "description": "Social harassment"
+        "description": "Social harassment",
     },
     {
         "text": "如果你不聽話，你會後悔的",
         "expected_toxicity": "toxic",
         "expected_bullying": "threat",
         "expected_emotion": "neg",
-        "description": "Intimidation threat"
+        "description": "Intimidation threat",
     },
-
     # Edge cases
     {
         "text": "呵呵呵呵呵",
         "expected_toxicity": "none",
         "expected_emotion": "neu",
-        "description": "Ambiguous expression"
+        "description": "Ambiguous expression",
     },
     {
         "text": "我今天心情不好",
         "expected_toxicity": "none",
         "expected_emotion": "neg",
-        "description": "Negative emotion but not toxic"
+        "description": "Negative emotion but not toxic",
     },
-
     # Mixed content
     {
         "text": "你好，但是你真的很笨",
         "expected_toxicity": "toxic",
         "expected_emotion": "neg",
-        "description": "Mixed polite + insult"
-    }
+        "description": "Mixed polite + insult",
+    },
 ]
 
 
@@ -141,23 +136,18 @@ class APITester:
 
         for attempt in range(timeout):
             try:
-                async with self.session.get(f"{self.base_url}/healthz") as \
-                    response:
+                async with self.session.get(f"{self.base_url}/healthz") as response:
                     if response.status == 200:
                         health_data = await response.json()
                         if health_data.get("status") == "healthy":
-                            logger.info(f"API ready after {attempt + 1} \
-                                seconds")
+                            logger.info(f"API ready after {attempt + 1} seconds")
                             return True
                         elif health_data.get("status") == "starting":
-                            logger.info(f"API starting... (attempt \
-                                {attempt + 1})")
+                            logger.info(f"API starting... (attempt {attempt + 1})")
                         else:
-                            logger.warning(f"API status: \
-                                {health_data.get('status')}")
+                            logger.warning(f"API status: {health_data.get('status')}")
             except Exception as e:
-                logger.debug(f"Startup check failed (attempt {attempt + \
-                    1}): {e}")
+                logger.debug(f"Startup check failed (attempt {attempt + 1}): {e}")
 
             await asyncio.sleep(1)
 
@@ -169,8 +159,7 @@ class APITester:
         logger.info("Testing health endpoint...")
 
         try:
-            async with self.session.get(f"{self.base_url}/healthz") as \
-                response:
+            async with self.session.get(f"{self.base_url}/healthz") as response:
                 health_data = await response.json()
 
                 result = {
@@ -178,33 +167,23 @@ class APITester:
                     "status": "success",
                     "response_code": response.status,
                     "data": health_data,
-                    "model_status": health_data.get("model_status", {})
+                    "model_status": health_data.get("model_status", {}),
                 }
 
                 logger.info(f"Health check: {health_data.get('status')}")
                 if health_data.get("model_status"):
                     model_info = health_data["model_status"]
-                    logger.info(f"Models loaded: \
-                        {model_info.get('models_loaded')}")
+                    logger.info(f"Models loaded: {model_info.get('models_loaded')}")
                     logger.info(f"Device: {model_info.get('device')}")
-                    logger.info(f"Warmup complete: \
-                        {model_info.get('warmup_complete')}")
+                    logger.info(f"Warmup complete: {model_info.get('warmup_complete')}")
 
                 return result
 
         except Exception as e:
             logger.error(f"Health endpoint test failed: {e}")
-            return {
-                "endpoint": "health",
-                "status": "failed",
-                "error": str(e)
-            }
+            return {"endpoint": "health", "status": "failed", "error": str(e)}
 
-    async def test_analyze_endpoint(
-        self,
-        text_data: Dict[str,
-        Any]
-    ) -> Dict[str, Any]:
+    async def test_analyze_endpoint(self, text_data: Dict[str, Any]) -> Dict[str, Any]:
         """Test analyze endpoint with a single text."""
         start_time = time.time()
 
@@ -212,13 +191,13 @@ class APITester:
             payload = {
                 "text": text_data["text"],
                 "context": None,
-                "thread_id": f"test_{int(time.time())}"
+                "thread_id": f"test_{int(time.time())}",
             }
 
             async with self.session.post(
                 f"{self.base_url}/analyze",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
 
                 response_time = time.time() - start_time
@@ -228,15 +207,17 @@ class APITester:
 
                     # Validate response structure
                     required_fields = [
-                        "toxi"
-                            "city", 
-                        "sco"
-                            "res", 
+                        "toxicity",
+                        "bullying",
+                        "role",
+                        "emotion",
+                        "emotion_strength",
+                        "scores",
+                        "explanations",
                     ]
 
                     missing_fields = [
-                        field for field in required_fields if field not in
-                            result_data
+                        field for field in required_fields if field not in result_data
                     ]
 
                     result = {
@@ -246,36 +227,35 @@ class APITester:
                         "response_code": response.status,
                         "response_time_s": round(response_time, 3),
                         "api_processing_time_ms": result_data.get(
-                            "processing_time_ms",
-                            0),
+                            "processing_time_ms", 0
+                        ),
                         "predictions": {
                             "toxicity": result_data.get("toxicity"),
                             "bullying": result_data.get("bullying"),
                             "role": result_data.get("role"),
                             "emotion": result_data.get("emotion"),
-                            "emotion_"
-                                "strength": result_data.get(
+                            "emotion_strength": result_data.get("emotion_strength"),
                         },
                         "scores": result_data.get("scores", {}),
                         "explanations": result_data.get("explanations", {}),
                         "validation": {
                             "missing_fields": missing_fields,
-                            "valid_structure": len(missing_fields) == 0
+                            "valid_structure": len(missing_fields) == 0,
                         },
                         "expectations": {
                             "toxicity_match": (
-                                result_data.get("toxi"
-                                    "city") == text_data.get(
+                                result_data.get("toxicity")
+                                == text_data.get("expected_toxicity")
                             ),
                             "emotion_match": (
-                                result_data.get("emo"
-                                    "tion") == text_data.get(
+                                result_data.get("emotion")
+                                == text_data.get("expected_emotion")
                             ),
                             "bullying_match": (
-                                result_data.get("bullying") ==
-                                text_data.get("expected_bullying", "none")
-                            )
-                        }
+                                result_data.get("bullying")
+                                == text_data.get("expected_bullying", "none")
+                            ),
+                        },
                     }
 
                     # Log key predictions
@@ -295,7 +275,7 @@ class APITester:
                         "status": "failed",
                         "response_code": response.status,
                         "response_time_s": round(response_time, 3),
-                        "error": error_data
+                        "error": error_data,
                     }
                     logger.error(f"API error {response.status}: {error_data}")
 
@@ -309,7 +289,7 @@ class APITester:
                 "input_text": text_data["text"],
                 "status": "failed",
                 "response_time_s": round(response_time, 3),
-                "error": str(e)
+                "error": str(e),
             }
 
     async def test_metrics_endpoint(self) -> Dict[str, Any]:
@@ -317,22 +297,25 @@ class APITester:
         logger.info("Testing metrics endpoint...")
 
         try:
-            async with self.session.get(f"{self.base_url}/metrics") as \
-                response:
+            async with self.session.get(f"{self.base_url}/metrics") as response:
                 if response.status == 200:
                     metrics_data = await response.json()
 
                     result = {
                         "endpoint": "metrics",
                         "status": "success",
-                        "data": metrics_data
+                        "data": metrics_data,
                     }
 
-                    logger.info(f"Total predictions: \
-                        {metrics_data.get('total_predictions')}")
-                    logger.info(f"Success rate: \
-                        {metrics_data.get('success_rate')}")
-                    avg_time = metrics_data.get('average_processing_time_ms')
+                    logger.info(
+                        f"Total predictions: \
+                        {metrics_data.get('total_predictions')}"
+                    )
+                    logger.info(
+                        f"Success rate: \
+                        {metrics_data.get('success_rate')}"
+                    )
+                    avg_time = metrics_data.get("average_processing_time_ms")
                     logger.info(f"Avg processing time: {avg_time}ms")
 
                     return result
@@ -341,16 +324,12 @@ class APITester:
                     return {
                         "endpoint": "metrics",
                         "status": "failed",
-                        "error": error_data
+                        "error": error_data,
                     }
 
         except Exception as e:
             logger.error(f"Metrics endpoint test failed: {e}")
-            return {
-                "endpoint": "metrics",
-                "status": "failed",
-                "error": str(e)
-            }
+            return {"endpoint": "metrics", "status": "failed", "error": str(e)}
 
     async def run_comprehensive_test(self) -> Dict[str, Any]:
         """Run comprehensive API test suite."""
@@ -369,12 +348,16 @@ class APITester:
         failed_predictions = 0
         total_response_time = 0
 
-        logger.info(f"Testing analyze endpoint with {len(TEST_TEXTS)} \
-            examples...")
+        logger.info(
+            f"Testing analyze endpoint with {len(TEST_TEXTS)} \
+            examples..."
+        )
 
         for i, text_data in enumerate(TEST_TEXTS):
-            logger.info(f"Testing example {i+1}/{len(TEST_TEXTS)}: \
-                {text_data['description']}")
+            logger.info(
+                f"Testing example {i+1}/{len(TEST_TEXTS)}: \
+                {text_data['description']}"
+            )
             result = await self.test_analyze_endpoint(text_data)
             analyze_results.append(result)
 
@@ -392,28 +375,27 @@ class APITester:
 
         # Calculate overall statistics
         total_tests = len(TEST_TEXTS)
-        success_rate = \
-            successful_predictions / total_tests if total_tests > 0 else 0
+        success_rate = successful_predictions / total_tests if total_tests > 0 else 0
         avg_response_time = (
-            total_response_time /
-                successful_predictions if successful_predictions > 0 else 0
+            total_response_time / successful_predictions
+            if successful_predictions > 0
+            else 0
         )
 
         # Validate predictions accuracy
-        prediction_accuracy = \
-            self._calculate_prediction_accuracy(analyze_results)
+        prediction_accuracy = self._calculate_prediction_accuracy(analyze_results)
 
         test_summary = {
             "test_metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "total_test_cases": total_tests,
-                "api_base_url": self.base_url
+                "api_base_url": self.base_url,
             },
             "overall_results": {
                 "successful_requests": successful_predictions,
                 "failed_requests": failed_predictions,
                 "success_rate": round(success_rate, 4),
-                "average_response_time_s": round(avg_response_time, 3)
+                "average_response_time_s": round(avg_response_time, 3),
             },
             "prediction_accuracy": prediction_accuracy,
             "health_check": health_result,
@@ -421,30 +403,27 @@ class APITester:
             "detailed_results": analyze_results,
             "conclusion": self._generate_test_conclusion(
                 success_rate, prediction_accuracy, health_result
-            )
+            ),
         }
 
         return test_summary
 
-    def _calculate_prediction_accuracy(
-        self,
-        results: List[Dict]
-    ) -> Dict[str, Any]:
+    def _calculate_prediction_accuracy(self, results: List[Dict]) -> Dict[str, Any]:
         """Calculate prediction accuracy statistics."""
         successful_results = [r for r in results if r["status"] == "success"]
 
         if not successful_results:
             return {"status": "no_successful_predictions"}
 
-        toxicity_correct = \
-            sum(1 for r in successful_results if r["expect"
-                "ations"][
-        emotion_correct = \
-            sum(1 for r in successful_results if r["expect"
-                "ations"][
-        bullying_correct = \
-            sum(1 for r in successful_results if r["expect"
-                "ations"][
+        toxicity_correct = sum(
+            1 for r in successful_results if r["expectations"]["toxicity_match"]
+        )
+        emotion_correct = sum(
+            1 for r in successful_results if r["expectations"]["emotion_match"]
+        )
+        bullying_correct = sum(
+            1 for r in successful_results if r["expectations"]["bullying_match"]
+        )
 
         total = len(successful_results)
 
@@ -454,11 +433,8 @@ class APITester:
             "emotion_accuracy": round(emotion_correct / total, 4),
             "bullying_accuracy": round(bullying_correct / total, 4),
             "overall_accuracy": round(
-                (
-                    toxicity_correct + emotion_correct + bullying_correct) /
-                        (total * 3),
-                    4
-            )
+                (toxicity_correct + emotion_correct + bullying_correct) / (total * 3), 4
+            ),
         }
 
     def _generate_test_conclusion(
@@ -474,33 +450,26 @@ class APITester:
                 "status": "critical_failure",
                 "message": "Models not loaded - API not functional",
                 "recommendations": [
-                    "Check mo"
-                        "del files", 
-                ]
+                    "Check model files",
+                ],
             }
 
         if success_rate < 0.5:
             return {
                 "status": "major_issues",
-                "mes"
-                    "sage": 
+                "message": "Success rate is below 50%, indicating major API issues",
                 "recommendations": [
-                    "Check API "
-                        "error logs", 
-                ]
+                    "Check API error logs",
+                ],
             }
 
-        if success_rate >= 0.9 and accuracy_data.get(
-            "overall_accuracy",
-            0) >= 0.6:
+        if success_rate >= 0.9 and accuracy_data.get("overall_accuracy", 0) >= 0.6:
             return {
                 "status": "excellent",
-                "mes"
-                    "sage": 
+                "message": "API performance is excellent",
                 "recommendations": [
-                    "Monitor p"
-                        "erformance", 
-                ]
+                    "Monitor performance",
+                ],
             }
 
         elif success_rate >= 0.8:
@@ -508,9 +477,8 @@ class APITester:
                 "status": "good",
                 "message": "API mostly functional with minor issues",
                 "recommendations": [
-                    "Investigate "
-                        "failed cases", 
-                ]
+                    "Investigate failed cases",
+                ],
             }
 
         else:
@@ -518,9 +486,8 @@ class APITester:
                 "status": "needs_improvement",
                 "message": "API functional but needs optimization",
                 "recommendations": [
-                    "Review mod"
-                        "el accuracy", 
-                ]
+                    "Review model accuracy",
+                ],
             }
 
 
@@ -537,7 +504,7 @@ async def main():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         results_file = f"api_test_results_{timestamp}.json"
 
-        with open(results_file, 'w', encoding='utf-8') as f:
+        with open(results_file, "w", encoding="utf-8") as f:
             json.dump(test_results, f, ensure_ascii=False, indent=2)
 
         # Print summary
@@ -549,13 +516,17 @@ async def main():
         accuracy = test_results["prediction_accuracy"]
         conclusion = test_results["conclusion"]
 
-        print(f"Total test cases: \
-            {test_results['test_metadata']['total_test_cases']}")
+        print(
+            f"Total test cases: \
+            {test_results['test_metadata']['total_test_cases']}"
+        )
         print(f"Successful requests: {overall['successful_requests']}")
         print(f"Failed requests: {overall['failed_requests']}")
         print(f"Success rate: {overall['success_rate']:.1%}")
-        print(f"Average response time: \
-            {overall['average_response_time_s']:.3f}s")
+        print(
+            f"Average response time: \
+            {overall['average_response_time_s']:.3f}s"
+        )
 
         if accuracy.get("total_successful_predictions", 0) > 0:
             print("\nPrediction Accuracy:")

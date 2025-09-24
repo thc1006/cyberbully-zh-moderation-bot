@@ -190,8 +190,7 @@ class TestCLIBatchProcessing:
             for result_data in results:
                 assert "id" in result_data
                 assert "text" in result_data
-                assert "predi"
-                    "ctions" in result_data or 
+                assert "predictions" in result_data
 
     def test_cli_csv_output_format(
         self,
@@ -266,8 +265,7 @@ class TestCLITrainingCommands:
         if result.returncode != 0:
             assert "model" in result.stderr.lower() or "模型" in result.stderr
         else:
-            assert "evalu"
-                "ation" in result.stdout.lower() or 
+            assert "evaluation" in result.stdout.lower() 
 
 
 @pytest.mark.cli
@@ -310,8 +308,7 @@ class TestCLIDataProcessing:
             assert output_file.exists()
         else:
             # 檢查錯誤訊息是否合理
-            assert "prepr"
-                "ocess" in result.stderr.lower() or 
+            assert "preprocess" in result.stderr.lower() 
 
 
 @pytest.mark.cli

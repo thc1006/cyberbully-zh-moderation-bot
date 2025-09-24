@@ -23,8 +23,7 @@ class PathConfig(BaseModel):
 
     def ensure_directories(self) -> None:
         """Create all required directories if they don't exist."""
-        for path in [self.data_dir, self.models_dir, self.logs_dir,
-            self.cache_dir]:
+        for path in [self.data_dir, self.models_dir, self.logs_dir, self.cache_dir]:
             path.mkdir(parents=True, exist_ok=True)
 
 
@@ -76,7 +75,7 @@ class Config(BaseSettings):
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         case_sensitive=False,
-        extra="allow"
+        extra="allow",
     )
 
     # Application settings

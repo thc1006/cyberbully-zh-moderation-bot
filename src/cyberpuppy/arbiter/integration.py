@@ -29,12 +29,11 @@ class ArbiterService:
         )
 
         self._perspective_api: Optional[PerspectiveAPI] = None
-        self._is_perspective_available = (
-            arbiter_config.is_perspective_enabled()
-        )
+        self._is_perspective_available = arbiter_config.is_perspective_enabled()
 
-        logger.info(f"仲裁服務已初始化 - Perspective API 可用: "
-            "{self._is_perspective_available}")
+        logger.info(
+            f"仲裁服務已初始化 - Perspective API 可用: {self._is_perspective_available}"
+        )
 
     async def __aenter__(self):
         """異步上下文管理器進入"""
@@ -52,8 +51,7 @@ class ArbiterService:
             await self._perspective_api.__aexit__(exc_type, exc_val, exc_tb)
 
     async def validate_prediction(
-        self, text: str, local_prediction: Dict[str, Any], context:
-            Optional[str] = None
+        self, text: str, local_prediction: Dict[str, Any], context: Optional[str] = None
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         驗證本地模型預測
@@ -82,8 +80,7 @@ class ArbiterService:
             validation_metadata["uncertainty_analysis"] = {
                 "is_uncertain": uncertainty_analysis.is_uncertain,
                 "confidence_score": uncertainty_analysis.confidence_score,
-                "rea"
-                    "sons": [reason.value for reason in uncertainty_analysis.reasons],
+                "rea" "sons": [reason.value for reason in uncertainty_analysis.reasons],
                 "recommendation": uncertainty_analysis.recommendation,
                 "threshold_details": uncertainty_analysis.threshold_details,
             }
@@ -107,20 +104,18 @@ class ArbiterService:
                     validation_metadata["perspective_result"] = {
                         "toxicity_score": perspective_result.toxicity_score,
                         "severe_tox"
-                            "icity_score": perspective_result.severe_toxicity_score,
+                        "icity_score": perspective_result.severe_toxicity_score,
                         "threat_score": perspective_result.threat_score,
-                        "processin"
-                            "g_time_ms": perspective_result.processing_time_ms,
+                        "processin" "g_time_ms": perspective_result.processing_time_ms,
                         "confidence"
-                            "_assessment": self._assess_perspective_confidence(
+                        "_assessment": self._assess_perspective_confidence(
                             perspective_result
                         ),
                     }
 
                     # 整合外部驗證結果
                     enhanced_prediction = self._integrate_external_validation(
-                        local_prediction, perspective_result,
-                            uncertainty_analysis
+                        local_prediction, perspective_result, uncertainty_analysis
                     )
 
                     validation_metadata["recommendation"] = (
@@ -138,7 +133,7 @@ class ArbiterService:
                 logger.warning("需要外部驗證但 Perspective API 不可用")
                 validation_metadata["recommendation"] = (
                     "External validation unavailable, use local prediction with caution"
-                ) 
+                )
 
             return enhanced_prediction, validation_metadata
 
@@ -151,8 +146,7 @@ class ArbiterService:
             return local_prediction, validation_metadata
 
     def _assess_perspective_confidence(
-        self,
-        result: PerspectiveResult
+        self, result: PerspectiveResult
     ) -> Dict[str, Any]:
         """評估 Perspective API 結果的信心度"""
         # 基於多個屬性評估整體信心度
@@ -164,8 +158,9 @@ class ArbiterService:
         ]
 
         max_score = max(scores)
-        score_variance = sum((s -
-            sum(scores) / len(scores)) ** 2 for s in scores) / len(scores)
+        score_variance = sum(
+            (s - sum(scores) / len(scores)) ** 2 for s in scores
+        ) / len(scores)
 
         # 信心度評估
         if max_score > 0.8 or max_score < 0.2:
@@ -210,7 +205,7 @@ class ArbiterService:
             enhanced["confidence_adjustment"] = "low_agreement"
             enhanced["validation_note"] = (
                 "External validation shows significant disagreement"
-            ) 
+            )
         elif score_difference < 0.1:
             enhanced["confidence_adjustment"] = "high_agreement"
             enhanced["validation_note"] = (
@@ -220,7 +215,7 @@ class ArbiterService:
             enhanced["confidence_adjustment"] = "moderate_agreement"
             enhanced["validation_note"] = (
                 "External validation moderately agrees with local prediction"
-            ) 
+            )
 
         return enhanced
 
@@ -261,11 +256,7 @@ async def validate_with_arbiter(
         Tuple[enhanced_prediction, validation_metadata]
     """
     async with ArbiterService() as arbiter:
-        return await arbiter.validate_prediction(
-            text,
-            local_prediction,
-            context
-        )
+        return await arbiter.validate_prediction(text, local_prediction, context)
 
 
 # 使用範例

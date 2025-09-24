@@ -3,6 +3,7 @@ Model evaluator for CyberPuppy.
 
 Placeholder implementation for CLI integration.
 """
+
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -33,53 +34,63 @@ class ModelEvaluator:
 
         # Simulate evaluation results
         results = {
-            'accuracy': 0.856,
-            'precision': 0.832,
-            'recall': 0.798,
-            'f1': 0.815,
-            'confusion_matrix': [
-                [85, 5],   # True negatives, False positives
-                [12, 88]   # False negatives, True positives
+            "accuracy": 0.856,
+            "precision": 0.832,
+            "recall": 0.798,
+            "f1": 0.815,
+            "confusion_matrix": [
+                [85, 5],  # True negatives, False positives
+                [12, 88],  # False negatives, True positives
             ],
-            'classification_report': {
-                'none': {
-                    'precision': 0.876,
-                    'recall': 0.944,
-                    'f1-score': 0.909,
-                    'support': 90
+            "classification_report": {
+                "none": {
+                    "precision": 0.876,
+                    "recall": 0.944,
+                    "f1-score": 0.909,
+                    "support": 90,
                 },
-                'toxic': {
-                    'precision': 0.946,
-                    'recall': 0.880,
-                    'f1-score': 0.912,
-                    'support': 100
+                "toxic": {
+                    "precision": 0.946,
+                    "recall": 0.880,
+                    "f1-score": 0.912,
+                    "support": 100,
                 },
-                'macro avg': {
-                    'precision': 0.911,
-                    'recall': 0.912,
-                    'f1-score': 0.911,
-                    'support': 190
+                "macro avg": {
+                    "precision": 0.911,
+                    "recall": 0.912,
+                    "f1-score": 0.911,
+                    "support": 190,
                 },
-                'weighted avg': {
-                    'precision': 0.913,
-                    'recall': 0.912,
-                    'f1-score': 0.912,
-                    'support': 190
-                }
+                "weighted avg": {
+                    "precision": 0.913,
+                    "recall": 0.912,
+                    "f1-score": 0.912,
+                    "support": 190,
+                },
             },
-            'detailed_results': [
-                {'text': 'Good morning', 'predicted': 'none', 'actual': 'none',
-                    'correct': True},
+            "detailed_results": [
                 {
-                    'text': 'You are stupid', 'predicted': 'toxic',
-                    'actual': 'toxic', 'correct': True
+                    "text": "Good morning",
+                    "predicted": "none",
+                    "actual": "none",
+                    "correct": True,
                 },
-                {'text': 'Nice work', 'predicted': 'none', 'actual': 'toxic',
-                    'correct': False},
+                {
+                    "text": "You are stupid",
+                    "predicted": "toxic",
+                    "actual": "toxic",
+                    "correct": True,
+                },
+                {
+                    "text": "Nice work",
+                    "predicted": "none",
+                    "actual": "toxic",
+                    "correct": False,
+                },
             ],
-            'model_path': model_path,
-            'dataset_path': dataset_path,
-            'evaluation_timestamp': '2024-01-15T10:30:00Z'
+            "model_path": model_path,
+            "dataset_path": dataset_path,
+            "evaluation_timestamp": "2024-01-15T10:30:00Z",
         }
 
         logger.info(

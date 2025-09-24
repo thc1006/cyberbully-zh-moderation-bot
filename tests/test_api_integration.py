@@ -35,8 +35,7 @@ def test_api_analyze_endpoint():
     response = client.post("/analyze", json=test_request)
 
     # Check response
-    assert response.status_code == 200, f"Expected 200, got {response."
-        "status_code}: {response.text}"
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
 
     data = response.json()
 

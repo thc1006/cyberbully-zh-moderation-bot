@@ -8,12 +8,19 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.cyberpuppy.safety.human_review import (HumanReviewInterface,
-                                                ReviewAction, ReviewPriority)
-from src.cyberpuppy.safety.rules import (AppealManager, AppealStatus,
-                                         PIIHandler, PrivacyLogger,
-                                         ResponseLevel,
-                                         SafetyRules)
+from src.cyberpuppy.safety.human_review import (
+    HumanReviewInterface,
+    ReviewAction,
+    ReviewPriority,
+)
+from src.cyberpuppy.safety.rules import (
+    AppealManager,
+    AppealStatus,
+    PIIHandler,
+    PrivacyLogger,
+    ResponseLevel,
+    SafetyRules,
+)
 
 
 class TestPIIHandler:
@@ -299,8 +306,12 @@ class TestAppealManager:
         appeal2 = appeal_manager.create_appeal("user2", "hash2", "測試2")
         appeal_manager.create_appeal("user3", "hash3", "測試3")
 
-        appeal_manager.review_appeal(appeal1.appeal_id, "admin", AppealStatus.APPROVED, "Approved")
-        appeal_manager.review_appeal(appeal2.appeal_id, "admin", AppealStatus.REJECTED, "Rejected") 
+        appeal_manager.review_appeal(
+            appeal1.appeal_id, "admin", AppealStatus.APPROVED, "Approved"
+        )
+        appeal_manager.review_appeal(
+            appeal2.appeal_id, "admin", AppealStatus.REJECTED, "Rejected"
+        )
 
         stats = appeal_manager.get_appeal_stats()
 
@@ -384,8 +395,11 @@ class TestHumanReviewInterface:
             appeal = review_interface.appeal_manager.create_appeal(
                 f"user{i}", f"hash{i}", f"測試{i}"
             )
-            priority = [ReviewPriority.URGENT, ReviewPriority.HIGH,
-                ReviewPriority.NORMAL][i % 3]
+            priority = [
+                ReviewPriority.URGENT,
+                ReviewPriority.HIGH,
+                ReviewPriority.NORMAL,
+            ][i % 3]
             review_interface.create_review_task(appeal.appeal_id, priority)
 
         dashboard = review_interface.get_review_dashboard()

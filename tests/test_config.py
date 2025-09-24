@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from cyberpuppy.config import (DevelopmentConfig, ProductionConfig, Settings,
-                               get_config)
+from cyberpuppy.config import DevelopmentConfig, ProductionConfig, Settings, get_config
 
 
 class TestSettings:
@@ -54,8 +53,9 @@ class TestSettings:
         """Test threshold value validation."""
         # Valid thresholds
         settings = Settings(
-            TOXICITY_THRESHOLD=0.5, SEVERE_TOXICITY_THRESHOLD=0.9,
-                EMOTION_NEGATIVE_THRESHOLD=0.7
+            TOXICITY_THRESHOLD=0.5,
+            SEVERE_TOXICITY_THRESHOLD=0.9,
+            EMOTION_NEGATIVE_THRESHOLD=0.7,
         )
 
         assert settings.TOXICITY_THRESHOLD == 0.5

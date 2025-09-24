@@ -35,7 +35,11 @@ TEST_BOT_BASE = "http://localhost:8080"
 pytestmark = pytest.mark.integration
 
 __all__ = [
-    'TEST_ROOT', 'PROJECT_ROOT', 'FIXTURES_DIR',
-    'TIMEOUT_SECONDS', 'MAX_RESPONSE_TIME_MS',
-    'TEST_API_BASE', 'TEST_BOT_BASE'
+    "TEST_ROOT",
+    "PROJECT_ROOT",
+    "FIXTURES_DIR",
+    "TIMEOUT_SECONDS",
+    "MAX_RESPONSE_TIME_MS",
+    "TEST_API_BASE",
+    "TEST_BOT_BASE",
 ]

@@ -46,8 +46,7 @@ class SimpleMockDetector:
         harassment_keywords = ["骚扰", "烦人", "讨厌", "没用", "废物"]
         threat_keywords = ["威胁", "警告", "后果", "小心", "等着"]
 
-        has_harassment = \
-            any(keyword in text_lower for keyword in harassment_keywords)
+        has_harassment = any(keyword in text_lower for keyword in harassment_keywords)
         has_threat = any(keyword in text_lower for keyword in threat_keywords)
 
         if has_threat or has_severe:
@@ -65,33 +64,39 @@ class SimpleMockDetector:
         perpetrator_keywords = ["笨蛋", "废物"] + toxic_keywords
 
         has_victim = any(keyword in text_lower for keyword in victim_keywords)
-        has_perpetrator = \
-            any(keyword in text_lower for keyword in perpetrator_keywords)
+        has_perpetrator = any(keyword in text_lower for keyword in perpetrator_keywords)
 
         if has_perpetrator and not has_victim:
             role = "perpetrator"
-            role_scores = \
-                {"no"
-                    "ne": 0.1, 
+            role_scores = {
+                "none": 0.1,
+                "perpetrator": 0.7,
+                "victim": 0.1,
+                "bystander": 0.1,
+            }
         elif has_victim:
             role = "victim"
-            role_scores = \
-                {"no"
-                    "ne": 0.1, 
+            role_scores = {
+                "none": 0.1,
+                "perpetrator": 0.05,
+                "victim": 0.75,
+                "bystander": 0.1,
+            }
         else:
             role = "none"
-            role_scores = \
-                {"no"
-                    "ne": 0.7, 
+            role_scores = {
+                "none": 0.7,
+                "perpetrator": 0.1,
+                "victim": 0.1,
+                "bystander": 0.1,
+            }
 
         # Emotion analysis
         positive_keywords = ["开心", "高兴", "好棒", "谢谢", "感谢", "不错", "棒"]
         negative_keywords = ["难过", "生气", "讨厌", "糟糕", "愤怒"] + toxic_keywords
 
-        has_positive = \
-            any(keyword in text_lower for keyword in positive_keywords)
-        has_negative = \
-            any(keyword in text_lower for keyword in negative_keywords)
+        has_positive = any(keyword in text_lower for keyword in positive_keywords)
+        has_negative = any(keyword in text_lower for keyword in negative_keywords)
 
         if has_positive and not has_negative:
             emotion = "pos"
@@ -122,10 +127,7 @@ class SimpleMockDetector:
                 importance = 0.7
 
             if importance > 0.5 or len(important_words) < 3:
-                important_words.append({
-                    "word": word,
-                    "importance": importance
-                })
+                important_words.append({"word": word, "importance": importance})
 
         # Sort by importance
         important_words.sort(key=lambda x: x["importance"], reverse=True)
@@ -162,14 +164,16 @@ class SimpleModelLoader:
         self.detector = None
         self._warmup_complete = False
         self.cache_stats = {
-            'cached_models': ['mock_detector'],
-            'load_times': {'mock_detector': 0.1},
-            'access_counts': {'mock_detector': 0},
-            'total_models': 1
+            "cached_models": ["mock_detector"],
+            "load_times": {"mock_detector": 0.1},
+            "access_counts": {"mock_detector": 0},
+            "total_models": 1,
         }
 
-        logger.info(f"SimpleModelLoader initialized with device: \
-            {self.device}")
+        logger.info(
+            f"SimpleModelLoader initialized with device: \
+            {self.device}"
+        )
 
     def load_models(self) -> SimpleMockDetector:
         """Load mock detector."""
@@ -182,15 +186,12 @@ class SimpleModelLoader:
         self.detector = SimpleMockDetector(device=self.device)
 
         load_time = time.time() - start_time
-        self.cache_stats['load_times']['mock_detector'] = load_time
+        self.cache_stats["load_times"]["mock_detector"] = load_time
 
         logger.info(f"Mock detector loaded in {load_time:.3f}s")
         return self.detector
 
-    def warm_up_models(
-        self,
-        sample_texts: Optional[list] = None
-    ) -> Dict[str, Any]::
+    def warm_up_models(self, sample_texts: Optional[list] = None) -> Dict[str, Any]:
         """Warm up models with sample predictions."""
         if self.detector is None:
             self.detector = self.load_models()
@@ -200,18 +201,20 @@ class SimpleModelLoader:
                 "你好",
                 "这是一个测试",
                 "笨蛋，去死吧",
-                "我很开心今天的天气很好"
+                "我很开心今天的天气很好",
             ]
 
         warmup_stats = {
-            'warmup_samples': len(sample_texts),
-            'warmup_times': [],
-            'success_count': 0,
-            'error_count': 0
+            "warmup_samples": len(sample_texts),
+            "warmup_times": [],
+            "success_count": 0,
+            "error_count": 0,
         }
 
-        logger.info(f"Starting mock model warm-up with {len(sample_texts)} \
-            samples")
+        logger.info(
+            f"Starting mock model warm-up with {len(sample_texts)} \
+            samples"
+        )
 
         for i, text in enumerate(sample_texts):
             try:
@@ -219,8 +222,8 @@ class SimpleModelLoader:
                 result = self.detector.analyze(text)
                 warmup_time = time.time() - start_time
 
-                warmup_stats['warmup_times'].append(warmup_time)
-                warmup_stats['success_count'] += 1
+                warmup_stats["warmup_times"].append(warmup_time)
+                warmup_stats["success_count"] += 1
 
                 logger.debug(
                     f"Warmup {i+1}/{len(sample_texts)}: {warmup_time:.3f}s "
@@ -229,12 +232,12 @@ class SimpleModelLoader:
 
             except Exception as e:
                 logger.warning(f"Warmup sample {i+1} failed: {e}")
-                warmup_stats['error_count'] += 1
+                warmup_stats["error_count"] += 1
 
-        warmup_stats['average_time'] = (
-            sum(warmup_stats['warmup_times']) /
-                len(warmup_stats['warmup_times'])
-            if warmup_stats['warmup_times'] else 0
+        warmup_stats["average_time"] = (
+            sum(warmup_stats["warmup_times"]) / len(warmup_stats["warmup_times"])
+            if warmup_stats["warmup_times"]
+            else 0
         )
 
         self._warmup_complete = True
@@ -246,22 +249,21 @@ class SimpleModelLoader:
     def get_model_status(self) -> Dict[str, Any]:
         """Get model status."""
         return {
-            'device': self.device,
-            'models_loaded': self.detector is not None,
-            'warmup_complete': self._warmup_complete,
-            'cache_stats': self.cache_stats,
-            'detector_ready': self.detector is not None and
-                self.detector.is_ready(),
-            'gpu_available': False,
-            'gpu_memory': None,
-            'model_type': 'mock_detector'
+            "device": self.device,
+            "models_loaded": self.detector is not None,
+            "warmup_complete": self._warmup_complete,
+            "cache_stats": self.cache_stats,
+            "detector_ready": self.detector is not None and self.detector.is_ready(),
+            "gpu_available": False,
+            "gpu_memory": None,
+            "model_type": "mock_detector",
         }
 
     def clear_cache(self) -> None:
         """Clear model cache."""
         self.detector = None
         self._warmup_complete = False
-        self.cache_stats['access_counts'] = {'mock_detector': 0}
+        self.cache_stats["access_counts"] = {"mock_detector": 0}
         logger.info("Mock model cache cleared")
 
 
@@ -273,6 +275,6 @@ def get_model_loader() -> SimpleModelLoader:
     """Get global simple model loader instance."""
     global _simple_model_loader
     if _simple_model_loader is None:
-        models_dir = os.getenv('MODELS_DIR', 'models')
+        models_dir = os.getenv("MODELS_DIR", "models")
         _simple_model_loader = SimpleModelLoader(models_dir)
     return _simple_model_loader

@@ -15,10 +15,10 @@ from typing import List, Tuple, Optional
 
 # Windows encoding fix - apply immediately
 if platform.system() == "Windows":
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ["PYTHONIOENCODING"] = "utf-8"
     try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except AttributeError:
         # Python < 3.7 doesn't have reconfigure
         pass
@@ -27,7 +27,9 @@ if platform.system() == "Windows":
 class ValidationResult:
     """Represents the result of a validation check"""
 
-    def __init__(self, name: str, passed: bool, message: str, suggestion: Optional[str] = None):
+    def __init__(
+        self, name: str, passed: bool, message: str, suggestion: Optional[str] = None
+    ):
         self.name = name
         self.passed = passed
         self.message = message
@@ -85,10 +87,10 @@ class WindowsSetupValidator:
                 print(result)
             except Exception as e:
                 error_result = ValidationResult(
-                    check.__name__.replace('check_', '').replace('_', ' ').title(),
+                    check.__name__.replace("check_", "").replace("_", " ").title(),
                     False,
                     f"Check failed with error: {e}",
-                    "Review the error message and ensure all dependencies are installed"
+                    "Review the error message and ensure all dependencies are installed",
                 )
                 self.results.append(error_result)
                 print(error_result)
@@ -103,14 +105,14 @@ class WindowsSetupValidator:
             return ValidationResult(
                 "Platform Check",
                 True,
-                f"Running on Windows {release} (version {version})"
+                f"Running on Windows {release} (version {version})",
             )
         else:
             return ValidationResult(
                 "Platform Check",
                 False,
                 f"Not running on Windows (detected: {platform.system()})",
-                "This validation is specifically for Windows systems"
+                "This validation is specifically for Windows systems",
             )
 
     def check_python_version(self) -> ValidationResult:
@@ -120,14 +122,14 @@ class WindowsSetupValidator:
             return ValidationResult(
                 "Python Version",
                 True,
-                f"Python {version.major}.{version.minor}.{version.micro} is supported"
+                f"Python {version.major}.{version.minor}.{version.micro} is supported",
             )
         else:
             return ValidationResult(
                 "Python Version",
                 False,
                 f"Python {version.major}.{version.minor}.{version.micro} is not supported",
-                "Upgrade to Python 3.9 or higher"
+                "Upgrade to Python 3.9 or higher",
             )
 
     def check_encoding_setup(self) -> ValidationResult:
@@ -135,19 +137,19 @@ class WindowsSetupValidator:
         issues = []
 
         # Check environment variables
-        pythonioencoding = os.environ.get('PYTHONIOENCODING')
-        if pythonioencoding != 'utf-8':
+        pythonioencoding = os.environ.get("PYTHONIOENCODING")
+        if pythonioencoding != "utf-8":
             issues.append("PYTHONIOENCODING not set to utf-8")
 
         # Check stdout/stderr encoding
-        stdout_encoding = getattr(sys.stdout, 'encoding', None)
-        if stdout_encoding and 'utf' not in stdout_encoding.lower():
+        stdout_encoding = getattr(sys.stdout, "encoding", None)
+        if stdout_encoding and "utf" not in stdout_encoding.lower():
             issues.append(f"stdout encoding is {stdout_encoding}, not UTF-8")
 
         # Test Unicode handling
         try:
             test_str = "測試中文編碼"  # Remove emoji that might cause issues
-            test_str.encode('utf-8').decode('utf-8')
+            test_str.encode("utf-8").decode("utf-8")
         except UnicodeError:
             issues.append("Unicode encoding/decoding failed")
 
@@ -156,42 +158,44 @@ class WindowsSetupValidator:
                 "Encoding Setup",
                 False,
                 "; ".join(issues),
-                "Run 'chcp 65001' and set PYTHONIOENCODING=utf-8"
+                "Run 'chcp 65001' and set PYTHONIOENCODING=utf-8",
             )
         else:
             return ValidationResult(
                 "Encoding Setup",
                 True,
-                f"Encoding configured correctly (stdout: {stdout_encoding})"
+                f"Encoding configured correctly (stdout: {stdout_encoding})",
             )
 
     def check_console_encoding(self) -> ValidationResult:
         """Check Windows console encoding"""
         try:
             # Try to get current codepage
-            result = subprocess.run(['chcp'], shell=True, capture_output=True, text=True)
+            result = subprocess.run(
+                ["chcp"], shell=True, capture_output=True, text=True
+            )
 
             if result.returncode == 0:
                 output = result.stdout.strip()
-                if '65001' in output:  # UTF-8 codepage
+                if "65001" in output:  # UTF-8 codepage
                     return ValidationResult(
                         "Console Encoding",
                         True,
-                        "Console set to UTF-8 (codepage 65001)"
+                        "Console set to UTF-8 (codepage 65001)",
                     )
                 else:
                     return ValidationResult(
                         "Console Encoding",
                         False,
                         f"Console not set to UTF-8: {output}",
-                        "Run 'chcp 65001' to set UTF-8 encoding"
+                        "Run 'chcp 65001' to set UTF-8 encoding",
                     )
             else:
                 return ValidationResult(
                     "Console Encoding",
                     False,
                     f"Failed to check codepage: {result.stderr}",
-                    "Manually run 'chcp 65001' in command prompt"
+                    "Manually run 'chcp 65001' in command prompt",
                 )
 
         except Exception as e:
@@ -199,7 +203,7 @@ class WindowsSetupValidator:
                 "Console Encoding",
                 False,
                 f"Could not check console encoding: {e}",
-                "Try running 'chcp 65001' manually"
+                "Try running 'chcp 65001' manually",
             )
 
     def check_numpy_installation(self) -> ValidationResult:
@@ -209,22 +213,22 @@ class WindowsSetupValidator:
 
             version = np.__version__
             # Check if it's a pre-compiled version (should load quickly)
-            start_time = __import__('time').time()
+            start_time = __import__("time").time()
             _ = np.array([1, 2, 3])
-            load_time = __import__('time').time() - start_time
+            load_time = __import__("time").time() - start_time
 
             if load_time < 1.0:  # Should be very fast for pre-compiled
                 return ValidationResult(
                     "NumPy Installation",
                     True,
-                    f"NumPy {version} installed correctly (pre-compiled)"
+                    f"NumPy {version} installed correctly (pre-compiled)",
                 )
             else:
                 return ValidationResult(
                     "NumPy Installation",
                     True,
                     f"NumPy {version} installed but may be compiled from source",
-                    "Consider reinstalling with --only-binary=numpy"
+                    "Consider reinstalling with --only-binary=numpy",
                 )
 
         except ImportError:
@@ -232,14 +236,14 @@ class WindowsSetupValidator:
                 "NumPy Installation",
                 False,
                 "NumPy not installed",
-                "Install with: pip install --only-binary=numpy numpy"
+                "Install with: pip install --only-binary=numpy numpy",
             )
         except Exception as e:
             return ValidationResult(
                 "NumPy Installation",
                 False,
                 f"NumPy import failed: {e}",
-                "Reinstall NumPy with pre-compiled wheels"
+                "Reinstall NumPy with pre-compiled wheels",
             )
 
     def check_pytorch_installation(self) -> ValidationResult:
@@ -259,7 +263,7 @@ class WindowsSetupValidator:
             return ValidationResult(
                 "PyTorch Installation",
                 True,
-                f"PyTorch {version} working correctly{cuda_info}"
+                f"PyTorch {version} working correctly{cuda_info}",
             )
 
         except ImportError:
@@ -267,42 +271,38 @@ class WindowsSetupValidator:
                 "PyTorch Installation",
                 False,
                 "PyTorch not installed",
-                "Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu"
+                "Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu",
             )
         except Exception as e:
             return ValidationResult(
                 "PyTorch Installation",
                 False,
                 f"PyTorch test failed: {e}",
-                "Reinstall PyTorch from official website"
+                "Reinstall PyTorch from official website",
             )
 
     def check_chinese_packages(self) -> ValidationResult:
         """Check Chinese NLP packages"""
         packages = {
-            'jieba': 'Chinese word segmentation',
-            'opencc': 'Traditional/Simplified conversion'
+            "jieba": "Chinese word segmentation",
+            "opencc": "Traditional/Simplified conversion",
         }
 
         results = []
         for package, description in packages.items():
             try:
                 module = importlib.import_module(package)
-                version = getattr(module, '__version__', 'unknown')
+                version = getattr(module, "__version__", "unknown")
                 results.append(f"{package} {version} ({description})")
             except ImportError:
                 return ValidationResult(
                     "Chinese Packages",
                     False,
                     f"Missing package: {package} ({description})",
-                    f"Install with: pip install {package if package != 'opencc' else 'opencc-python-reimplemented'}"
+                    f"Install with: pip install {package if package != 'opencc' else 'opencc-python-reimplemented'}",
                 )
 
-        return ValidationResult(
-            "Chinese Packages",
-            True,
-            "; ".join(results)
-        )
+        return ValidationResult("Chinese Packages", True, "; ".join(results))
 
     def check_chinese_text_processing(self) -> ValidationResult:
         """Check Chinese text processing functionality"""
@@ -319,11 +319,11 @@ class WindowsSetupValidator:
                     "Chinese Text Processing",
                     False,
                     f"Jieba segmentation produced too few words: {len(words)}",
-                    "Check jieba installation and dictionary files"
+                    "Check jieba installation and dictionary files",
                 )
 
             # Test OpenCC
-            cc = OpenCC('s2t')  # Simplified to Traditional
+            cc = OpenCC("s2t")  # Simplified to Traditional
             converted = cc.convert(test_text)
 
             if converted == test_text:
@@ -331,13 +331,13 @@ class WindowsSetupValidator:
                     "Chinese Text Processing",
                     False,
                     "OpenCC conversion did not change text",
-                    "Check OpenCC configuration and data files"
+                    "Check OpenCC configuration and data files",
                 )
 
             return ValidationResult(
                 "Chinese Text Processing",
                 True,
-                f"Jieba: {len(words)} words, OpenCC: conversion successful"
+                f"Jieba: {len(words)} words, OpenCC: conversion successful",
             )
 
         except Exception as e:
@@ -345,7 +345,7 @@ class WindowsSetupValidator:
                 "Chinese Text Processing",
                 False,
                 f"Text processing failed: {e}",
-                "Reinstall Chinese NLP packages"
+                "Reinstall Chinese NLP packages",
             )
 
     def check_file_encoding(self) -> ValidationResult:
@@ -356,13 +356,15 @@ class WindowsSetupValidator:
 
             # Create temporary file
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
-                                           delete=False, suffix='.txt') as f:
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", delete=False, suffix=".txt"
+            ) as f:
                 f.write(test_content)
                 temp_path = f.name
 
             # Read it back
-            with open(temp_path, 'r', encoding='utf-8') as f:
+            with open(temp_path, "r", encoding="utf-8") as f:
                 read_content = f.read()
 
             # Clean up
@@ -370,16 +372,14 @@ class WindowsSetupValidator:
 
             if read_content == test_content:
                 return ValidationResult(
-                    "File Encoding",
-                    True,
-                    "UTF-8 file I/O working correctly"
+                    "File Encoding", True, "UTF-8 file I/O working correctly"
                 )
             else:
                 return ValidationResult(
                     "File Encoding",
                     False,
                     "File content mismatch after write/read",
-                    "Check file system encoding support"
+                    "Check file system encoding support",
                 )
 
         except Exception as e:
@@ -387,18 +387,18 @@ class WindowsSetupValidator:
                 "File Encoding",
                 False,
                 f"File I/O test failed: {e}",
-                "Check file system permissions and encoding"
+                "Check file system permissions and encoding",
             )
 
     def check_test_imports(self) -> ValidationResult:
         """Check critical package imports"""
         critical_imports = [
-            ('pandas', 'Data processing'),
-            ('sklearn', 'Machine learning'),
-            ('transformers', 'NLP models'),
-            ('datasets', 'HuggingFace datasets'),
-            ('fastapi', 'API framework'),
-            ('pytest', 'Testing framework'),
+            ("pandas", "Data processing"),
+            ("sklearn", "Machine learning"),
+            ("transformers", "NLP models"),
+            ("datasets", "HuggingFace datasets"),
+            ("fastapi", "API framework"),
+            ("pytest", "Testing framework"),
         ]
 
         failed_imports = []
@@ -416,23 +416,23 @@ class WindowsSetupValidator:
                 "Critical Imports",
                 False,
                 f"Failed imports: {', '.join(failed_imports)}",
-                "Install missing packages from requirements.txt"
+                "Install missing packages from requirements.txt",
             )
         else:
             return ValidationResult(
                 "Critical Imports",
                 True,
-                f"All {success_count} critical packages imported successfully"
+                f"All {success_count} critical packages imported successfully",
             )
 
     def check_environment_variables(self) -> ValidationResult:
         """Check required environment variables"""
         required_vars = {
-            'PYTHONIOENCODING': 'utf-8',
+            "PYTHONIOENCODING": "utf-8",
         }
 
         recommended_vars = {
-            'PYTHONUTF8': '1',
+            "PYTHONUTF8": "1",
         }
 
         issues = []
@@ -453,27 +453,30 @@ class WindowsSetupValidator:
                 "Environment Variables",
                 False,
                 "; ".join(issues),
-                "Set environment variables for proper encoding"
+                "Set environment variables for proper encoding",
             )
         elif warnings:
             return ValidationResult(
                 "Environment Variables",
                 True,
-                f"Required vars OK. Recommendations: {'; '.join(warnings)}"
+                f"Required vars OK. Recommendations: {'; '.join(warnings)}",
             )
         else:
             return ValidationResult(
                 "Environment Variables",
                 True,
-                "All encoding environment variables properly set"
+                "All encoding environment variables properly set",
             )
 
     def check_pip_configuration(self) -> ValidationResult:
         """Check pip configuration for Windows"""
         try:
             # Check pip version
-            result = subprocess.run([sys.executable, '-m', 'pip', '--version'],
-                                  capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "--version"],
+                capture_output=True,
+                text=True,
+            )
 
             if result.returncode == 0:
                 pip_version = result.stdout.strip()
@@ -481,22 +484,21 @@ class WindowsSetupValidator:
                 # Check for pip-tools
                 try:
                     import pip_tools
+
                     pip_tools_version = pip_tools.__version__
                     tools_info = f", pip-tools {pip_tools_version}"
                 except ImportError:
                     tools_info = " (pip-tools not installed)"
 
                 return ValidationResult(
-                    "Pip Configuration",
-                    True,
-                    f"Pip working: {pip_version}{tools_info}"
+                    "Pip Configuration", True, f"Pip working: {pip_version}{tools_info}"
                 )
             else:
                 return ValidationResult(
                     "Pip Configuration",
                     False,
                     f"Pip check failed: {result.stderr}",
-                    "Reinstall or upgrade pip"
+                    "Reinstall or upgrade pip",
                 )
 
         except Exception as e:
@@ -504,7 +506,7 @@ class WindowsSetupValidator:
                 "Pip Configuration",
                 False,
                 f"Pip check error: {e}",
-                "Check pip installation"
+                "Check pip installation",
             )
 
     def generate_report(self) -> str:
@@ -533,7 +535,9 @@ class WindowsSetupValidator:
         report += f"{summary_icon} Summary: {passed}/{total} checks passed\n\n"
 
         if passed == total:
-            report += f"{success_icon} All checks passed! Your Windows setup is ready.\n\n"
+            report += (
+                f"{success_icon} All checks passed! Your Windows setup is ready.\n\n"
+            )
             report += "Next steps:\n"
             report += "1. Run 'python test_opencc.py' to test Chinese processing\n"
             report += "2. Run 'python -m pytest tests/ -v' to run the test suite\n"
@@ -565,5 +569,5 @@ def main():
     sys.exit(failed_count)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

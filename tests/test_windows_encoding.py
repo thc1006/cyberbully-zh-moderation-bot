@@ -22,11 +22,11 @@ class TestWindowsEncoding:
     def setup_method(self):
         """Setup encoding for each test"""
         if platform.system() == "Windows":
-            os.environ['PYTHONIOENCODING'] = 'utf-8'
+            os.environ["PYTHONIOENCODING"] = "utf-8"
             # Try to reconfigure stdout/stderr if available
             try:
-                sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-                sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")
             except AttributeError:
                 # Python < 3.7 doesn't have reconfigure
                 pass
@@ -45,8 +45,8 @@ class TestWindowsEncoding:
         for text in chinese_texts:
             # Should not raise UnicodeEncodeError
             try:
-                encoded = text.encode('utf-8')
-                decoded = encoded.decode('utf-8')
+                encoded = text.encode("utf-8")
+                decoded = encoded.decode("utf-8")
                 assert decoded == text, f"Encoding/decoding failed for: {text}"
             except UnicodeError as e:
                 pytest.fail(f"Unicode error for text '{text}': {e}")
@@ -61,14 +61,14 @@ class TestWindowsEncoding:
         try:
             # Test string representation
             repr_text = repr(test_text)
-            assert test_text in repr_text or '\\u' in repr_text
+            assert test_text in repr_text or "\\u" in repr_text
 
             # Test encoding to various Windows codepages
-            encodings_to_test = ['utf-8', 'utf-16', 'cp1252']
+            encodings_to_test = ["utf-8", "utf-16", "cp1252"]
 
             for encoding in encodings_to_test:
                 try:
-                    encoded = test_text.encode(encoding, errors='replace')
+                    encoded = test_text.encode(encoding, errors="replace")
                     decoded = encoded.decode(encoding)
                     # Should not be empty after encoding/decoding
                     assert len(decoded) > 0
@@ -93,14 +93,14 @@ class TestWindowsEncoding:
 
         # Test writing with UTF-8 encoding
         try:
-            with open(test_file, 'w', encoding='utf-8') as f:
+            with open(test_file, "w", encoding="utf-8") as f:
                 f.write(chinese_content)
         except UnicodeError as e:
             pytest.fail(f"Failed to write Chinese content: {e}")
 
         # Test reading with UTF-8 encoding
         try:
-            with open(test_file, 'r', encoding='utf-8') as f:
+            with open(test_file, "r", encoding="utf-8") as f:
                 read_content = f.read()
             assert read_content == chinese_content
         except UnicodeError as e:
@@ -113,12 +113,7 @@ class TestWindowsEncoding:
             current_locale = locale.getlocale()
 
             # Test setting UTF-8 locale if available
-            utf8_locales = [
-                'C.UTF-8',
-                'en_US.UTF-8',
-                'zh_CN.UTF-8',
-                'zh_TW.UTF-8'
-            ]
+            utf8_locales = ["C.UTF-8", "en_US.UTF-8", "zh_CN.UTF-8", "zh_TW.UTF-8"]
 
             for loc in utf8_locales:
                 try:
@@ -128,7 +123,7 @@ class TestWindowsEncoding:
                     continue
             else:
                 # If no UTF-8 locale available, use default
-                locale.setlocale(locale.LC_ALL, '')
+                locale.setlocale(locale.LC_ALL, "")
 
             # Test encoding detection
             encoding = locale.getpreferredencoding()
@@ -151,15 +146,21 @@ class TestWindowsEncoding:
             import subprocess
 
             # Try to get current codepage
-            result = subprocess.run(['chcp'], shell=True, capture_output=True, text=True)
+            result = subprocess.run(
+                ["chcp"], shell=True, capture_output=True, text=True
+            )
 
             if result.returncode == 0:
                 # Should contain codepage information
-                assert 'codepage' in result.stdout.lower() or result.stdout.strip().isdigit()
+                assert (
+                    "codepage" in result.stdout.lower()
+                    or result.stdout.strip().isdigit()
+                )
 
             # Test setting UTF-8 codepage (65001)
-            result = subprocess.run(['chcp', '65001'], shell=True,
-                                  capture_output=True, text=True)
+            result = subprocess.run(
+                ["chcp", "65001"], shell=True, capture_output=True, text=True
+            )
             # Command should execute (may not succeed depending on permissions)
 
         except Exception as e:
@@ -168,10 +169,7 @@ class TestWindowsEncoding:
     def test_environment_variables(self):
         """Test encoding-related environment variables"""
         # Test that our encoding environment variables are set
-        encoding_vars = {
-            'PYTHONIOENCODING': 'utf-8',
-            'PYTHONUTF8': '1'
-        }
+        encoding_vars = {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
 
         for var, expected in encoding_vars.items():
             actual = os.environ.get(var)
@@ -198,7 +196,7 @@ class TestWindowsEncoding:
             for word in words:
                 assert isinstance(word, str)
                 # Should be able to encode/decode
-                word.encode('utf-8').decode('utf-8')
+                word.encode("utf-8").decode("utf-8")
 
         except ImportError:
             pytest.skip("jieba not installed")
@@ -209,7 +207,7 @@ class TestWindowsEncoding:
             from opencc import OpenCC
 
             # Test OpenCC with traditional/simplified conversion
-            cc = OpenCC('s2t')  # Simplified to Traditional
+            cc = OpenCC("s2t")  # Simplified to Traditional
 
             test_text = "这是简体中文测试"
             converted = cc.convert(test_text)
@@ -219,7 +217,7 @@ class TestWindowsEncoding:
             assert len(converted) > 0
 
             # Should be valid Unicode
-            converted.encode('utf-8').decode('utf-8')
+            converted.encode("utf-8").decode("utf-8")
 
         except ImportError:
             pytest.skip("opencc not installed")
@@ -234,10 +232,7 @@ class TestWindowsEncoding:
             "name": "網路霸凌檢測",
             "description": "中文毒性內容檢測系統",
             "labels": ["正常", "有毒", "嚴重"],
-            "examples": [
-                "這是正常的中文句子。",
-                "這可能是有問題的內容。"
-            ]
+            "examples": ["這是正常的中文句子。", "這可能是有問題的內容。"],
         }
 
         try:
@@ -267,10 +262,10 @@ class TestWindowsEncoding:
         try:
             # Write Chinese content to Chinese-named file
             chinese_content = "中文內容測試"
-            chinese_file.write_text(chinese_content, encoding='utf-8')
+            chinese_file.write_text(chinese_content, encoding="utf-8")
 
             # Read it back
-            read_content = chinese_file.read_text(encoding='utf-8')
+            read_content = chinese_file.read_text(encoding="utf-8")
             assert read_content == chinese_content
 
             # Test path operations
@@ -300,7 +295,7 @@ class TestWindowsSpecific:
         assert release is not None
 
         # Windows 10 and above should support UTF-8 better
-        if release in ['10', '11']:
+        if release in ["10", "11"]:
             # Should have better Unicode support
             assert True  # Test passes for supported versions
         else:
@@ -310,8 +305,8 @@ class TestWindowsSpecific:
     def test_windows_terminal_detection(self):
         """Test if running in Windows Terminal (better Unicode support)"""
         # Check for Windows Terminal environment variables
-        wt_session = os.environ.get('WT_SESSION')
-        wt_profile = os.environ.get('WT_PROFILE_ID')
+        wt_session = os.environ.get("WT_SESSION")
+        wt_profile = os.environ.get("WT_PROFILE_ID")
 
         if wt_session or wt_profile:
             # Running in Windows Terminal - better Unicode support

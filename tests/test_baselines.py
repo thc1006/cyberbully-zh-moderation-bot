@@ -11,13 +11,22 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
-                                               RoleType, ToxicityLevel,
-                                               UnifiedLabel)
-from src.cyberpuppy.models.baselines import (BaselineModel, FocalLoss,
-                                             ModelConfig, ModelEvaluator,
-                                             MultiTaskDataset, MultiTaskHead,
-                                             create_model_variants)
+from src.cyberpuppy.labeling.label_map import (
+    BullyingLevel,
+    EmotionType,
+    RoleType,
+    ToxicityLevel,
+    UnifiedLabel,
+)
+from src.cyberpuppy.models.baselines import (
+    BaselineModel,
+    FocalLoss,
+    ModelConfig,
+    ModelEvaluator,
+    MultiTaskDataset,
+    MultiTaskHead,
+    create_model_variants,
+)
 
 
 class TestModelConfig:
@@ -134,8 +143,9 @@ class TestMultiTaskDataset:
                 emotion_intensity=3,
             ),
             UnifiedLabel(
-                toxicity=ToxicityLevel.NONE, emotion=EmotionType.POSITIVE,
-                    emotion_intensity=2
+                toxicity=ToxicityLevel.NONE,
+                emotion=EmotionType.POSITIVE,
+                emotion_intensity=2,
             ),
             UnifiedLabel(
                 toxicity=ToxicityLevel.SEVERE,
@@ -147,22 +157,14 @@ class TestMultiTaskDataset:
 
     def test_dataset_init(self):
         """測試資料集初始化"""
-        dataset = MultiTaskDataset(
-            self.texts,
-            self.labels,
-            self.mock_tokenizer
-        )
+        dataset = MultiTaskDataset(self.texts, self.labels, self.mock_tokenizer)
 
         assert len(dataset) == 3
         assert dataset.max_length == 256
 
     def test_dataset_getitem(self):
         """測試資料獲取"""
-        dataset = MultiTaskDataset(
-            self.texts,
-            self.labels,
-            self.mock_tokenizer
-        )
+        dataset = MultiTaskDataset(self.texts, self.labels, self.mock_tokenizer)
 
         item = dataset[0]
 
@@ -188,11 +190,7 @@ class TestMultiTaskDataset:
 
     def test_dataset_label_mapping(self):
         """測試標籤映射"""
-        dataset = MultiTaskDataset(
-            self.texts,
-            self.labels,
-            self.mock_tokenizer
-        )
+        dataset = MultiTaskDataset(self.texts, self.labels, self.mock_tokenizer)
 
         # 測試第二個樣本（預設值）
         item = dataset[1]
@@ -293,7 +291,7 @@ class MockTokenizer:
         return {
             "input_ids": torch.randint(1, 1000, (1, kwargs.get("max_length", 128))),
             "attention_mask": torch.ones(1, kwargs.get("max_length", 128)),
-            "token_type_ids": torch.zeros(1, kwargs.get("max_length", 128))
+            "token_type_ids": torch.zeros(1, kwargs.get("max_length", 128)),
         }
 
     def save_pretrained(self, path):
@@ -330,13 +328,7 @@ class TestBaselineModel:
         batch_size = 2
         seq_len = 128
 
-        input_ids = torch.randint(
-            1,
-            1000,
-            (batch_size,
-             seq_len),
-            dtype=torch.long
-        )
+        input_ids = torch.randint(1, 1000, (batch_size, seq_len), dtype=torch.long)
         attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long)
         token_type_ids = torch.zeros(batch_size, seq_len, dtype=torch.long)
 
@@ -407,13 +399,7 @@ class TestBaselineModel:
         batch_size = 2
         seq_len = 128
 
-        input_ids = torch.randint(
-            1,
-            1000,
-            (batch_size,
-             seq_len),
-            dtype=torch.long
-        )
+        input_ids = torch.randint(1, 1000, (batch_size, seq_len), dtype=torch.long)
         attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long)
 
         predictions = model.predict(input_ids, attention_mask)
@@ -459,8 +445,10 @@ class TestModelEvaluator:
 
     def setup_method(self):
         """設置測試環境"""
-        with patch("transformers.AutoModel") as mock_model, patch(
-            "transformers.AutoTokenizer") as mock_tokenizer:
+        with (
+            patch("transformers.AutoModel") as mock_model,
+            patch("transformers.AutoTokenizer") as mock_tokenizer,
+        ):
             mock_model.from_pretrained.return_value = MockTransformer()
             mock_tokenizer.from_pretrained.return_value = MockTokenizer()
 
@@ -479,11 +467,7 @@ class TestModelEvaluator:
         labels = [0, 1, 1, 1, 0]  # 真實標籤
         session_ids = ["s1", "s1", "s2", "s2", "s3"]  # 會話ID
 
-        f1 = self.evaluator._compute_session_level_f1(
-            predictions,
-            labels,
-            session_ids
-        )
+        f1 = self.evaluator._compute_session_level_f1(predictions, labels, session_ids)
 
         assert isinstance(f1, float)
         assert 0 <= f1 <= 1
@@ -536,31 +520,14 @@ class TestIntegration:
         # 建立測試資料
         texts = ["測試文本1", "測試文本2", "測試文本3", "測試文本4"]
         labels = [
-            UnifiedLabel(
-                toxicity=ToxicityLevel.TOXIC,
-                emotion=EmotionType.NEGATIVE
-            ),
-            UnifiedLabel(
-                toxicity=ToxicityLevel.NONE,
-                emotion=EmotionType.POSITIVE
-            ),
-            UnifiedLabel(
-                toxicity=ToxicityLevel.SEVERE,
-                emotion=EmotionType.NEGATIVE
-            ),
-            UnifiedLabel(
-                toxicity=ToxicityLevel.NONE,
-                emotion=EmotionType.NEUTRAL
-            ),
+            UnifiedLabel(toxicity=ToxicityLevel.TOXIC, emotion=EmotionType.NEGATIVE),
+            UnifiedLabel(toxicity=ToxicityLevel.NONE, emotion=EmotionType.POSITIVE),
+            UnifiedLabel(toxicity=ToxicityLevel.SEVERE, emotion=EmotionType.NEGATIVE),
+            UnifiedLabel(toxicity=ToxicityLevel.NONE, emotion=EmotionType.NEUTRAL),
         ]
 
         # 建立資料集
-        dataset = MultiTaskDataset(
-            texts,
-            labels,
-            mock_tokenizer_obj,
-            max_length=128
-        )
+        dataset = MultiTaskDataset(texts, labels, mock_tokenizer_obj, max_length=128)
 
         # 建立資料載入器
         from torch.utils.data import DataLoader

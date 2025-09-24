@@ -36,14 +36,17 @@ def test_model_loader():
         print("Result:")
         print(f"  Toxicity: {result['toxicity']}")
         print(f"  Emotion: {result['emotion']}")
-        print(f"  Explanations: \
-            {len(result['explanations']['important_words'])} words")
+        print(
+            f"  Explanations: \
+            {len(result['explanations']['important_words'])} words"
+        )
 
         return True
 
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

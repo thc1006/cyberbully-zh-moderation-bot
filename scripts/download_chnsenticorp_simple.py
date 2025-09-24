@@ -16,11 +16,7 @@ def download_chnsenticorp():
         from datasets import load_dataset
 
         # 嘗試從不同的來源下載
-        dataset_names = [
-            "seamew/ChnSentiCorp",
-            "chnsenticorp",
-            "eriktks/ChnSentiCorp"
-        ]
+        dataset_names = ["seamew/ChnSentiCorp", "chnsenticorp", "eriktks/ChnSentiCorp"]
 
         dataset = None
         for name in dataset_names:
@@ -47,7 +43,7 @@ def download_chnsenticorp():
             for item in dataset[split]:
                 data.append(item)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             print(f"Saved to: {output_file}")
@@ -57,20 +53,18 @@ def download_chnsenticorp():
             "dataset_name": "ChnSentiCorp",
             "source": "Hugging Face",
             "splits": list(dataset.keys()),
-            "total_samples": sum(
-                len(dataset[split]) for split in dataset.keys()
-            ),
+            "total_samples": sum(len(dataset[split]) for split in dataset.keys()),
             "samples_per_split": {
                 split: len(dataset[split]) for split in dataset.keys()
-            }
+            },
         }
 
-        with open(output_dir / "metadata.json", 'w', encoding='utf-8') as f:
+        with open(output_dir / "metadata.json", "w", encoding="utf-8") as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
 
         print("\nDataset successfully downloaded!")
         print(f"Total samples: {metadata['total_samples']}")
-        for split, count in metadata['samples_per_split'].items():
+        for split, count in metadata["samples_per_split"].items():
             print(f"  {split}: {count} samples")
 
         return True

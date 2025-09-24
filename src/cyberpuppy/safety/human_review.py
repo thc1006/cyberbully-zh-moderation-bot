@@ -103,20 +103,23 @@ class HumanReviewInterface:
             assigned_to = self._auto_assign_reviewer()
 
         task = ReviewTask(
-            task_id=task_id, appeal_id=appeal_id, priority=priority,
-                assigned_to=assigned_to
+            task_id=task_id,
+            appeal_id=appeal_id,
+            priority=priority,
+            assigned_to=assigned_to,
         )
 
         self.review_tasks[task_id] = task
 
         # 更新審核員工作量
         if assigned_to:
-            self.reviewer_workload[assigned_to] = self.reviewer_workload.get(
-                assigned_to,
-                0
-            ) + 1
+            self.reviewer_workload[assigned_to] = (
+                self.reviewer_workload.get(assigned_to, 0) + 1
+            )
 
-        logger.info(f"審核任務建立 - ID: {task_id}, 申訴: {appeal_id}, 優先級: {priority.value}")
+        logger.info(
+            f"審核任務建立 - ID: {task_id}, 申訴: {appeal_id}, 優先級: {priority.value}"
+        )
 
         return task
 
@@ -128,8 +131,9 @@ class HumanReviewInterface:
         return min(self.reviewer_workload.items(), key=lambda x: x[1])[0]
 
     def get_pending_reviews(
-        self, reviewer_id: Optional[str] = None, priority_filter:
-            Optional[ReviewPriority] = None
+        self,
+        reviewer_id: Optional[str] = None,
+        priority_filter: Optional[ReviewPriority] = None,
     ) -> List[Tuple[ReviewTask, Appeal]]:
         """
         取得待審核案件
@@ -163,10 +167,7 @@ class HumanReviewInterface:
             ReviewPriority.LOW: 3,
         }
 
-        pending.sort(
-            key=lambda x: (priority_order[x[0].priority],
-            x[0].due_date)
-        )
+        pending.sort(key=lambda x: (priority_order[x[0].priority], x[0].due_date))
 
         return pending
 
@@ -231,8 +232,9 @@ class HumanReviewInterface:
                 task.priority = ReviewPriority.URGENT
                 # 重新分配給上級審核員
                 senior_reviewer = (
-                    additional_data.get("senior_"
-                        "reviewer") if additional_data else None
+                    additional_data.get("senior_" "reviewer")
+                    if additional_data
+                    else None
                 )
                 if senior_reviewer:
                     task.assigned_to = senior_reviewer
@@ -246,8 +248,9 @@ class HumanReviewInterface:
 
         elif action == ReviewAction.DEFER:
             # 延後處理
-            defer_days = additional_data.get("defer"
-                "_days", 3) if additional_data else 3
+            defer_days = (
+                additional_data.get("defer" "_days", 3) if additional_data else 3
+            )
             task.due_date = datetime.now() + timedelta(days=defer_days)
             return True, f"已延後 {defer_days} 天處理"
 
@@ -265,8 +268,7 @@ class HumanReviewInterface:
             logger.info(f"審核任務完成: {task_id}")
 
     def batch_review(
-        self, task_ids: List[str], reviewer_id: str, action: ReviewAction,
-            notes: str
+        self, task_ids: List[str], reviewer_id: str, action: ReviewAction, notes: str
     ) -> Dict[str, Tuple[bool, str]]:
         """
         批次審核
@@ -284,8 +286,7 @@ class HumanReviewInterface:
 
         for task_id in task_ids:
             success, message = self.process_review(
-                task_id=task_id, reviewer_id=reviewer_id, action=action,
-                    notes=notes
+                task_id=task_id, reviewer_id=reviewer_id, action=action, notes=notes
             )
             results[task_id] = (success, message)
 
@@ -294,10 +295,7 @@ class HumanReviewInterface:
 
         return results
 
-    def get_review_dashboard(
-        self,
-        reviewer_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def get_review_dashboard(self, reviewer_id: Optional[str] = None) -> Dict[str, Any]:
         """
         取得審核儀表板資料
 
@@ -349,8 +347,7 @@ class HumanReviewInterface:
         if reviewer_id:
             workload_stats = {
                 "assigned": self.reviewer_workload.get(reviewer_id, 0),
-                "complet"
-                    "ed_today": self._get_completed_count(reviewer_id, hours=24),
+                "complet" "ed_today": self._get_completed_count(reviewer_id, hours=24),
                 "average_time": self._get_average_review_time(reviewer_id),
             }
 
@@ -373,8 +370,7 @@ class HumanReviewInterface:
         for appeal in self.appeal_manager.appeals.values():
             if (
                 appeal.reviewer == reviewer_id
-                and appeal.status in [AppealStatus.APPROVED,
-                    AppealStatus.REJECTED]
+                and appeal.status in [AppealStatus.APPROVED, AppealStatus.REJECTED]
                 and appeal.updated_at > cutoff
             ):
                 count += 1
@@ -390,8 +386,9 @@ class HumanReviewInterface:
                 AppealStatus.APPROVED,
                 AppealStatus.REJECTED,
             ]:
-                duration = (appeal.updated_at -
-                    appeal.created_at).total_seconds() / 3600
+                duration = (
+                    appeal.updated_at - appeal.created_at
+                ).total_seconds() / 3600
                 times.append(duration)
 
         return round(sum(times) / len(times), 2) if times else 0.0
@@ -420,11 +417,21 @@ class HumanReviewInterface:
         stats = {
             "period": {
                 "total_appeals": len(appeals_in_period),
-                "approved": len([a for a in appeals_in_period if a.status == AppealStatus.APPROVED]),
-                "rejected": len([a for a in appeals_in_period if a.status == AppealStatus.REJECTED]),
-                "pending": len([a for a in appeals_in_period if a.status == AppealStatus.PENDING]),
-                "escalated": len([a for a in appeals_in_period if a.status == AppealStatus.ESCALATED]),
-                "reviewers": list(set(a.reviewer for a in appeals_in_period if a.reviewer)),
+                "approved": len(
+                    [a for a in appeals_in_period if a.status == AppealStatus.APPROVED]
+                ),
+                "rejected": len(
+                    [a for a in appeals_in_period if a.status == AppealStatus.REJECTED]
+                ),
+                "pending": len(
+                    [a for a in appeals_in_period if a.status == AppealStatus.PENDING]
+                ),
+                "escalated": len(
+                    [a for a in appeals_in_period if a.status == AppealStatus.ESCALATED]
+                ),
+                "reviewers": list(
+                    set(a.reviewer for a in appeals_in_period if a.reviewer)
+                ),
             }
         }
 
@@ -483,8 +490,7 @@ def example_human_review():
     tasks = []
     for appeal, priority in zip(appeals, priorities):
         task = review_interface.create_review_task(
-            appeal_id=appeal.appeal_id, priority=priority, assigned_to="review"
-                "er_001"
+            appeal_id=appeal.appeal_id, priority=priority, assigned_to="review" "er_001"
         )
         tasks.append(task)
         print(f"建立審核任務: {task.task_id} - 優先級: {priority.value}")
@@ -493,7 +499,9 @@ def example_human_review():
     print("\n待審核案件:")
     pending = review_interface.get_pending_reviews(reviewer_id="reviewer_001")
     for task, appeal in pending:
-        print(f"  - 任務: {task.task_id}, 申訴: {appeal.appeal_id}, 截止: {task.due_date}")
+        print(
+            f"  - 任務: {task.task_id}, 申訴: {appeal.appeal_id}, 截止: {task.due_date}"
+        )
 
     # 處理審核
     print("\n處理審核:")
@@ -540,15 +548,15 @@ def example_human_review():
 
     # 查看儀表板
     print("\n審核儀表板:")
-    dashboard = review_interface.get_review_dashboard(reviewer_id="review"
-        "er_001")
+    dashboard = review_interface.get_review_dashboard(reviewer_id="review" "er_001")
     print(json.dumps(dashboard, ensure_ascii=False, indent=2))
 
     # 匯出報告
     print("\n審核報告:")
     report = review_interface.export_review_report(
-        start_date=datetime.now() - timedelta(days=7), end_date=datetime.now(), format="js"
-            "on"
+        start_date=datetime.now() - timedelta(days=7),
+        end_date=datetime.now(),
+        format="js" "on",
     )
     print(report)
 

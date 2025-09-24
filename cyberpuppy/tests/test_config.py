@@ -73,9 +73,7 @@ class TestConfig:
     def test_save_env(self, temp_dir: Path):
         """Test saving configuration to .env file."""
         config = Config(
-            environment="production",
-            debug=False,
-            paths={"base_dir": temp_dir}
+            environment="production", debug=False, paths={"base_dir": temp_dir}
         )
 
         env_file = temp_dir / ".env"
@@ -128,11 +126,14 @@ class TestConfig:
         assert config.logging.retention == "7 days"
         assert config.logging.backtrace is True
 
-    @pytest.mark.parametrize("env,debug", [
-        ("development", True),
-        ("production", False),
-        ("staging", False),
-    ])
+    @pytest.mark.parametrize(
+        "env,debug",
+        [
+            ("development", True),
+            ("production", False),
+            ("staging", False),
+        ],
+    )
     def test_environment_settings(self, env: str, debug: bool):
         """Test environment-specific settings."""
         config = Config(environment=env, debug=debug)

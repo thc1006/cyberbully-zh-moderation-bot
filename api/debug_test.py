@@ -43,6 +43,7 @@ def test_model_loader():
     except Exception as e:
         print(f"✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -68,6 +69,7 @@ def test_api_function():
     except Exception as e:
         print(f"✗ API function error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

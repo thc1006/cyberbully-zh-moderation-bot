@@ -14,13 +14,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import (accuracy_score, average_precision_score,
-                             precision_recall_fscore_support, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    precision_recall_fscore_support,
+    roc_auc_score,
+)
 from torch.utils.data import DataLoader, Dataset
-from transformers import (AutoModel, AutoTokenizer)
+from transformers import AutoModel, AutoTokenizer
 
-from ..labeling.label_map import (BullyingLevel, EmotionType, RoleType,
-                                  ToxicityLevel, UnifiedLabel)
+from ..labeling.label_map import (
+    BullyingLevel,
+    EmotionType,
+    RoleType,
+    ToxicityLevel,
+    UnifiedLabel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,22 +78,13 @@ class ModelConfig:
 class FocalLoss(nn.Module):
     """Focal Loss實現"""
 
-    def __init__(
-        self,
-        alpha: float = 1.0,
-        gamma: float = 2.0,
-        reduction: str = "mean"
-    ):
+    def __init__(self, alpha: float = 1.0, gamma: float = 2.0, reduction: str = "mean"):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
 
-    def forward(
-        self,
-        inputs: torch.Tensor,
-        targets: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         Args:
             inputs: [batch_size, num_classes] 邏輯回歸輸出
@@ -106,8 +106,11 @@ class MultiTaskDataset(Dataset):
     """多任務資料集"""
 
     def __init__(
-        self, texts: List[str], labels: List[UnifiedLabel], tokenizer,
-            max_length: int = 256
+        self,
+        texts: List[str],
+        labels: List[UnifiedLabel],
+        tokenizer,
+        max_length: int = 256,
     ):
         self.texts = texts
         self.labels = labels
@@ -115,9 +118,11 @@ class MultiTaskDataset(Dataset):
         self.max_length = max_length
 
         # 建立標籤映射
-        self.toxicity_map = \
-            {ToxicityLevel.NONE: 0, ToxicityLevel.TOXIC: 1,
-                ToxicityLevel.SEVERE: 2}
+        self.toxicity_map = {
+            ToxicityLevel.NONE: 0,
+            ToxicityLevel.TOXIC: 1,
+            ToxicityLevel.SEVERE: 2,
+        }
         self.bullying_map = {
             BullyingLevel.NONE: 0,
             BullyingLevel.HARASSMENT: 1,
@@ -168,9 +173,7 @@ class MultiTaskDataset(Dataset):
             "bullying_label": torch.tensor(bullying_label, dtype=torch.long),
             "role_label": torch.tensor(role_label, dtype=torch.long),
             "emotion_label": torch.tensor(emotion_label, dtype=torch.long),
-            "emotion_intensity": torch.tensor(
-                emotion_intensity,
-                dtype=torch.float)
+            "emotion_intensity": torch.tensor(emotion_intensity, dtype=torch.float),
         }
 
 
@@ -185,11 +188,9 @@ class MultiTaskHead(nn.Module):
 
         # 共享特徵層
         self.shared_layer = nn.Sequential(
-            nn.Linear(
-                hidden_size,
-                hidden_size),
-                nn.ReLU(),
-                nn.Dropout(config.classifier_dropout)
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(config.classifier_dropout),
         )
 
         # 各任務專用頭
@@ -252,8 +253,8 @@ class MultiTaskHead(nn.Module):
 
         # 情緒強度回歸
         if self.config.use_emotion_regression and hasattr(
-            self,
-            "emotion_intensity_head"):
+            self, "emotion_intensity_head"
+        ):
             outputs["emotion_intensity"] = (
                 self.emotion_intensity_head(shared_features) * 4.0
             )  # 0-4強度
@@ -288,18 +289,10 @@ class BaselineModel(nn.Module):
         config = self.config
 
         if config.use_focal_loss:
-            self.toxicity_loss_fn = FocalLoss(
-                config.focal_alpha,
-                config.focal_gamma)
-            self.bullying_loss_fn = FocalLoss(
-                config.focal_alpha,
-                config.focal_gamma)
-            self.role_loss_fn = FocalLoss(
-                config.focal_alpha,
-                config.focal_gamma)
-            self.emotion_loss_fn = FocalLoss(
-                config.focal_alpha,
-                config.focal_gamma)
+            self.toxicity_loss_fn = FocalLoss(config.focal_alpha, config.focal_gamma)
+            self.bullying_loss_fn = FocalLoss(config.focal_alpha, config.focal_gamma)
+            self.role_loss_fn = FocalLoss(config.focal_alpha, config.focal_gamma)
+            self.emotion_loss_fn = FocalLoss(config.focal_alpha, config.focal_gamma)
         else:
             # 標準交叉熵損失
             label_smoothing = config.label_smoothing
@@ -321,8 +314,8 @@ class BaselineModel(nn.Module):
                     )
                 if "role" in config.class_weights:
                     role_weights = torch.tensor(
-                        config.class_weights["role"],
-                        dtype=torch.float)
+                        config.class_weights["role"], dtype=torch.float
+                    )
                 if "emotion" in config.class_weights:
                     emotion_weights = torch.tensor(
                         config.class_weights["emotion"], dtype=torch.float
@@ -363,15 +356,16 @@ class BaselineModel(nn.Module):
             outputs: 各任務的預測結果
         """
         # Backbone輸出
-        backbone_inputs = \
-            {"input_ids": input_ids, "attention_mask": attention_mask}
+        backbone_inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
         if token_type_ids is not None:
             backbone_inputs["token_type_ids"] = token_type_ids
 
         backbone_outputs = self.backbone(**backbone_inputs)
 
         # 使用[CLS] token的表示
-        pooled_output = backbone_outputs.last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+        pooled_output = backbone_outputs.last_hidden_state[
+            :, 0, :
+        ]  # [batch_size, hidden_size]
 
         # 多任務預測
         task_outputs = self.multi_task_head(pooled_output)
@@ -403,53 +397,42 @@ class BaselineModel(nn.Module):
         # 毒性分類損失
         if "toxicity" in outputs and "toxicity_label" in labels:
             mask = (
-                task_mask.get(
-                    "toxicity",
-                    torch.ones_like(labels["toxicity_label"]))
+                task_mask.get("toxicity", torch.ones_like(labels["toxicity_label"]))
                 if task_mask
                 else None
             )
             if mask is None or mask.sum() > 0:
                 toxicity_loss = self.toxicity_loss_fn(
-                    outputs["toxicity"],
-                    labels["toxicity_label"])
+                    outputs["toxicity"], labels["toxicity_label"]
+                )
                 if mask is not None:
                     toxicity_loss = (toxicity_loss * mask).sum() / mask.sum()
-                losses["toxicity"] = toxicity_loss * task_weights.get(
-                    "toxicity",
-                    1.0)
+                losses["toxicity"] = toxicity_loss * task_weights.get("toxicity", 1.0)
 
         # 霸凌分類損失
         if "bullying" in outputs and "bullying_label" in labels:
             mask = (
-                task_mask.get(
-                    "bullying",
-                    torch.ones_like(labels["bullying_label"]))
+                task_mask.get("bullying", torch.ones_like(labels["bullying_label"]))
                 if task_mask
                 else None
             )
             if mask is None or mask.sum() > 0:
                 bullying_loss = self.bullying_loss_fn(
-                    outputs["bullying"],
-                    labels["bullying_label"])
+                    outputs["bullying"], labels["bullying_label"]
+                )
                 if mask is not None:
                     bullying_loss = (bullying_loss * mask).sum() / mask.sum()
-                losses["bullying"] = bullying_loss * task_weights.get(
-                    "bullying",
-                    1.0)
+                losses["bullying"] = bullying_loss * task_weights.get("bullying", 1.0)
 
         # 角色分類損失
         if "role" in outputs and "role_label" in labels:
             mask = (
-                task_mask.get(
-                    "role",
-                    torch.ones_like(labels["role_"
-                        "label"])) if task_mask else None
+                task_mask.get("role", torch.ones_like(labels["role_" "label"]))
+                if task_mask
+                else None
             )
             if mask is None or mask.sum() > 0:
-                role_loss = self.role_loss_fn(
-                    outputs["role"],
-                    labels["role_label"])
+                role_loss = self.role_loss_fn(outputs["role"], labels["role_label"])
                 if mask is not None:
                     role_loss = (role_loss * mask).sum() / mask.sum()
                 losses["role"] = role_loss * task_weights.get("role", 1.0)
@@ -457,21 +440,17 @@ class BaselineModel(nn.Module):
         # 情緒分類損失
         if "emotion" in outputs and "emotion_label" in labels:
             mask = (
-                task_mask.get(
-                    "emotion",
-                    torch.ones_like(labels["emotion_label"]))
+                task_mask.get("emotion", torch.ones_like(labels["emotion_label"]))
                 if task_mask
                 else None
             )
             if mask is None or mask.sum() > 0:
                 emotion_loss = self.emotion_loss_fn(
-                    outputs["emotion"],
-                    labels["emotion_label"])
+                    outputs["emotion"], labels["emotion_label"]
+                )
                 if mask is not None:
                     emotion_loss = (emotion_loss * mask).sum() / mask.sum()
-                losses["emotion"] = emotion_loss * task_weights.get(
-                    "emotion",
-                    1.0)
+                losses["emotion"] = emotion_loss * task_weights.get("emotion", 1.0)
 
         # 情緒強度回歸損失
         if (
@@ -482,14 +461,12 @@ class BaselineModel(nn.Module):
             mask = task_mask.get("emotion_intensity") if task_mask else None
             if mask is None or mask.sum() > 0:
                 intensity_loss = self.emotion_intensity_loss_fn(
-                    outputs["emotion_intensity"].squeeze(
-                        -1),
-                        labels["emotion_intensity"]
+                    outputs["emotion_intensity"].squeeze(-1),
+                    labels["emotion_intensity"],
                 )
                 if mask is not None:
                     intensity_loss = (intensity_loss * mask).sum() / mask.sum()
-                losses["emotion_intensity"] = \
-                    intensity_loss * task_weights.get(
+                losses["emotion_intensity"] = intensity_loss * task_weights.get(
                     "emotion_intensity", 1.0
                 )
 
@@ -525,8 +502,9 @@ class BaselineModel(nn.Module):
 
                     predictions[f"{task}_pred"] = pred_labels.cpu().numpy()
                     predictions[f"{task}_probs"] = probs.cpu().numpy()
-                    predictions[f"{task}_confidence"] = \
+                    predictions[f"{task}_confidence"] = (
                         probs.max(dim=-1)[0].cpu().numpy()
+                    )
 
             # 情緒強度回歸
             if "emotion_intensity" in outputs:
@@ -577,9 +555,8 @@ class BaselineModel(nn.Module):
 
         # 載入模型檢查點
         checkpoint = torch.load(
-            load_path / "best.ckpt",
-            map_location="cpu",
-            weights_only=False)
+            load_path / "best.ckpt", map_location="cpu", weights_only=False
+        )
         config = checkpoint["config"]
 
         # 建立模型
@@ -595,7 +572,9 @@ class ModelEvaluator:
 
     def __init__(self, model: BaselineModel, device: torch.device = None):
         self.model = model
-        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         self.model.to(self.device)
 
     def evaluate(
@@ -655,7 +634,9 @@ class ModelEvaluator:
                 # 情緒強度回歸
                 if "emotion_intensity" in outputs:
                     intensity_preds = outputs["emotion_intensity"].squeeze(-1)
-                    all_predictions["emotion_intensity"].extend(intensity_preds.cpu().numpy())
+                    all_predictions["emotion_intensity"].extend(
+                        intensity_preds.cpu().numpy()
+                    )
                     all_labels["emotion_intensity"].extend(batch["emotion_intensity"])
 
         # 計算指標
@@ -686,14 +667,12 @@ class ModelEvaluator:
                         auc_scores = []
                         for class_idx in range(y_probs.shape[1]):
                             if class_idx in y_true:  # 只計算存在的類別
-                                binary_labels = \
-                                    (y_true == class_idx).astype(int)
+                                binary_labels = (y_true == class_idx).astype(int)
                                 if len(np.unique(binary_labels)) > 1:  #
                                     確保有正負樣本
                                     auc = roc_auc_score(
-                                        binary_labels,
-                                        y_probs[:,
-                                        class_idx])
+                                        binary_labels, y_probs[:, class_idx]
+                                    )
                                     auc_scores.append(auc)
 
                         if auc_scores:
@@ -713,8 +692,7 @@ class ModelEvaluator:
                         aucpr_scores = []
                         for class_idx in range(y_probs.shape[1]):
                             if class_idx in y_true:
-                                binary_labels = \
-                                    (y_true == class_idx).astype(int)
+                                binary_labels = (y_true == class_idx).astype(int)
                                 if len(np.unique(binary_labels)) > 1:
                                     aucpr = average_precision_score(
                                         binary_labels, y_probs[:, class_idx]
@@ -722,15 +700,11 @@ class ModelEvaluator:
                                     aucpr_scores.append(aucpr)
 
                         if aucpr_scores:
-                            metrics[f"{task}_macro_aucpr"] = \
-                                np.mean(aucpr_scores)
+                            metrics[f"{task}_macro_aucpr"] = np.mean(aucpr_scores)
                     else:
                         # 二分類AUCPR
                         if len(np.unique(y_true)) > 1:
-                            aucpr = average_precision_score(
-                                y_true,
-                                y_probs[:,
-                                1])
+                            aucpr = average_precision_score(y_true, y_probs[:, 1])
                             metrics[f"{task}_aucpr"] = aucpr
                 except Exception as e:
                     logger.warning(f"Could not compute AUCPR for {task}: {e}")
@@ -790,8 +764,10 @@ class ModelEvaluator:
         # 計算會話級F1
         if len(set(session_level_labels)) > 1:
             _, _, f1, _ = precision_recall_fscore_support(
-                session_level_labels, session_level_preds, average="bin"
-                    "ary", zero_division=0
+                session_level_labels,
+                session_level_preds,
+                average="bin" "ary",
+                zero_division=0,
             )
             return f1
         else:
@@ -808,10 +784,12 @@ class ModelEvaluator:
                 report_lines.append(f"\n{task.upper()}:")
                 report_lines.append(
                     f"  Accuracy: {metrics.get(f'{task}_accuracy',
-                    0):.4f}")
+                    0):.4f}"
+                )
                 report_lines.append(
                     f"  Macro F1: {metrics.get(f'{task}_macro_f1',
-                    0):.4f}")
+                    0):.4f}"
+                )
                 report_lines.append(
                     f"  Macro Precision: {metrics.get(
                         f'{task}_macro_precision',
@@ -819,22 +797,31 @@ class ModelEvaluator:
                 )
                 report_lines.append(
                     f"  Macro Recall: {metrics.get(f'{task}_macro_recall',
-                    0):.4f}")
+                    0):.4f}"
+                )
 
                 if f"{task}_macro_auc" in metrics:
-                    report_lines.append(f"  Macro AUC: \
-                        {metrics[f'{task}_macro_auc']:.4f}")
+                    report_lines.append(
+                        f"  Macro AUC: \
+                        {metrics[f'{task}_macro_auc']:.4f}"
+                    )
                 if f"{task}_macro_aucpr" in metrics:
-                    report_lines.append(f"  Macro AUCPR: \
-                        {metrics[f'{task}_macro_aucpr']:.4f}")
+                    report_lines.append(
+                        f"  Macro AUCPR: \
+                        {metrics[f'{task}_macro_aucpr']:.4f}"
+                    )
 
         # 情緒強度
         if "emotion_intensity_mse" in metrics:
             report_lines.append("\nEMOTION INTENSITY (Regression):")
-            report_lines.append(f"  MSE: \
-                {metrics['emotion_intensity_mse']:.4f}")
-            report_lines.append(f"  MAE: \
-                {metrics['emotion_intensity_mae']:.4f}")
+            report_lines.append(
+                f"  MSE: \
+                {metrics['emotion_intensity_mse']:.4f}"
+            )
+            report_lines.append(
+                f"  MAE: \
+                {metrics['emotion_intensity_mae']:.4f}"
+            )
             if "emotion_intensity_correlation" in metrics:
                 report_lines.append(
                     f"  Correlation: \
@@ -844,8 +831,10 @@ class ModelEvaluator:
         # 會話級F1
         if "session_level_f1" in metrics:
             report_lines.append("\nSESSION LEVEL:")
-            report_lines.append(f"  Session F1: \
-                {metrics['session_level_f1']:.4f}")
+            report_lines.append(
+                f"  Session F1: \
+                {metrics['session_level_f1']:.4f}"
+            )
 
         return "\n".join(report_lines)
 
@@ -857,20 +846,21 @@ def create_model_variants() -> Dict[str, ModelConfig]:
 
     # MacBERT基線
     variants["macbert_base"] = ModelConfig(
-        model_name="hfl/chinese-"
-            "macbert-base", use_focal_loss=False, label_smoothing=0.0
+        model_name="hfl/chinese-" "macbert-base",
+        use_focal_loss=False,
+        label_smoothing=0.0,
     )
 
     # MacBERT + Focal Loss
     variants["macbert_focal"] = ModelConfig(
-        model_name="hfl/chinese-"
-            "macbert-base", use_focal_loss=True, focal_gamma=2.0
+        model_name="hfl/chinese-" "macbert-base", use_focal_loss=True, focal_gamma=2.0
     )
 
     # RoBERTa基線
     variants["roberta_base"] = ModelConfig(
-        model_name="hfl/chinese-r"
-            "oberta-wwm-ext", use_focal_loss=False, label_smoothing=0.0
+        model_name="hfl/chinese-r" "oberta-wwm-ext",
+        use_focal_loss=False,
+        label_smoothing=0.0,
     )
 
     # RoBERTa + 高級特徵
@@ -890,7 +880,7 @@ def create_model_variants() -> Dict[str, ModelConfig]:
     # 單任務毒性偵測
     variants["toxicity_only"] = ModelConfig(
         model_name="hfl/chinese-macbert-base",
-        task_weights={"toxicity": 1.0, "emotion": 1.0, "bullying": 1.0, "role": 1.0}
+        task_weights={"toxicity": 1.0, "emotion": 1.0, "bullying": 1.0, "role": 1.0},
     )
 
     return variants
@@ -900,16 +890,16 @@ def main():
     """示例使用"""
     # 建立配置
     config = ModelConfig(
-        model_name="hfl/chinese-"
-            "macbert-base", use_focal_loss=True, use_emotion_regression=True
+        model_name="hfl/chinese-" "macbert-base",
+        use_focal_loss=True,
+        use_emotion_regression=True,
     )
 
     # 建立模型
     model = BaselineModel(config)
 
     print(f"Model created with backbone: {config.model_name}")
-    print(
-        f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"Number of parameters: {sum(p.numel() for p in model.parameters()):,}")
     print(
         f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}"
     )

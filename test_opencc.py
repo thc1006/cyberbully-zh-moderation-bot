@@ -6,10 +6,10 @@ import sys
 import os
 
 # Windows encoding fix
-if sys.platform.startswith('win'):
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+if sys.platform.startswith("win"):
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from opencc import OpenCC
 
@@ -18,15 +18,15 @@ def test_opencc():
     """測試各種轉換模式"""
 
     test_cases = [
-        ('s2t', '这是简体中文测试', '繁體'),
-        ('t2s', '這是繁體中文測試', '简体'),
-        ('s2tw', '这是简体中文测试', '台灣繁體'),
-        ('tw2s', '這是繁體中文測試', '简体'),
+        ("s2t", "这是简体中文测试", "繁體"),
+        ("t2s", "這是繁體中文測試", "简体"),
+        ("s2tw", "这是简体中文测试", "台灣繁體"),
+        ("tw2s", "這是繁體中文測試", "简体"),
     ]
 
-    print("="*50)
+    print("=" * 50)
     print("OpenCC 繁簡轉換測試")
-    print("="*50)
+    print("=" * 50)
 
     for mode, text, desc in test_cases:
         try:
@@ -38,15 +38,15 @@ def test_opencc():
         except Exception as e:
             print(f"錯誤 ({mode}): {e}")
             # Windows-specific error handling for encoding issues
-            if sys.platform.startswith('win') and 'codec' in str(e).lower():
+            if sys.platform.startswith("win") and "codec" in str(e).lower():
                 print("提示：Windows 編碼問題，請確保 console 設定為 UTF-8")
 
     # 測試實際應用場景
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("實際應用測試")
-    print("="*50)
+    print("=" * 50)
 
-    cc_s2t = OpenCC('s2t')
+    cc_s2t = OpenCC("s2t")
 
     # 網路霸凌相關詞彙轉換
     test_texts = [
@@ -62,10 +62,10 @@ def test_opencc():
         print(f"  {text} → {converted}")
 
     print("\nOpenCC 安裝成功！所有轉換模式可用。")
-    print("="*50)
+    print("=" * 50)
 
     # Windows encoding test
-    if sys.platform.startswith('win'):
+    if sys.platform.startswith("win"):
         print("\n🪟 Windows 編碼測試:")
         try:
             test_encoding = "中文編碼測試 - 繁簡轉換 ✓"
