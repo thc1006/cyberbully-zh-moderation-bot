@@ -114,18 +114,30 @@ class TestPerspectiveAPI:
     def mock_response_data(self):
         return {
             "attributeScores": {
-                "TOXI"
-                    "CITY": {
-                "SEVERE_"
-                    "TOXICITY": {
-                "IDENTIT"
-                    "Y_ATTACK": {
-                "INS"
-                    "ULT": {
-                "PROF"
-                    "ANITY": {
-                "THR"
-                    "EAT": {
+                "TOXICITY": {
+                    "summaryScore": {"value": 0.75, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.75, "type": "PROBABILITY"}}]
+                },
+                "SEVERE_TOXICITY": {
+                    "summaryScore": {"value": 0.25, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.25, "type": "PROBABILITY"}}]
+                },
+                "IDENTITY_ATTACK": {
+                    "summaryScore": {"value": 0.15, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.15, "type": "PROBABILITY"}}]
+                },
+                "INSULT": {
+                    "summaryScore": {"value": 0.35, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.35, "type": "PROBABILITY"}}]
+                },
+                "PROFANITY": {
+                    "summaryScore": {"value": 0.45, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.45, "type": "PROBABILITY"}}]
+                },
+                "THREAT": {
+                    "summaryScore": {"value": 0.20, "type": "PROBABILITY"},
+                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.20, "type": "PROBABILITY"}}]
+                }
             },
             "detectedLanguages": ["zh"],
             "clientToken": "cyberpuppy-test",
@@ -267,15 +279,14 @@ class TestPerspectiveIntegration:
     """Perspective API 整合測試（需要實際 API Key）"""
 
     @pytest.mark.skipif(
-        not os.getenv("PERSPECTI"
-            "VE_API_KEY"), reason=
+        not os.getenv("PERSPECTIVE_API_KEY"),
+        reason="PERSPECTIVE_API_KEY not set"
     )
     @pytest.mark.asyncio
     async def test_real_api_call(self):
         """測試實際 API 呼叫"""
         async with PerspectiveAPI() as api:
-            result = await api.analyze_comment("This is a t"
-                "est message", lang=
+            result = await api.analyze_comment("This is a test message", lang="en")
 
             assert isinstance(result, PerspectiveResult)
             assert 0 <= result.toxicity_score <= 1
