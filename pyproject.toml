@@ -1,0 +1,176 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberpuppy"
+version = "0.1.0"
+description = "Chinese cyberbullying detection and moderation bot with explainable AI"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "CyberPuppy Team", email = "cyberpuppy@example.com"}
+]
+keywords = ["cyberbullying", "chinese-nlp", "toxicity-detection", "emotion-analysis", "line-bot"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # Core ML/DL
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "datasets>=2.14.0",
+    "scikit-learn>=1.3.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+
+    # Chinese NLP
+    "jieba>=0.42.1",
+    "opencc-python-reimplemented>=0.1.7",
+
+    # Explainability
+    "captum>=0.6.0",
+    "shap>=0.42.0",
+
+    # API & Bot
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "line-bot-sdk>=3.5.0",
+    "python-multipart>=0.0.6",
+    "pydantic>=2.4.0",
+    "pydantic-settings>=2.0.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+    "rich>=13.6.0",
+    "tqdm>=4.66.0",
+    "pyyaml>=6.0.1",
+    "requests>=2.31.0",
+
+    # Data processing
+    "jsonlines>=4.0.0",
+    "pyarrow>=14.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.9.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "ipykernel>=6.25.0",
+    "jupyter>=1.0.0",
+    "notebook>=7.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+ckip = [
+    "ckiptagger>=0.2.1",
+    "ckip-transformers>=0.3.4",
+]
+
+perspective = [
+    "google-api-python-client>=2.100.0",
+]
+
+[project.scripts]
+cyberpuppy = "cyberpuppy.cli:main"
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/cyberbully-zh-moderation-bot"
+"Bug Reports" = "https://github.com/yourusername/cyberbully-zh-moderation-bot/issues"
+"Source" = "https://github.com/yourusername/cyberbully-zh-moderation-bot"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cyberpuppy = ["*.yaml", "*.json"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--cov=cyberpuppy",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance tests",
+    "gpu: marks tests as GPU tests",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W", "B", "C90"]
+ignore = ["E501", "B008", "C901"]
+target-version = "py39"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+check_untyped_defs = true
+strict_equality = true
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/cyberpuppy"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/migrations/*", "*/examples/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 80
+
+# Coverage thresholds for core modules (DoD requirement: >90% for core modules)
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.json]
+output = "coverage.json"
+
+# Individual module thresholds
+[tool.coverage.paths]
+source = [
+    "src/cyberpuppy/",
+    "/*/src/cyberpuppy/",
+]

@@ -1,0 +1,32 @@
+{
+  "train": {
+    "total_samples": 25726,
+    "toxicity_distribution": {
+      "toxic": 12723,
+      "none": 13003
+    },
+    "emotion_distribution": {
+      "neutral": 25726
+    }
+  },
+  "dev": {
+    "total_samples": 6431,
+    "toxicity_distribution": {
+      "toxic": 3211,
+      "none": 3220
+    },
+    "emotion_distribution": {
+      "neutral": 6431
+    }
+  },
+  "test": {
+    "total_samples": 5323,
+    "toxicity_distribution": {
+      "toxic": 2107,
+      "none": 3216
+    },
+    "emotion_distribution": {
+      "neutral": 5323
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# CyberPuppy LINE Bot Dependencies
+
+# FastAPI 和服務器
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# LINE Bot SDK
+line-bot-sdk==3.7.0
+
+# HTTP 客戶端
+httpx==0.25.2
+
+# 資料驗證
+pydantic==2.5.0
+
+# 日誌和工具
+python-multipart==0.0.6
+
+# 開發和測試
+pytest==7.4.3
+pytest-asyncio==0.21.1
+requests==2.31.0
+
+# 環境變數管理（可選）
+python-dotenv==1.0.0

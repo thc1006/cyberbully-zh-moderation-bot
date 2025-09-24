@@ -1,0 +1,798 @@
+openapi: 3.0.0
+info:
+  title: CyberPuppy Moderation API
+  description: |
+    # 中文網路霸凌防治與毒性偵測 API
+
+    CyberPuppy API 是一個專為中文文本設計的網路霸凌防治與毒性偵測服務。
+
+    ## 核心功能
+    - **多任務分析**: 毒性偵測、霸凌行為識別、角色分析、情緒分類
+    - **高可解釋性**: 提供詞彙重要性分析，支援 Integrated Gradients (IG)
+    - **隱私保護**: 不儲存原始文本，僅記錄雜湊值與分析結果
+    - **即時處理**: 低延遲分析，支援對話上下文
+
+    ## 分析維度
+    1. **毒性等級**: none (無) | toxic (一般) | severe (嚴重)
+    2. **霸凌類型**: none (無) | harassment (騷擾) | threat (威脅)
+    3. **用戶角色**: none (無) | perpetrator (施暴者) | victim (受害者) | bystander (旁觀者)
+    4. **情緒分析**: positive (正面) | neutral (中性) | negative (負面) + 強度 (0-4)
+
+  version: 1.0.0
+  contact:
+    name: CyberPuppy API Support
+    email: support@cyberpuppy.ai
+    url: https://docs.cyberpuppy.ai
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://cyberpuppy.ai/terms
+
+servers:
+  - url: https://api.cyberpuppy.ai
+    description: Production server
+  - url: http://localhost:8000
+    description: Development server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /:
+    get:
+      tags:
+        - System
+      summary: 取得 API 基本資訊
+      description: 回傳 API 基本資訊與可用端點
+      operationId: getApiInfo
+      responses:
+        '200':
+          description: API 基本資訊
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+              example:
+                name: "CyberPuppy Moderation API"
+                description: "中文網路霸凌防治與毒性偵測 API"
+                version: "1.0.0"
+                docs_url: "/docs"
+                health_check: "/healthz"
+
+  /healthz:
+    get:
+      tags:
+        - System
+      summary: 健康檢查
+      description: 檢查 API 服務狀態與運行時間
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 服務正常運行
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2024-12-30T10:15:30Z"
+                version: "1.0.0"
+                uptime_seconds: 86400.5
+        '503':
+          description: 服務不可用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyze:
+    post:
+      tags:
+        - Analysis
+      summary: 文本分析
+      description: |
+        分析中文文本的毒性、霸凌行為、角色與情緒
+
+        ## 分析範例
+
+        **正常文本**:
+        ```
+        輸入: "今天天氣真好，心情很棒！"
+        輸出: toxicity=none, emotion=pos, emotion_strength=3
+        ```
+
+        **毒性文本**:
+        ```
+        輸入: "你這個笨蛋，滾開！"
+        輸出: toxicity=toxic, bullying=harassment, role=perpetrator
+        ```
+
+        **威脅性文本**:
+        ```
+        輸入: "我要讓你後悔，等著瞧！"
+        輸出: toxicity=severe, bullying=threat, emotion_strength=4
+        ```
+
+        ## 可解釋性
+        API 提供 Integrated Gradients (IG) 分析，識別對預測結果貢獻最大的詞彙:
+        - importance > 0.8: 強烈影響預測
+        - importance 0.5-0.8: 中等影響
+        - importance < 0.5: 輕微影響
+
+      operationId: analyzeText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+            examples:
+              basic_analysis:
+                summary: 基本文本分析
+                value:
+                  text: "你好，今天天氣真好！"
+              toxic_text:
+                summary: 毒性文本範例
+                value:
+                  text: "你這個笨蛋，滾開！"
+              context_analysis:
+                summary: 帶上下文分析
+                value:
+                  text: "我不同意你的看法"
+                  context: "剛才討論的是關於教育政策的議題"
+                  thread_id: "edu_discussion_001"
+              emotional_text:
+                summary: 情緒文本分析
+                value:
+                  text: "今天考試沒考好，心情很沮喪..."
+              threat_text:
+                summary: 威脅性文本
+                value:
+                  text: "你等著瞧，我會讓你後悔的"
+
+      responses:
+        '200':
+          description: 分析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeResponse'
+              examples:
+                normal_text:
+                  summary: 正常文本結果
+                  value:
+                    toxicity: "none"
+                    bullying: "none"
+                    role: "none"
+                    emotion: "pos"
+                    emotion_strength: 3
+                    scores:
+                      toxicity: {"none": 0.85, "toxic": 0.12, "severe": 0.03}
+                      bullying: {"none": 0.90, "harassment": 0.08, "threat": 0.02}
+                      role: {"none": 0.80, "perpetrator": 0.08, "victim": 0.07, "bystander": 0.05}
+                      emotion: {"positive": 0.75, "neutral": 0.20, "negative": 0.05}
+                    explanations:
+                      important_words: [
+                        {"word": "好", "importance": 0.72},
+                        {"word": "天氣", "importance": 0.45}
+                      ]
+                      method: "IG"
+                      confidence: 0.91
+                    text_hash: "a1b2c3d4"
+                    timestamp: "2024-12-30T10:15:30Z"
+                    processing_time_ms: 125.4
+                toxic_text:
+                  summary: 毒性文本結果
+                  value:
+                    toxicity: "toxic"
+                    bullying: "harassment"
+                    role: "perpetrator"
+                    emotion: "neg"
+                    emotion_strength: 4
+                    scores:
+                      toxicity: {"none": 0.15, "toxic": 0.70, "severe": 0.15}
+                      bullying: {"none": 0.20, "harassment": 0.65, "threat": 0.15}
+                      role: {"none": 0.10, "perpetrator": 0.75, "victim": 0.10, "bystander": 0.05}
+                      emotion: {"positive": 0.05, "neutral": 0.15, "negative": 0.80}
+                    explanations:
+                      important_words: [
+                        {"word": "笨蛋", "importance": 0.89},
+                        {"word": "滾開", "importance": 0.94}
+                      ]
+                      method: "IG"
+                      confidence: 0.87
+                    text_hash: "e5f6g7h8"
+                    timestamp: "2024-12-30T10:15:32Z"
+                    processing_time_ms: 156.7
+
+        '400':
+          description: 請求格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                empty_text:
+                  summary: 文本為空
+                  value:
+                    error: true
+                    message: "輸入驗證錯誤: 文本不能為空"
+                    timestamp: "2024-12-30T10:15:30Z"
+                text_too_long:
+                  summary: 文本過長
+                  value:
+                    error: true
+                    message: "輸入驗證錯誤: 文本長度超過限制"
+                    timestamp: "2024-12-30T10:15:30Z"
+
+        '401':
+          description: 認證失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '429':
+          description: 超出限流
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: true
+                message: "Rate limit exceeded: 30 requests per minute"
+                timestamp: "2024-12-30T10:15:30Z"
+
+        '500':
+          description: 服務器錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /webhook:
+    post:
+      tags:
+        - LINE Bot
+      summary: LINE Webhook 處理器
+      description: |
+        接收來自 LINE 平台的 Webhook 事件
+
+        ## 簽名驗證
+        使用 HMAC-SHA256 進行簽名驗證:
+        ```
+        signature = base64(HMAC-SHA256(channel_secret, request_body))
+        ```
+
+        ## 支援的事件類型
+        - `message`: 文字訊息事件
+        - `postback`: 互動按鈕事件
+
+        ## 自動回應機制
+        系統會根據分析結果自動發送回應:
+        - **溫和提醒**: 輕微毒性內容
+        - **嚴厲警告**: 中度毒性或霸凌內容
+        - **資源分享**: 偵測到負面情緒
+        - **升級處理**: 重複違規用戶
+
+      operationId: lineWebhook
+      parameters:
+        - name: X-Line-Signature
+          in: header
+          required: true
+          description: LINE 平台簽名
+          schema:
+            type: string
+          example: "a1b2c3d4e5f6g7h8i9j0"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineWebhookRequest'
+            examples:
+              text_message:
+                summary: 文字訊息事件
+                value:
+                  events:
+                    - type: "message"
+                      message:
+                        type: "text"
+                        text: "你這個笨蛋！"
+                      source:
+                        userId: "U1234567890abcdef"
+                      replyToken: "reply_token_12345"
+              postback_event:
+                summary: 互動回應事件
+                value:
+                  events:
+                    - type: "postback"
+                      postback:
+                        data: "action=understand"
+                      source:
+                        userId: "U1234567890abcdef"
+                      replyToken: "reply_token_67890"
+
+      responses:
+        '200':
+          description: Webhook 處理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+        '400':
+          description: 簽名驗證失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: 處理錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        API 密鑰認證，格式: `Bearer YOUR_API_KEY`
+
+        ## 如何取得 API 密鑰
+        1. 註冊 CyberPuppy 開發者帳號
+        2. 在控制台建立新專案
+        3. 生成 API 密鑰並妥善保管
+
+        ## 使用範例
+        ```
+        Authorization: Bearer cp_1234567890abcdef
+        ```
+
+  schemas:
+    ApiInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: API 名稱
+          example: "CyberPuppy Moderation API"
+        description:
+          type: string
+          description: API 描述
+          example: "中文網路霸凌防治與毒性偵測 API"
+        version:
+          type: string
+          description: API 版本
+          example: "1.0.0"
+        docs_url:
+          type: string
+          description: 文檔 URL
+          example: "/docs"
+        health_check:
+          type: string
+          description: 健康檢查 URL
+          example: "/healthz"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - uptime_seconds
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+          description: 服務狀態
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: 檢查時間
+          example: "2024-12-30T10:15:30Z"
+        version:
+          type: string
+          description: API 版本
+          example: "1.0.0"
+        uptime_seconds:
+          type: number
+          format: double
+          description: 運行時間（秒）
+          example: 86400.5
+
+    AnalyzeRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: 待分析文本 (1-1000 字符)
+          example: "你好，今天天氣真好！"
+        context:
+          type: string
+          maxLength: 2000
+          description: 對話上下文（可選，最多 2000 字符）
+          example: "之前討論的是關於教育政策的議題"
+        thread_id:
+          type: string
+          maxLength: 50
+          description: 對話串 ID（可選，最多 50 字符）
+          example: "conversation_123"
+
+    AnalyzeResponse:
+      type: object
+      required:
+        - toxicity
+        - bullying
+        - role
+        - emotion
+        - emotion_strength
+        - scores
+        - explanations
+        - text_hash
+        - timestamp
+        - processing_time_ms
+      properties:
+        toxicity:
+          type: string
+          enum: [none, toxic, severe]
+          description: 毒性標籤
+          example: "none"
+        bullying:
+          type: string
+          enum: [none, harassment, threat]
+          description: 霸凌標籤
+          example: "none"
+        role:
+          type: string
+          enum: [none, perpetrator, victim, bystander]
+          description: 角色標籤
+          example: "none"
+        emotion:
+          type: string
+          enum: [pos, neu, neg]
+          description: 情緒標籤
+          example: "pos"
+        emotion_strength:
+          type: integer
+          minimum: 0
+          maximum: 4
+          description: 情緒強度 (0-4)
+          example: 3
+        scores:
+          type: object
+          description: 各類別機率分數
+          properties:
+            toxicity:
+              $ref: '#/components/schemas/ToxicityScore'
+            bullying:
+              $ref: '#/components/schemas/BullyingScore'
+            role:
+              $ref: '#/components/schemas/RoleScore'
+            emotion:
+              $ref: '#/components/schemas/EmotionScore'
+        explanations:
+          $ref: '#/components/schemas/ExplanationData'
+        text_hash:
+          type: string
+          description: 輸入文本雜湊值 (SHA256, 16字符)
+          example: "a1b2c3d4e5f6g7h8"
+        timestamp:
+          type: string
+          format: date-time
+          description: 分析時間戳記
+          example: "2024-12-30T10:15:30Z"
+        processing_time_ms:
+          type: number
+          format: double
+          description: 處理時間（毫秒）
+          example: 145.7
+
+    ToxicityScore:
+      type: object
+      required:
+        - none
+        - toxic
+        - severe
+      properties:
+        none:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 無毒性機率
+          example: 0.8
+        toxic:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 一般毒性機率
+          example: 0.15
+        severe:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 嚴重毒性機率
+          example: 0.05
+
+    BullyingScore:
+      type: object
+      required:
+        - none
+        - harassment
+        - threat
+      properties:
+        none:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 無霸凌機率
+          example: 0.8
+        harassment:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 騷擾機率
+          example: 0.15
+        threat:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 威脅機率
+          example: 0.05
+
+    RoleScore:
+      type: object
+      required:
+        - none
+        - perpetrator
+        - victim
+        - bystander
+      properties:
+        none:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 無特定角色機率
+          example: 0.7
+        perpetrator:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 施暴者機率
+          example: 0.1
+        victim:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 受害者機率
+          example: 0.1
+        bystander:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 旁觀者機率
+          example: 0.1
+
+    EmotionScore:
+      type: object
+      required:
+        - positive
+        - neutral
+        - negative
+      properties:
+        positive:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 正面情緒機率
+          example: 0.7
+        neutral:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 中性情緒機率
+          example: 0.2
+        negative:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 負面情緒機率
+          example: 0.1
+
+    ExplanationData:
+      type: object
+      required:
+        - important_words
+        - method
+        - confidence
+      properties:
+        important_words:
+          type: array
+          description: 重要詞彙與權重
+          items:
+            type: object
+            properties:
+              word:
+                type: string
+                description: 詞彙
+                example: "好"
+              importance:
+                type: number
+                format: double
+                minimum: 0
+                maximum: 1
+                description: 重要性權重 (0-1)
+                example: 0.72
+        method:
+          type: string
+          description: 解釋方法
+          enum: [IG, SHAP]
+          example: "IG"
+        confidence:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: 預測信心度
+          example: 0.89
+
+    LineWebhookRequest:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          description: LINE 事件列表
+          items:
+            $ref: '#/components/schemas/LineEvent'
+
+    LineEvent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [message, postback, follow, unfollow]
+          description: 事件類型
+          example: "message"
+        message:
+          $ref: '#/components/schemas/LineMessage'
+        postback:
+          $ref: '#/components/schemas/LinePostback'
+        source:
+          $ref: '#/components/schemas/LineSource'
+        replyToken:
+          type: string
+          description: 回覆 Token
+          example: "reply_token_12345"
+        timestamp:
+          type: integer
+          description: 事件時間戳記
+          example: 1640861730000
+
+    LineMessage:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [text, image, video, audio, file, location, sticker]
+          description: 訊息類型
+          example: "text"
+        text:
+          type: string
+          description: 文字內容
+          example: "你好"
+        id:
+          type: string
+          description: 訊息 ID
+          example: "message_id_12345"
+
+    LinePostback:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: string
+          description: Postback 資料
+          example: "action=understand"
+
+    LineSource:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [user, group, room]
+          description: 來源類型
+          example: "user"
+        userId:
+          type: string
+          description: 用戶 ID
+          example: "U1234567890abcdef"
+        groupId:
+          type: string
+          description: 群組 ID
+          example: "G1234567890abcdef"
+        roomId:
+          type: string
+          description: 聊天室 ID
+          example: "R1234567890abcdef"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: boolean
+          description: 錯誤標記
+          example: true
+        message:
+          type: string
+          description: 錯誤描述
+          example: "輸入驗證錯誤: 文本不能為空"
+        timestamp:
+          type: string
+          format: date-time
+          description: 錯誤時間
+          example: "2024-12-30T10:15:30Z"
+        details:
+          type: object
+          description: 錯誤詳情
+          properties:
+            field:
+              type: string
+              description: 錯誤欄位
+              example: "text"
+            code:
+              type: string
+              description: 錯誤代碼
+              example: "INVALID_LENGTH"
+
+tags:
+  - name: System
+    description: 系統相關端點
+  - name: Analysis
+    description: 文本分析端點
+  - name: LINE Bot
+    description: LINE Bot 整合端點
+
+externalDocs:
+  description: 詳細文檔與範例
+  url: https://docs.cyberpuppy.ai

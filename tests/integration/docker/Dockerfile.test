@@ -1,0 +1,51 @@
+# 整合測試 Docker 映像
+# 用於執行整合測試的容器環境
+
+FROM python:3.9-slim
+
+# 設定工作目錄
+WORKDIR /app
+
+# 安裝系統依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    gcc \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安裝 Python 依賴
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+# 安裝測試專用依賴
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    pytest-xdist \
+    pytest-benchmark \
+    pytest-html \
+    httpx \
+    docker \
+    psutil
+
+# 複製專案檔案
+COPY . .
+
+# 設定 Python 路徑
+ENV PYTHONPATH=/app:/app/src
+
+# 建立測試結果目錄
+RUN mkdir -p /app/test-results /app/logs /app/performance-logs
+
+# 設定環境變數
+ENV TESTING=1
+ENV LOG_LEVEL=INFO
+ENV PYTEST_ADDOPTS="--strict-markers --disable-warnings"
+
+# 預設命令
+CMD ["pytest", "tests/integration/", "-v"]
