@@ -13,7 +13,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Import core modules that should work
-from cyberpuppy.config import Settings, Labels, get_config_preset
+from cyberpuppy.config import Settings, get_config
 from cyberpuppy.labeling.label_map import LabelMapper, TaskLabelConfig
 from cyberpuppy.models.result import DetectionResult, ModelOutput
 
@@ -96,31 +96,27 @@ class TestConfigModule(unittest.TestCase):
         self.assertNotIn("api_key", str(settings_dict))
 
     def test_labels_configuration(self):
-        """Test labels configuration"""
-        labels = Labels(
-            toxicity=["none", "toxic", "severe"],
-            emotion=["positive", "neutral", "negative"],
-            bullying=["none", "harassment", "threat"]
-        )
+        """Test labels configuration from settings"""
+        settings = Settings()
 
-        self.assertEqual(len(labels.toxicity), 3)
-        self.assertEqual(len(labels.emotion), 3)
-        self.assertEqual(len(labels.bullying), 3)
+        self.assertEqual(len(settings.TOXICITY_LABELS), 3)
+        self.assertEqual(len(settings.EMOTION_LABELS), 3)
+        self.assertEqual(len(settings.BULLYING_LABELS), 3)
 
     def test_config_presets(self):
         """Test configuration presets"""
-        # Test all presets
+        # Test all presets using get_config
         presets = ["development", "production", "testing"]
 
         for preset_name in presets:
-            preset = get_config_preset(preset_name)
-            self.assertIsInstance(preset, dict)
-            self.assertIn("model_name", preset)
-            self.assertIn("confidence_threshold", preset)
+            config = get_config(preset_name)
+            self.assertIsInstance(config, Settings)
+            self.assertTrue(hasattr(config, "BASE_MODEL"))
+            self.assertTrue(hasattr(config, "TOXICITY_THRESHOLD"))
 
-        # Test invalid preset
-        with self.assertRaises(ValueError):
-            get_config_preset("invalid_preset")
+        # Test unknown config (should default to development)
+        config = get_config("invalid_preset")
+        self.assertIsInstance(config, Settings)
 
     def test_settings_path_methods(self):
         """Test path helper methods"""
