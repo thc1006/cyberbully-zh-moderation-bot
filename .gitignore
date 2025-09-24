@@ -140,6 +140,19 @@ coverage.xml
 env/
 venv/
 
+# pip-tools files
+.pip-tools/cache/
+requirements-freeze.txt
+requirements-backup.txt
+requirements-legacy.txt
+*-test.txt
+*-updated.txt
+dependency-tree.txt
+safety-report.json
+pip-audit-report.json
+outdated-packages.json
+update-summary.md
+
 # IDE files
 .vscode/
 .idea/

@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -129,7 +129,11 @@ class Settings(BaseSettings):
         """Convert settings to dictionary, excluding sensitive information."""
         data = self.model_dump()
         # Remove sensitive keys
-        sensitive_keys = ["LINE_CHANNEL_ACCESS_TOKEN", "LINE_CHANNEL_SECRET", "PERSPECTIVE_API_KEY"]
+        sensitive_keys = [
+            "LINE_CHANNEL_ACCESS_TOKEN",
+            "LINE_CHANNEL_SECRET",
+            "PERSPECTIVE_API_KEY"
+        ]
         for key in sensitive_keys:
             if key in data:
                 data[key] = "***" if data[key] else None
@@ -203,7 +207,9 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     if config_path:
         config_file = Path(config_path)
         if not config_file.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+            raise FileNotFoundError(
+                f"Configuration file not found: {config_path}"
+            )
 
         with open(config_file, 'r', encoding='utf-8') as f:
             if config_path.endswith(('.yaml', '.yml')):

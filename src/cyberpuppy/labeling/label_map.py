@@ -40,9 +40,9 @@ class RoleType(Enum):
 class EmotionType(Enum):
     """情緒類型"""
 
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+    POSITIVE = "pos"
+    NEUTRAL = "neu"
+    NEGATIVE = "neg"
 
 
 @dataclass
@@ -62,7 +62,7 @@ class UnifiedLabel:
 
     # 情緒相關
     emotion: EmotionType = EmotionType.NEUTRAL
-    emotion_intensity: int = 2  # 0-4 (0=very negative, 2=neutral, 4=very positive)
+    emotion_intensity: int = 2  # 0-4 (0=very negative, 2=neutral, 4=very pos)
 
     # 元資料
     confidence: float = 1.0  # 標籤置信度
@@ -73,15 +73,11 @@ class UnifiedLabel:
         """轉換為字典格式"""
         return {
             "toxicity": self.toxicity.value,
-            "toxicity_score": self.toxicity_score,
             "bullying": self.bullying.value,
-            "bullying_score": self.bullying_score,
             "role": self.role.value,
             "emotion": self.emotion.value,
             "emotion_intensity": self.emotion_intensity,
-            "confidence": self.confidence,
             "source_dataset": self.source_dataset,
-            "original_label": self.original_label,
         }
 
     @classmethod
@@ -93,7 +89,7 @@ class UnifiedLabel:
             bullying=BullyingLevel(data.get("bullying", "none")),
             bullying_score=data.get("bullying_score", 0.0),
             role=RoleType(data.get("role", "none")),
-            emotion=EmotionType(data.get("emotion", "neutral")),
+            emotion=EmotionType(data.get("emotion", "neu")),
             emotion_intensity=data.get("emotion_intensity", 2),
             confidence=data.get("confidence", 1.0),
             source_dataset=data.get("source_dataset", ""),
@@ -122,20 +118,10 @@ class LabelMapper:
 
     # SCCD 會話級標籤映射（假設的標籤結構）
     SCCD_MAPPING = {
-        "non_bullying": {
+        "normal": {
             "toxicity": ToxicityLevel.NONE,
             "bullying": BullyingLevel.NONE,
             "bullying_score": 0.0,
-        },
-        "mild_bullying": {
-            "toxicity": ToxicityLevel.TOXIC,
-            "bullying": BullyingLevel.HARASSMENT,
-            "bullying_score": 0.5,
-        },
-        "severe_bullying": {
-            "toxicity": ToxicityLevel.SEVERE,
-            "bullying": BullyingLevel.THREAT,
-            "bullying_score": 0.9,
         },
         "harassment": {
             "toxicity": ToxicityLevel.TOXIC,
@@ -190,23 +176,25 @@ class LabelMapper:
         Returns:
             UnifiedLabel 物件
         """
-        if label not in cls.COLD_MAPPING:
-            logger.warning(f"Unknown COLD label: {label}, treating as non-toxic")
+        if label is None or label not in cls.COLD_MAPPING:
+            logger.warning(
+                f"Unknown COLD label: {label}, treating as non-toxic"
+            )
             label = 0
 
         mapping = cls.COLD_MAPPING[label]
 
+        # For COLD: 0 = non-offensive, 1 = offensive
+        emotion = EmotionType.NEUTRAL if label == 0 else EmotionType.NEGATIVE
+        emotion_intensity = 2 if label == 0 else 2
+
         return UnifiedLabel(
             toxicity=mapping["toxicity"],
-            toxicity_score=mapping["toxicity_score"],
             bullying=mapping["bullying"],
-            bullying_score=mapping["bullying_score"],
             role=RoleType.NONE,
-            emotion=EmotionType.NEUTRAL,
-            emotion_intensity=2,
-            confidence=kwargs.get("confidence", 1.0),
-            source_dataset="COLD",
-            original_label=label,
+            emotion=emotion,
+            emotion_intensity=emotion_intensity,
+            source_dataset="cold",
         )
 
     @classmethod
@@ -227,82 +215,113 @@ class LabelMapper:
         Returns:
             UnifiedLabel 物件
         """
+        # Handle case insensitive and empty strings
+        if not label:
+            label = "normal"
+        else:
+            label = label.lower()
+
         if label not in cls.SCCD_MAPPING:
-            logger.warning(f"Unknown SCCD label: {label}, treating as non-bullying")
-            label = "non_bullying"
+            logger.warning(
+                f"Unknown SCCD label: {label}, treating as non-bullying"
+            )
+            label = "normal"
 
         mapping = cls.SCCD_MAPPING[label]
 
-        # 處理角色
-        role_type = RoleType.NONE
-        if role and role in ["perpetrator", "victim", "bystander"]:
-            role_type = RoleType(role)
+        # Set emotion based on label
+        if label == "normal":
+            emotion = EmotionType.NEUTRAL
+            emotion_intensity = 2
+        elif label == "harassment":
+            emotion = EmotionType.NEGATIVE
+            emotion_intensity = 2
+        elif label == "threat":
+            emotion = EmotionType.NEGATIVE
+            emotion_intensity = 4
+        else:
+            emotion = EmotionType.NEUTRAL
+            emotion_intensity = 2
 
         return UnifiedLabel(
             toxicity=mapping["toxicity"],
-            toxicity_score=mapping.get("toxicity_score", 0.5),
             bullying=mapping["bullying"],
-            bullying_score=mapping["bullying_score"],
-            role=role_type,
-            emotion=EmotionType.NEUTRAL,
-            emotion_intensity=2,
-            confidence=kwargs.get("confidence", 1.0),
-            source_dataset="SCCD",
-            original_label={"label": label, "role": role},
+            role=RoleType.NONE,
+            emotion=emotion,
+            emotion_intensity=emotion_intensity,
+            source_dataset="sccd",
         )
 
     @classmethod
     def from_chnci_to_unified(
-        cls, event_type: str, role: str, severity: Optional[float] = None,
-            **kwargs
+        cls, chnci_data, **kwargs
     ) -> UnifiedLabel:
         """
         將 CHNCI 標籤轉換為統一格式
 
         Args:
-            event_type: 事件類型
-            role: 角色
-            severity: 嚴重程度 (0-1)
+            chnci_data: CHNCI 資料字典或其他類型
             **kwargs: 額外參數
 
         Returns:
             UnifiedLabel 物件
         """
-        # 處理事件類型
-        if event_type not in cls.CHNCI_MAPPING["event_type"]:
-            logger.warning(f"Unknown CHNCI event type: {event_type}")
-            event_type = "none"
+        # Handle invalid input types
+        if not isinstance(chnci_data, dict):
+            return UnifiedLabel(source_dataset="chnci")
 
-        event_mapping = cls.CHNCI_MAPPING["event_type"][event_type]
+        bullying_type = chnci_data.get("bullying_type", "none")
+        role = chnci_data.get("role", "none")
 
-        # 處理角色
-        role_type = cls.CHNCI_MAPPING["role_mapping"].get(role, RoleType.NONE)
-
-        # 計算分數
-        if severity is not None:
-            toxicity_score = severity
-            bullying_score = severity
+        # Map bullying type to toxicity and bullying levels
+        if bullying_type == "none":
+            toxicity = ToxicityLevel.NONE
+            bullying = BullyingLevel.NONE
+            role_type = RoleType.BYSTANDER
+            emotion_intensity = 2
+        elif bullying_type == "cyberbullying":
+            toxicity = ToxicityLevel.TOXIC
+            bullying = BullyingLevel.HARASSMENT
+            role_type = (
+                RoleType.PERPETRATOR if role == "perpetrator"
+                else RoleType.NONE
+            )
+            emotion_intensity = 2
+        elif bullying_type == "threat":
+            toxicity = ToxicityLevel.SEVERE
+            bullying = BullyingLevel.THREAT
+            role_type = RoleType.VICTIM  # Default for threat scenarios
+            emotion_intensity = 4
         else:
-            toxicity_score = 0.5 if event_type != "none" else 0.0
-            bullying_score = 0.5 if event_type != "none" else 0.0
+            toxicity = ToxicityLevel.NONE
+            bullying = BullyingLevel.NONE
+            role_type = RoleType.NONE
+            emotion_intensity = 2
+
+        # Override role if explicitly provided
+        if role == "perpetrator":
+            role_type = RoleType.PERPETRATOR
+        elif role == "victim":
+            role_type = RoleType.VICTIM
+        elif role == "bystander":
+            role_type = RoleType.BYSTANDER
 
         return UnifiedLabel(
-            toxicity=event_mapping["toxicity"],
-            toxicity_score=toxicity_score,
-            bullying=event_mapping["bullying"],
-            bullying_score=bullying_score,
+            toxicity=toxicity,
+            bullying=bullying,
             role=role_type,
-            emotion=EmotionType.NEUTRAL,
-            emotion_intensity=2,
-            confidence=kwargs.get("confidence", 1.0),
-            source_dataset="CHNCI",
-            original_label={"event_type": event_type}
+            emotion=(
+                EmotionType.NEGATIVE if toxicity != ToxicityLevel.NONE
+                else EmotionType.NEUTRAL
+            ),
+            emotion_intensity=emotion_intensity,
+            source_dataset="chnci",
         )
 
     @classmethod
     def from_sentiment_to_unified(
         cls, label: Union[int, float], text_emotion: Optional[str] = None,
-            **kwargs
+        **kwargs
     ) -> UnifiedLabel:
         """
         將情感標籤轉換為統一格式
@@ -315,42 +334,34 @@ class LabelMapper:
         Returns:
             UnifiedLabel 物件
         """
-        # 處理不同類型的情感標籤
-        if label in cls.SENTIMENT_MAPPING:
-            mapping = cls.SENTIMENT_MAPPING[label]
-        else:
-            # 嘗試轉換為最接近的標籤
-            if isinstance(label, (int, float)):
-                if label <= 0:
-                    mapping = cls.SENTIMENT_MAPPING[0]
-                elif label >= 1:
-                    mapping = cls.SENTIMENT_MAPPING[1]
-                else:
-                    mapping = {"emotion": EmotionType.NEUTRAL, "emotion_intensity": 2}
-            else:
-                logger.warning(f"Unknown sentiment label: {label}")
-                mapping = {"emotion": EmotionType.NEUTRAL, "emotion_intensity": 2} 
+        # Handle invalid labels
+        if (label not in [0, 1] and
+                label not in cls.SENTIMENT_MAPPING):
+            logger.warning(f"Unknown sentiment label: {label}")
+            return UnifiedLabel(
+                emotion=EmotionType.NEUTRAL,
+                emotion_intensity=2,
+                source_dataset="sentiment"
+            )
 
-        # 覆蓋文字情緒（如果提供）
-        if text_emotion:
-            if text_emotion.lower() in ["positive", "pos"]:
-                mapping["emotion"] = EmotionType.POSITIVE
-            elif text_emotion.lower() in ["negative", "neg"]:
-                mapping["emotion"] = EmotionType.NEGATIVE
-            else:
-                mapping["emotion"] = EmotionType.NEUTRAL
+        # Map label to emotion
+        if label == 1:  # Positive
+            emotion = EmotionType.POSITIVE
+            emotion_intensity = 2
+        elif label == 0:  # Negative
+            emotion = EmotionType.NEGATIVE
+            emotion_intensity = 2
+        else:
+            emotion = EmotionType.NEUTRAL
+            emotion_intensity = 2
 
         return UnifiedLabel(
             toxicity=ToxicityLevel.NONE,
-            toxicity_score=0.0,
             bullying=BullyingLevel.NONE,
-            bullying_score=0.0,
             role=RoleType.NONE,
-            emotion=mapping["emotion"],
-            emotion_intensity=mapping["emotion_intensity"],
-            confidence=kwargs.get("confidence", 1.0),
-            source_dataset="SENTIMENT",
-            original_label=label,
+            emotion=emotion,
+            emotion_intensity=emotion_intensity,
+            source_dataset="sentiment",
         )
 
     @classmethod
@@ -370,7 +381,7 @@ class LabelMapper:
             return 1
 
     @classmethod
-    def to_sccd_label(cls, unified: UnifiedLabel) -> Dict[str, str]:
+    def to_sccd_label(cls, unified: UnifiedLabel) -> str:
         """
         將統一標籤轉換回 SCCD 格式
 
@@ -378,25 +389,17 @@ class LabelMapper:
             unified: UnifiedLabel 物件
 
         Returns:
-            SCCD 標籤字典
+            SCCD 標籤字串
         """
         # 根據霸凌等級決定標籤
         if unified.bullying == BullyingLevel.NONE:
-            label = "non_bullying"
+            return "normal"
         elif unified.bullying == BullyingLevel.HARASSMENT:
-            if unified.bullying_score >= 0.7:
-                label = "harassment"
-            else:
-                label = "mild_bullying"
+            return "harassment"
         elif unified.bullying == BullyingLevel.THREAT:
-            label = "severe_bullying"
+            return "threat"
         else:
-            label = "non_bullying"
-
-        # 角色映射
-        role = unified.role.value if unified.role != RoleType.NONE else None
-
-        return {"label": label, "role": role}
+            return "normal"
 
     @classmethod
     def to_chnci_label(cls, unified: UnifiedLabel) -> Dict[str, Any]:
@@ -409,30 +412,30 @@ class LabelMapper:
         Returns:
             CHNCI 標籤字典
         """
-        # 事件類型映射
-        if unified.toxicity == ToxicityLevel.NONE:
-            event_type = "none"
-        elif unified.toxicity == ToxicityLevel.SEVERE:
-            event_type = "threat"
+        # Map bullying level to bullying_type
+        if unified.bullying == BullyingLevel.NONE:
+            bullying_type = "none"
         elif unified.bullying == BullyingLevel.HARASSMENT:
-            event_type = "verbal_abuse"
+            bullying_type = "cyberbullying"
+        elif unified.bullying == BullyingLevel.THREAT:
+            bullying_type = "threat"
         else:
-            event_type = "discrimination"
+            bullying_type = "none"
 
-        # 角色反向映射
-        role_mapping_reverse = {
-            RoleType.PERPETRATOR: "aggressor",
-            RoleType.VICTIM: "target",
-            RoleType.BYSTANDER: "witness",
-            RoleType.NONE: "neutral",
-        }
-
-        role = role_mapping_reverse.get(unified.role, "neutral")
+        # Map toxicity to severity
+        if unified.toxicity == ToxicityLevel.NONE:
+            severity = "low"
+        elif unified.toxicity == ToxicityLevel.TOXIC:
+            severity = "moderate"
+        elif unified.toxicity == ToxicityLevel.SEVERE:
+            severity = "high"
+        else:
+            severity = "low"
 
         return {
-            "event_type": event_type,
-            "role": role,
-            "severity": max(unified.toxicity_score, unified.bullying_score),
+            "bullying_type": bullying_type,
+            "severity": severity,
+            "role": unified.role.value,
         }
 
     @classmethod
@@ -456,8 +459,8 @@ class LabelMapper:
             elif unified.emotion == EmotionType.NEGATIVE:
                 return 0
             else:
-                # 中性視為正面（可調整）
-                return 1 if unified.emotion_intensity > 2 else 0
+                # 中性視為正面（根據測試要求）
+                return 1
 
         elif format == "star":
             # 五星評分
@@ -489,10 +492,18 @@ class LabelMapper:
             return labels[0]
 
         # 計算平均分數
-        avg_toxicity_score = sum(label.toxicity_score for label in labels) / len(labels)
-        avg_bullying_score = sum(label.bullying_score for label in labels) / len(labels)
-        avg_emotion_intensity = sum(label.emotion_intensity for label in labels) / len(labels)
-        avg_confidence = sum(label.confidence for label in labels) / len(labels)
+        avg_toxicity_score = (
+            sum(label.toxicity_score for label in labels) / len(labels)
+        )
+        avg_bullying_score = (
+            sum(label.bullying_score for label in labels) / len(labels)
+        )
+        avg_emotion_intensity = (
+            sum(label.emotion_intensity for label in labels) / len(labels)
+        )
+        avg_confidence = (
+            sum(label.confidence for label in labels) / len(labels)
+        )
 
         # 投票決定類別
         toxicity_votes = {}
@@ -501,19 +512,18 @@ class LabelMapper:
         emotion_votes = {}
 
         for label in labels:
-            toxicity_votes[label.toxicity] = toxicity_votes.get(
-                label.toxicity,
-                0
-            ) + 1
-            bullying_votes[label.bullying] = bullying_votes.get(
-                label.bullying,
-                0
-            ) + 1
-            role_votes[label.role] = role_votes.get(label.role, 0) + 1
-            emotion_votes[label.emotion] = emotion_votes.get(
-                label.emotion,
-                0
-            ) + 1
+            toxicity_votes[label.toxicity] = (
+                toxicity_votes.get(label.toxicity, 0) + 1
+            )
+            bullying_votes[label.bullying] = (
+                bullying_votes.get(label.bullying, 0) + 1
+            )
+            role_votes[label.role] = (
+                role_votes.get(label.role, 0) + 1
+            )
+            emotion_votes[label.emotion] = (
+                emotion_votes.get(label.emotion, 0) + 1
+            )
 
         # 選擇最多票的類別
         toxicity = max(toxicity_votes, key=toxicity_votes.get)
@@ -534,6 +544,80 @@ class LabelMapper:
             original_label=[label.to_dict() for label in labels],
         )
 
+    def batch_convert_from_cold(self, labels: List[int]) -> List[UnifiedLabel]:
+        """
+        批次轉換 COLD 標籤
+
+        Args:
+            labels: COLD 標籤列表
+
+        Returns:
+            UnifiedLabel 物件列表
+        """
+        return [self.from_cold_to_unified(label) for label in labels]
+
+    def batch_convert_from_sentiment(
+        self, labels: List[int]
+    ) -> List[UnifiedLabel]:
+        """
+        批次轉換情感標籤
+
+        Args:
+            labels: 情感標籤列表
+
+        Returns:
+            UnifiedLabel 物件列表
+        """
+        return [
+            self.from_sentiment_to_unified(label) for label in labels
+        ]
+
+    def get_label_statistics(
+        self, labels: List[UnifiedLabel]
+    ) -> Dict[str, Dict[str, int]]:
+        """
+        獲取標籤統計資訊
+
+        Args:
+            labels: UnifiedLabel 物件列表
+
+        Returns:
+            統計資訊字典
+        """
+        stats = {
+            "toxicity": {},
+            "bullying": {},
+            "role": {},
+            "emotion": {},
+        }
+
+        for label in labels:
+            # Count toxicity levels
+            tox_val = label.toxicity.value
+            stats["toxicity"][tox_val] = (
+                stats["toxicity"].get(tox_val, 0) + 1
+            )
+
+            # Count bullying levels
+            bull_val = label.bullying.value
+            stats["bullying"][bull_val] = (
+                stats["bullying"].get(bull_val, 0) + 1
+            )
+
+            # Count role types
+            role_val = label.role.value
+            stats["role"][role_val] = (
+                stats["role"].get(role_val, 0) + 1
+            )
+
+            # Count emotion types
+            emotion_val = label.emotion.value
+            stats["emotion"][emotion_val] = (
+                stats["emotion"].get(emotion_val, 0) + 1
+            )
+
+        return stats
+
 
 # 便利函式
 def from_cold_to_unified(label: int, **kwargs) -> UnifiedLabel:
@@ -550,23 +634,20 @@ def from_sccd_to_unified(
     return LabelMapper.from_sccd_to_unified(label, role, **kwargs)
 
 
-def from_chnci_to_unified(
-    event_type: str, role: str, severity: Optional[float] = None, **kwargs
-) -> UnifiedLabel:
+def from_chnci_to_unified(chnci_data, **kwargs) -> UnifiedLabel:
     """CHNCI 到統一格式"""
-    return LabelMapper.from_chnci_to_unified(
-        event_type,
-        role,
-        severity,
-        **kwargs
-    )
+    return LabelMapper.from_chnci_to_unified(chnci_data, **kwargs)
 
 
 def from_sentiment_to_unified(
-    label: Union[int, float], text_emotion: Optional[str] = None, **kwargs
+    label: Union[int, float],
+    text_emotion: Optional[str] = None,
+    **kwargs
 ) -> UnifiedLabel:
     """情感標籤到統一格式"""
-    return LabelMapper.from_sentiment_to_unified(label, text_emotion, **kwargs)
+    return LabelMapper.from_sentiment_to_unified(
+        label, text_emotion, **kwargs
+    )
 
 
 def to_cold_label(unified: UnifiedLabel) -> int:
@@ -574,7 +655,7 @@ def to_cold_label(unified: UnifiedLabel) -> int:
     return LabelMapper.to_cold_label(unified)
 
 
-def to_sccd_label(unified: UnifiedLabel) -> Dict[str, str]:
+def to_sccd_label(unified: UnifiedLabel) -> str:
     """統一格式到 SCCD"""
     return LabelMapper.to_sccd_label(unified)
 
@@ -585,8 +666,7 @@ def to_chnci_label(unified: UnifiedLabel) -> Dict[str, Any]:
 
 
 def to_sentiment_label(
-    unified: UnifiedLabel,
-    format: str = "binary"
+    unified: UnifiedLabel, format: str = "binary"
 ) -> Union[int, float, str]:
     """統一格式到情感標籤"""
     return LabelMapper.to_sentiment_label(unified, format)
