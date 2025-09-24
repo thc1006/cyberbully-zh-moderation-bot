@@ -177,12 +177,9 @@ class TestDetectionResult:
     def test_detection_result_creation(self, sample_detection_result):
         """Test DetectionResult can be created with all components."""
         assert sample_detection_result.text == "這個人真的很討厭，我很生氣"
-        assert sample_detection_result.toxicity.prediction ==
-            ToxicityLevel.TOXIC
-        assert sample_detection_result.emotion.prediction ==
-            EmotionType.NEGATIVE
-        assert sample_detection_result.bullying.prediction ==
-            BullyingType.HARASSMENT
+        assert sample_detection_result.toxicity.prediction == ToxicityLevel.TOXIC
+        assert sample_detection_result.emotion.prediction == EmotionType.NEGATIVE
+        assert sample_detection_result.bullying.prediction == BullyingType.HARASSMENT
         assert sample_detection_result.role.prediction == RoleType.VICTIM
         assert len(sample_detection_result.explanations) == 1
         assert len(sample_detection_result.model_predictions) == 1
@@ -192,8 +189,7 @@ class TestDetectionResult:
         sample_detection_result
     ):
         """Test high risk assessment logic."""
-        # Should be high risk due to toxic + harassment + strong negative
-            emotion
+        # Should be high risk due to toxic + harassment + strong negative emotion
         assert sample_detection_result.is_high_risk() is True
 
     def test_detection_result_serialization(self, sample_detection_result):
@@ -215,10 +211,8 @@ class TestDetectionResult:
         restored_result = DetectionResult.from_json(json_str)
 
         assert restored_result.text == sample_detection_result.text
-        assert restored_result.toxicity.prediction ==
-            sample_detection_result.toxicity.prediction
-        assert restored_result.emotion.strength ==
-            sample_detection_result.emotion.strength
+        assert restored_result.toxicity.prediction == sample_detection_result.toxicity.prediction
+        assert restored_result.emotion.strength == sample_detection_result.emotion.strength
 
     def test_detection_result_summary(self, sample_detection_result):
         """Test result summary generation."""
@@ -284,8 +278,7 @@ class TestResultAggregator:
         top_risks = ResultAggregator.get_top_risk_results(results, top_k=1)
 
         assert len(top_risks) == 1
-        assert top_risks[0] ==
-            sample_detection_result  # High risk result should be first
+        assert top_risks[0] == sample_detection_result  # High risk result should be first
 
 
 class TestConfidenceThresholds:
@@ -318,22 +311,19 @@ class TestConfidenceThresholds:
         assert updated_threshold == 0.9
 
         # Restore original for other tests
-        ConfidenceThresholds.DEFAULT_THRESHOLDS['toxicity']['toxic'] =
-            original_threshold
+        ConfidenceThresholds.DEFAULT_THRESHOLDS['toxicity']['toxic'] = original_threshold
 
     def test_validate_thresholds(self):
         """Test threshold validation."""
         valid_thresholds = {
             'toxicity': {'none': 0.5, 'toxic': 0.7, 'severe': 0.8}
         }
-        assert ConfidenceThresholds.validate_thresholds(valid_thresholds) is
-            True
+        assert ConfidenceThresholds.validate_thresholds(valid_thresholds) is True
 
         invalid_thresholds = {
             'toxicity': {'none': 0.5, 'toxic': 1.5}  # Invalid: > 1.0
         }
-        assert ConfidenceThresholds.validate_thresholds(invalid_thresholds) is
-            False
+        assert ConfidenceThresholds.validate_thresholds(invalid_thresholds) is False
 
 
 class TestCyberPuppyDetectorSimple:

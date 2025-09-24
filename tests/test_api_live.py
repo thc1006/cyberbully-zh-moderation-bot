@@ -31,8 +31,7 @@ def test_api_server():
 
     except requests.exceptions.RequestException as e:
         print(f"Failed to connect to API server: {e}")
-        print("Make sure to start the server fi"
-            "rst with: cd api && python app.py")
+        print("Make sure to start the server first with: cd api && python app.py")
         return False
 
     # Test analyze endpoint
@@ -42,8 +41,7 @@ def test_api_server():
             "context": "测试上下文"
         }
 
-        response = requests.post(f"{base_url"
-            "}/analyze", json=test_data, timeout=10)
+        response = requests.post(f"{base_url}/analyze", json=test_data, timeout=10)
         print(f"Analyze endpoint: {response.status_code}")
 
         if response.status_code == 200:
@@ -61,8 +59,7 @@ def test_api_server():
                 first_word = important_words[0]
                 print(f"- First word structure: {list(first_word.keys())}")
                 print(f"- Word field type: {type(first_word.get('word'))}")
-                print(f"- Importance field type: {type"
-                    "(first_word.get('importance'))}")
+                print(f"- Importance field type: {type(first_word.get('importance'))}")
 
             print("SUCCESS: API response has correct structure!")
             return True

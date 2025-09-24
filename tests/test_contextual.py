@@ -236,8 +236,7 @@ class TestEventFeatureExtractor:
 
         temporal_info = {"duration": 300}
 
-        event_emb, feature_weights = extractor.forward("測試"
-            "文本", event_context, temporal_info)
+        event_emb, feature_weights = extractor.forward("測試文本", event_context, temporal_info)
 
         assert event_emb.shape == (1, 768)
         assert isinstance(feature_weights, dict)
@@ -459,17 +458,8 @@ class TestContextualModel:
         with patch.object(model, "forward") as mock_forward:
             mock_output = ContextualOutput(
                 toxicity_logits=torch.tensor([[2.0, 0.1, 0.1]]),  # toxic 最高
-                bullying_logits=torch.tensor(
-                    [[0.1,
-                    2.0,
-                    0.1]]
-                ),  # harassment 最高
-                role_logits=torch.tensor(
-                    [[0.1,
-                    2.0,
-                    0.1,
-                    0.1]]
-                ),  # perpetrator 最高
+                bullying_logits=torch.tensor([[0.1, 2.0, 0.1]]),  # harassment 最高
+                role_logits=torch.tensor([[0.1, 2.0, 0.1, 0.1]]),  # perpetrator 最高
                 emotion_logits=torch.tensor([[0.1, 0.1, 2.0]]),  # neg 最高
                 text_embedding=torch.randn(1, 768),
             )
@@ -536,11 +526,8 @@ class TestIntegration:
         # 模擬編碼器輸出
         with patch.object(model.thread_encoder, "forward") as mock_thread:
             mock_thread.return_value = (
-                torch.randn(1,
-                768),
-                torch.randn(1,
-                1,
-                3)
+                torch.randn(1, 768),
+                torch.randn(1, 1, 3)
             )
 
             output = model.forward([ctx_input])
@@ -571,16 +558,14 @@ class TestIntegration:
                 "severity": "high",
                 "participants": ["perpetrator", "victim"],
             },
-            temporal_info={"dura"
-                "tion": 300, 
+            temporal_info={"duration": 300, "frequency": 2}, 
         )
 
         # 模擬事件抽取器輸出
         with patch.object(model.event_extractor, "forward") as mock_event:
             mock_event.return_value = (
                 torch.randn(1, 768),
-                {"te"
-                    "xt": 0.4, 
+                {"text": 0.4, "event": 0.3, "temporal": 0.3}
             )
 
             output = model.forward([ctx_input])

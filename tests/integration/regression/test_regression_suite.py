@@ -147,8 +147,7 @@ class TestRegressionBaseline:
             with open(baseline_file, "w", encoding="utf-8") as f:
                 json.dump(performance_baseline, f, indent=2)
 
-            print(f"Created performance baseline: {"
-                "performance_baseline['metrics']}")
+            print(f"Created performance baseline: {performance_baseline['metrics']}")
 
 
 @pytest.mark.regression

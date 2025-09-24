@@ -192,8 +192,7 @@ class TestDetectionResult:
         self,
         mock_detection_result
     ):
-        ""
-            ""
+        """Test detection result confidence validation."""
         result = mock_detection_result("測試文本")
 
         # Valid confidence scores
@@ -206,8 +205,7 @@ class TestDetectionResult:
         self,
         mock_detection_result
     ):
-        ""
-            ""
+        """Test detection result emotion strength validation."""
         result = mock_detection_result("測試文本")
 
         # Valid emotion strength (0-4)
@@ -226,8 +224,7 @@ class TestCyberPuppyDetector:
 
             # Verify configuration is stored
             assert detector.config == detector_config
-            assert detector.ensemble_weights ==
-                detector_config['ensemble_weights']
+            assert detector.ensemble_weights == detector_config['ensemble_weights']
             assert not detector._models_loaded
 
             # Verify _load_models was not called
@@ -547,8 +544,7 @@ class TestCyberPuppyDetector:
             detector = CyberPuppyDetector(custom_config)
             detector.models = mock_models
 
-            assert detector.ensemble_weights ==
-                custom_config['ensemble_weights']
+            assert detector.ensemble_weights == custom_config['ensemble_weights']
 
             # Test weight validation
             invalid_config = detector_config.copy()

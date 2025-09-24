@@ -42,8 +42,7 @@ def test_api_analyze_endpoint():
     # Check required fields
     required_fields = [
         "toxicity", "bullying", "role", "emotion", "emotion_strength",
-        "sco"
-            "res", 
+        "scores",
     ]
 
     for field in required_fields:
@@ -61,16 +60,11 @@ def test_api_analyze_endpoint():
 
     if important_words:  # If there are any words
         for word_data in important_words:
-            assert "wo"
-                "rd" in word_data, 
-            assert "impor"
-                "tance" in word_data, 
-            assert isinstance(word_data["wo"
-                "rd"], str), 
-            assert isinstance(word_data["impor"
-                "tance"], (int, float)), 
-            assert 0 <= word_data["impor"
-                "tance"] <= 1, 
+            assert "word" in word_data, f"Missing 'word' field in {word_data}"
+            assert "importance" in word_data, f"Missing 'importance' field in {word_data}"
+            assert isinstance(word_data["word"], str), f"'word' should be str, got {type(word_data['word'])}"
+            assert isinstance(word_data["importance"], (int, float)), f"'importance' should be numeric, got {type(word_data['importance'])}"
+            assert 0 <= word_data["importance"] <= 1, f"'importance' should be between 0-1, got {word_data['importance']}" 
 
     # Check scores structure
     scores = data["scores"]
@@ -111,17 +105,14 @@ if __name__ == "__main__":
         print(f"- toxicity: {result['toxicity']}")
         print(f"- bullying: {result['bullying']}")
         print(f"- emotion: {result['emotion']}")
-        print(f"- important_words count: {len(result"
-            "['explanations']['important_words'])}")
+        print(f"- important_words count: {len(result['explanations']['important_words'])}")
 
         if result['explanations']['important_words']:
             first_word = result['explanations']['important_words'][0]
             try:
-                print(f"- first important word: '{first_word['word'"
-                    "]}' (importance: {first_word['importance']})")
+                print(f"- first important word: '{first_word['word']}' (importance: {first_word['importance']})")
             except UnicodeEncodeError:
-                print(f"- first important word: [UNICODE] (im"
-                    "portance: {first_word['importance']})")
+                print(f"- first important word: [UNICODE] (importance: {first_word['importance']})")
 
         print("\nAll API integration tests passed!")
 
