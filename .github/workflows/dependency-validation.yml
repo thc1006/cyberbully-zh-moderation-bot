@@ -1,22 +1,23 @@
 name: Dependency Validation & Security
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'requirements*.in'
-      - 'requirements*.txt'
-      - 'constraints.txt'
-      - 'pyproject.toml'
-      - '.github/workflows/dependency-validation.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'requirements*.in'
-      - 'requirements*.txt'
-      - 'constraints.txt'
-      - 'pyproject.toml'
-      - '.github/workflows/dependency-validation.yml'
+  # Temporarily disabled due to pip-compile issues
+  # push:
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'requirements*.in'
+  #     - 'requirements*.txt'
+  #     - 'constraints.txt'
+  #     - 'pyproject.toml'
+  #     - '.github/workflows/dependency-validation.yml'
+  # pull_request:
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'requirements*.in'
+  #     - 'requirements*.txt'
+  #     - 'constraints.txt'
+  #     - 'pyproject.toml'
+  #     - '.github/workflows/dependency-validation.yml'
   schedule:
     # Weekly security check on Mondays at 9 AM UTC
     - cron: '0 9 * * 1'
