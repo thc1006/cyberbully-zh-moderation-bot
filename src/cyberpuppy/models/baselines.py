@@ -785,29 +785,31 @@ class ModelEvaluator:
                 report_lines.append(
                     f"  Accuracy: {metrics.get(f'{task}_accuracy', 0):.4f}"
                 )
+                # Fixed: avoid f-string line break issues by computing key first
+                macro_f1_key = f'{task}_macro_f1'
                 report_lines.append(
-                    f"  Macro F1: {metrics.get(f'{task}_macro_f1',
-                    0):.4f}"
+                    f"  Macro F1: {metrics.get(macro_f1_key, 0):.4f}"
+                )
+                # Fixed: avoid f-string line break issues by computing keys first
+                macro_precision_key = f'{task}_macro_precision'
+                macro_recall_key = f'{task}_macro_recall'
+                report_lines.append(
+                    f"  Macro Precision: {metrics.get(macro_precision_key, 0):.4f}"
                 )
                 report_lines.append(
-                    f"  Macro Precision: {metrics.get(
-                        f'{task}_macro_precision',
-                        0):.4f}"
-                )
-                report_lines.append(
-                    f"  Macro Recall: {metrics.get(f'{task}_macro_recall',
-                    0):.4f}"
+                    f"  Macro Recall: {metrics.get(macro_recall_key, 0):.4f}"
                 )
 
-                if f"{task}_macro_auc" in metrics:
+                # Fixed: avoid backslash line continuation issues in f-strings
+                macro_auc_key = f"{task}_macro_auc"
+                macro_aucpr_key = f"{task}_macro_aucpr"
+                if macro_auc_key in metrics:
                     report_lines.append(
-                        f"  Macro AUC: \
-                        {metrics[f'{task}_macro_auc']:.4f}"
+                        f"  Macro AUC: {metrics[macro_auc_key]:.4f}"
                     )
-                if f"{task}_macro_aucpr" in metrics:
+                if macro_aucpr_key in metrics:
                     report_lines.append(
-                        f"  Macro AUCPR: \
-                        {metrics[f'{task}_macro_aucpr']:.4f}"
+                        f"  Macro AUCPR: {metrics[macro_aucpr_key]:.4f}"
                     )
 
         # 情緒強度

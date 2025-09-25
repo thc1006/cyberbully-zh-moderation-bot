@@ -164,13 +164,7 @@ jobs:
 
     - name: 🧪 Run unit tests
       run: |
-        pytest tests/ \
-          --cov=src/cyberpuppy \
-          --cov-report=xml \
-          --cov-report=html \
-          --cov-report=term-missing \
-          --junitxml=junit.xml \
-          -v
+        pytest tests/ --cov=src/cyberpuppy --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=junit.xml -v
 
     - name: 📊 Upload coverage to Codecov
       uses: codecov/codecov-action@v3
