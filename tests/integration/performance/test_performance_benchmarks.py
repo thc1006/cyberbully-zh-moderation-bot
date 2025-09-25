@@ -99,6 +99,8 @@ class TestAPIPerformance:
 
             # 執行所有併發任務
             all_responses = await asyncio.gather(*tasks)
+        finally:
+            pass  # or add any required cleanup here
 
         # 驗證所有請求成功
         total_requests = 0
