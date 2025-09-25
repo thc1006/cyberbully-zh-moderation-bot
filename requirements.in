@@ -1,0 +1,44 @@
+# CyberPuppy Core Dependencies (Source)
+# This is the source file for pip-tools. Use `pip-compile` to generate requirements.txt
+# Run: make deps-compile to generate locked requirements.txt
+
+# Core ML/DL Framework
+torch>=2.1.0
+transformers>=4.35.0
+datasets>=2.14.0
+scikit-learn>=1.3.0
+tokenizers>=0.15.0
+
+# Data Science Stack
+numpy>=1.24.0,<2.0.0; python_version < "3.12"
+numpy>=1.26.0; python_version >= "3.12"
+pandas>=2.1.0
+
+# Chinese NLP Tools
+jieba>=0.42.1
+opencc-python-reimplemented>=0.1.7
+
+# Explainability & Interpretability
+captum>=0.7.0
+shap>=0.44.0
+
+# Web API & Bot Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+line-bot-sdk>=3.5.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.0.0
+
+# Core Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+rich>=13.7.0
+tqdm>=4.66.0
+pyyaml>=6.0.1
+requests>=2.31.0
+loguru>=0.7.2
+
+# Data Processing
+jsonlines>=4.0.0
+pyarrow>=14.0.0

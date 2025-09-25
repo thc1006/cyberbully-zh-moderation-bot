@@ -1,0 +1,16 @@
+{
+  "total_samples": 68809,
+  "sources": [
+    "dmsc",
+    "chnsenticorp"
+  ],
+  "splits": {
+    "train": 46789,
+    "dev": 8258,
+    "test": 13762
+  },
+  "label_distribution": {
+    "positive": 48310,
+    "negative": 20499
+  }
+}

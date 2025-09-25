@@ -1,0 +1,317 @@
+name: Coverage Analysis and Monitoring
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run coverage analysis daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.12'
+  COVERAGE_THRESHOLD: 80
+  CORE_MODULE_THRESHOLD: 90
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+
+        # Install additional testing dependencies
+        pip install hypothesis pytest-html pytest-json-report
+
+        # Install optional dependencies for better coverage
+        pip install captum || echo "Captum installation failed - using mocks"
+
+    - name: Install package in development mode
+      run: |
+        pip install -e .
+
+    - name: Run comprehensive tests with coverage
+      run: |
+        python -m pytest \
+          tests/test_baselines.py \
+          tests/test_config.py \
+          tests/test_safety_rules.py \
+          tests/test_label_map.py \
+          tests/test_property_based.py \
+          --verbose \
+          --cov=src/cyberpuppy \
+          --cov-branch \
+          --cov-report=term-missing \
+          --cov-report=html:htmlcov \
+          --cov-report=xml:coverage.xml \
+          --cov-report=json:coverage.json \
+          --html=report.html \
+          --json-report \
+          --json-report-file=test-report.json \
+          --junit-xml=junit.xml \
+          --maxfail=5 \
+          --tb=short
+
+    - name: Generate coverage summary
+      run: |
+        python -c "
+        import json
+        import xml.etree.ElementTree as ET
+
+        # Parse coverage.xml for detailed metrics
+        try:
+            tree = ET.parse('coverage.xml')
+            root = tree.getroot()
+
+            total_lines = int(root.attrib.get('lines-valid', 0))
+            covered_lines = int(root.attrib.get('lines-covered', 0))
+            line_rate = float(root.attrib.get('line-rate', 0)) * 100
+
+            total_branches = int(root.attrib.get('branches-valid', 0))
+            covered_branches = int(root.attrib.get('branches-covered', 0))
+            branch_rate = float(root.attrib.get('branch-rate', 0)) * 100 if total_branches > 0 else 0
+
+            print(f'::notice title=Coverage Summary::Overall: {line_rate:.2f}% ({covered_lines}/{total_lines} lines)')
+            print(f'::notice title=Branch Coverage::Branches: {branch_rate:.2f}% ({covered_branches}/{total_branches} branches)')
+
+            # Check if coverage meets thresholds
+            if line_rate < ${{ env.COVERAGE_THRESHOLD }}:
+                print(f'::error title=Coverage Too Low::Coverage {line_rate:.2f}% is below threshold {${{ env.COVERAGE_THRESHOLD }}}%')
+
+        except Exception as e:
+            print(f'::warning title=Coverage Parse Error::{e}')
+        "
+
+    - name: Check core module coverage
+      run: |
+        python -c "
+        import xml.etree.ElementTree as ET
+
+        core_modules = [
+            'src/cyberpuppy/models/',
+            'src/cyberpuppy/safety/',
+            'src/cyberpuppy/eval/',
+            'src/cyberpuppy/explain/'
+        ]
+
+        try:
+            tree = ET.parse('coverage.xml')
+            root = tree.getroot()
+
+            for package in root.findall('.//package'):
+                package_name = package.attrib.get('name', '')
+
+                for core_module in core_modules:
+                    if core_module.replace('src/', '').replace('/', '.') in package_name:
+                        line_rate = float(package.attrib.get('line-rate', 0)) * 100
+
+                        if line_rate < ${{ env.CORE_MODULE_THRESHOLD }}:
+                            print(f'::warning title=Core Module Coverage::Module {package_name} has {line_rate:.2f}% coverage (threshold: ${{ env.CORE_MODULE_THRESHOLD }}%)')
+                        else:
+                            print(f'::notice title=Core Module OK::Module {package_name} has {line_rate:.2f}% coverage')
+
+        except Exception as e:
+            print(f'::warning title=Core Module Check Error::{e}')
+        "
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
+
+    - name: Archive coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: |
+          htmlcov/
+          coverage.xml
+          coverage.json
+          test-report.json
+          report.html
+          junit.xml
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: MishaKav/pytest-coverage-comment@main
+      with:
+        pytest-xml-coverage-path: ./coverage.xml
+        junitxml-path: ./junit.xml
+
+  coverage-trend:
+    needs: test-coverage
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Fetch full history for trend analysis
+        fetch-depth: 0
+
+    - name: Download coverage artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-report-3.12
+        path: ./coverage/
+
+    - name: Store coverage trend data
+      run: |
+        mkdir -p .coverage-history
+
+        # Create coverage trend entry
+        echo "$(date -I),$(python -c '
+        import xml.etree.ElementTree as ET
+        try:
+            tree = ET.parse(\"./coverage/coverage.xml\")
+            print(f\"{float(tree.getroot().attrib.get(\"line-rate\", 0)) * 100:.2f}\")
+        except: print(\"0\")
+        ')" >> .coverage-history/trend.csv
+
+        # Keep only last 100 entries
+        tail -100 .coverage-history/trend.csv > .coverage-history/trend.tmp
+        mv .coverage-history/trend.tmp .coverage-history/trend.csv
+
+    - name: Generate coverage trend report
+      run: |
+        python -c "
+        import csv
+        from datetime import datetime
+
+        try:
+            with open('.coverage-history/trend.csv', 'r') as f:
+                reader = csv.reader(f)
+                data = list(reader)
+
+            if len(data) >= 2:
+                # Compare last two entries
+                prev_coverage = float(data[-2][1])
+                curr_coverage = float(data[-1][1])
+                change = curr_coverage - prev_coverage
+
+                if change > 0:
+                    print(f'::notice title=Coverage Improved::Coverage increased by {change:.2f}% to {curr_coverage:.2f}%')
+                elif change < -1:
+                    print(f'::warning title=Coverage Decreased::Coverage decreased by {abs(change):.2f}% to {curr_coverage:.2f}%')
+                else:
+                    print(f'::notice title=Coverage Stable::Coverage maintained at {curr_coverage:.2f}%')
+
+        except Exception as e:
+            print(f'::warning title=Trend Analysis Error::{e}')
+        "
+
+    - name: Commit trend data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .coverage-history/
+        git diff --staged --quiet || git commit -m "Update coverage trend data [skip ci]"
+        git push
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test-coverage
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Bandit security scan
+      uses: gaurav-nelson/bandit-action@v1
+      with:
+        path: "src/"
+        level: high
+        confidence: high
+
+    - name: Run Safety check
+      run: |
+        pip install safety
+        safety check --json --output safety-report.json || true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: test-coverage
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+        pip install -e .
+
+    - name: Run performance tests
+      run: |
+        python -m pytest tests/ -k "performance or benchmark" \
+          --verbose \
+          --benchmark-json=benchmark.json \
+          --benchmark-only \
+          --benchmark-sort=mean \
+          || echo "No performance tests found"
+
+    - name: Archive performance results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-results
+        path: benchmark.json
+
+  quality-gate:
+    needs: [test-coverage, security-scan]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Quality gate check
+      run: |
+        if [[ "${{ needs.test-coverage.result }}" == "success" && "${{ needs.security-scan.result }}" == "success" ]]; then
+          echo "::notice title=Quality Gate::All quality checks passed ✅"
+        else
+          echo "::error title=Quality Gate::Quality checks failed ❌"
+          echo "Coverage: ${{ needs.test-coverage.result }}"
+          echo "Security: ${{ needs.security-scan.result }}"
+          exit 1
+        fi

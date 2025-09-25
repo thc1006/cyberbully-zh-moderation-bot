@@ -1,0 +1,171 @@
+# Docker Compose 整合測試環境
+# 用於容器化整合測試，包含 API、Bot、資料庫等服務
+version: '3.8'
+
+services:
+  # API 服務測試
+  cyberpuppy-api-test:
+    build:
+      context: ../../../
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TESTING=1
+      - LOG_LEVEL=INFO
+      - CUDA_VISIBLE_DEVICES=""  # 測試環境禁用 GPU
+      - MODEL_CACHE_SIZE=100
+      - ENABLE_CACHING=false
+    volumes:
+      - ../../../models:/app/models:ro
+      - ../../../data/processed:/app/data:ro
+      - test_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - cyberpuppy-test-network
+
+  # Bot 服務測試
+  cyberpuppy-bot-test:
+    build:
+      context: ../../../
+      dockerfile: bot/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - TESTING=1
+      - LINE_CHANNEL_ACCESS_TOKEN=test_token_1234567890_abcdefghijk_TESTONLY_DO_NOT_USE_IN_PRODUCTION
+      - LINE_CHANNEL_SECRET=test_secret_1234567890_TESTONLY_DO_NOT_USE_IN_PRODUCTION
+      - CYBERPUPPY_API_URL=http://cyberpuppy-api-test:8000
+      - LOG_LEVEL=INFO
+    depends_on:
+      cyberpuppy-api-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - cyberpuppy-test-network
+
+  # Redis 快取服務（可選）
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - cyberpuppy-test-network
+
+  # 測試執行器
+  integration-tests:
+    build:
+      context: ../../../
+      dockerfile: tests/integration/docker/Dockerfile.test
+    environment:
+      - PYTEST_CURRENT_TEST=1
+      - API_BASE_URL=http://cyberpuppy-api-test:8000
+      - BOT_BASE_URL=http://cyberpuppy-bot-test:8080
+      - REDIS_URL=redis://redis-test:6379/0
+      - TEST_TIMEOUT=60
+    volumes:
+      - ../../../:/app
+      - test_logs:/app/logs
+      - test_results:/app/test-results
+    depends_on:
+      cyberpuppy-api-test:
+        condition: service_healthy
+      cyberpuppy-bot-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - cyberpuppy-test-network
+    command: >
+      sh -c "
+        echo 'Starting integration tests...' &&
+        pytest tests/integration/ -v --tb=short --maxfail=5 \
+          --junit-xml=/app/test-results/integration-results.xml \
+          --cov=src --cov=api --cov=bot \
+          --cov-report=html:/app/test-results/coverage-html \
+          --cov-report=xml:/app/test-results/coverage.xml \
+          -m 'not slow' &&
+        echo 'Integration tests completed.'
+      "
+
+  # 效能測試執行器
+  performance-tests:
+    build:
+      context: ../../../
+      dockerfile: tests/integration/docker/Dockerfile.test
+    environment:
+      - PYTEST_CURRENT_TEST=1
+      - API_BASE_URL=http://cyberpuppy-api-test:8000
+      - BOT_BASE_URL=http://cyberpuppy-bot-test:8080
+      - PERFORMANCE_TEST=1
+    volumes:
+      - ../../../:/app
+      - test_results:/app/test-results
+      - performance_logs:/app/performance-logs
+    depends_on:
+      cyberpuppy-api-test:
+        condition: service_healthy
+    networks:
+      - cyberpuppy-test-network
+    command: >
+      sh -c "
+        echo 'Starting performance tests...' &&
+        pytest tests/integration/performance/ -v --tb=short \
+          --junit-xml=/app/test-results/performance-results.xml \
+          --benchmark-json=/app/test-results/benchmark.json \
+          -m 'performance' &&
+        echo 'Performance tests completed.'
+      "
+
+  # 資料庫（如果需要）
+  postgres-test:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=cyberpuppy_test
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password_123
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ../../../scripts/init_test_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d cyberpuppy_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cyberpuppy-test-network
+
+volumes:
+  test_logs:
+    driver: local
+  test_results:
+    driver: local
+  performance_logs:
+    driver: local
+  postgres_test_data:
+    driver: local
+
+networks:
+  cyberpuppy-test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
