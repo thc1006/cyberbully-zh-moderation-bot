@@ -52,7 +52,6 @@ shap>=0.44.0,<1.0.0
 captum>=0.7.0,<1.0.0  # PyTorch 可解釋性工具
 
 # Testing
-pytest>=7.4.0
 pytest-cov>=4.1.0
 pytest-asyncio>=0.21.0
 
