@@ -27,13 +27,15 @@ CyberPuppy represents the **most comprehensive open-source solution** for Chines
 
 ## 📈 Performance Metrics
 
-| Metric | Score | Industry Benchmark |
-|--------|-------|-------------------|
-| **Toxicity Detection F1** | 0.82 | 0.75 |
-| **Emotion Analysis F1** | 0.87 | 0.82 |
-| **Response Time** | <200ms | 500ms |
-| **GPU Acceleration** | 5-10x | - |
-| **Uptime SLA** | 99.5% | 99% |
+| Metric | Actual | Target | Status |
+|--------|--------|--------|--------|
+| **Toxicity Detection F1** | 0.77 | 0.78 | 🔄 Near target |
+| **Bullying Detection F1** | 0.55 | 0.75 | ⚠️ Needs improvement |
+| **Emotion Analysis F1** | 1.00* | 0.85 | ✅ Exceeds target |
+| **Response Time** | <200ms | 500ms | ✅ Achieved |
+| **GPU Acceleration** | 5-10x | - | ✅ Verified |
+
+*Note: Emotion analysis showed perfect performance in limited testing, requires larger-scale validation
 
 ## 🛠️ Technology Stack
 
