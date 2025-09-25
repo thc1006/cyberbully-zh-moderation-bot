@@ -13,12 +13,13 @@ import asyncio
 import time
 import statistics
 import gc
+import threading
 
 import httpx
 import pytest
 import psutil
 
-from tests.integration import MAX_RESPONSE_TIME_MS, TIMEOUT_SECONDS
+from tests.integration import MAX_RESPONSE_TIME_MS, TIMEOUT_SECONDS, PROJECT_ROOT
 
 
 @pytest.mark.performance
@@ -88,7 +89,8 @@ class TestAPIPerformance:
                 responses = await asyncio.gather(*tasks)
                 return responses
 
-        async with performance__monitor() as _monitor:
+        # async with performance_monitor() as _monitor:  # TODO: implement performance monitor
+        try:
             # 建立併發任務
             tasks = []
             for i in range(concurrent_count):
