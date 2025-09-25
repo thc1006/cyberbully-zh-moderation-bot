@@ -668,8 +668,7 @@ class ModelEvaluator:
                         for class_idx in range(y_probs.shape[1]):
                             if class_idx in y_true:  # 只計算存在的類別
                                 binary_labels = (y_true == class_idx).astype(int)
-                                if len(np.unique(binary_labels)) > 1:  #
-                                    確保有正負樣本
+                                if len(np.unique(binary_labels)) > 1:  # 確保有正負樣本
                                     auc = roc_auc_score(
                                         binary_labels, y_probs[:, class_idx]
                                     )

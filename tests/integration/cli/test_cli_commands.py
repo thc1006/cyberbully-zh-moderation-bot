@@ -11,6 +11,7 @@ CLI 命令整合測試
 
 import json
 import subprocess
+import time
 
 import pytest
 

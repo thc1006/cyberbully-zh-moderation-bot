@@ -834,8 +834,7 @@ class WeakSupervisionModel:
             raise ValueError("Multi-task prediction not enabled in config")
 
             # For now, use the same weak supervision model for all tasks
-            # In a full implementation, you would have separate LF sets for each
-            task
+            # In a full implementation, you would have separate LF sets for each task
         base_predictions = self.predict(texts)
 
         # Simulate multi-task predictions based on toxicity predictions
