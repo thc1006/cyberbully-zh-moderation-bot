@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
 
-[English Version](README_EN.md) | [專案狀態](PROJECT_STATUS.md) | [API 文件](https://localhost:8000/docs)
+[English Version](README_EN.md) | [專案狀態](PROJECT_STATUS.md) | [API 文件](http://localhost:8000/docs)
 
 > 🌟 **專為中文環境打造的先進 AI 內容審核系統，提供即時毒性偵測、網路霸凌防治與情緒分析，並具備可解釋 AI 功能**
 
@@ -284,11 +284,7 @@ MIT License - 詳見 [LICENSE](LICENSE)
 - 📧 **電子郵件**：hctsai@linux.com
 - 🐛 **問題回報**：[GitHub Issues](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
 
-## 🏆 獎項與認可
 
-- 🥇 2025 最佳中文 NLP 專案（假設性）
-- 🌟 GitHub Trending AI 安全類別 #1
-- 📰 AI 安全電子報特色專案
 
 ## 📊 Star History
 

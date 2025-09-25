@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
 
-[中文版本](README.md) | [Project Status](PROJECT_STATUS.md) | [API Documentation](https://localhost:8000/docs)
+[中文版本](README.md) | [Project Status](PROJECT_STATUS.md) | [API Documentation](http://localhost:8000/docs)
 
 > 🌟 **State-of-the-art Chinese NLP solution for real-time toxicity detection, cyberbullying prevention, and sentiment analysis with explainable AI capabilities**
 
@@ -284,11 +284,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - 📧 **Email**: hctsai@linux.com
 - 🐛 **Issues**: [GitHub Issues](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
 
-## 🏆 Awards & Recognition
 
-- 🥇 Best Chinese NLP Project 2025 (Hypothetical)
-- 🌟 GitHub Trending #1 in AI Safety
-- 📰 Featured in AI Safety Newsletter
 
 ## 📊 Star History
 

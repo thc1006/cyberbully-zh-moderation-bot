@@ -141,8 +141,9 @@ cyberbully-zh-moderation-bot/
 | API 服務 | 95% | ✅ 運作正常 | FastAPI 完整實作 |
 | 模型載入 | 90% | ✅ 運作正常 | 統一使用單一 loader |
 | LINE Bot | 90% | ✅ 可部署 | 需要 LINE 憑證 |
-| 毒性偵測 | 85% | ✅ 可用 | GPU 加速已啟用 |
-| 情緒分析 | 85% | ✅ 可用 | 三分類正常運作 |
+| 毒性偵測 | 77% | 🔄 接近目標 | F1: 0.77 (目標 0.78) |
+| 霸凌偵測 | 55% | ⚠️ 需改進 | F1: 0.55 (目標 0.75) |
+| 情緒分析 | 100%* | ✅ 超越目標 | F1: 1.00* (小樣本測試) |
 | 可解釋性 | 85% | ✅ 實作完成 | IG + SHAP |
 | 安全規則 | 90% | ✅ 完整 | 4 層級回應系統 |
 | 測試覆蓋 | 95% | ✅ 優秀 | 30+ 測試檔案 |
@@ -163,7 +164,12 @@ cyberbully-zh-moderation-bot/
 ## 🚨 待處理事項
 
 ### 高優先級
-1. **修復 ChnSentiCorp 下載腳本**
+1. **改善霸凌偵測效能** 🔴
+   - 現狀: F1 = 0.55 (目標 0.75)
+   - 根本原因: 100% 合成標籤，缺乏真實霸凌資料
+   - 解決方案: 請參閱 [霸凌偵測改進指南](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
+
+2. **修復 ChnSentiCorp 下載腳本**
    - 問題: Hugging Face 資料集腳本不支援
    - 解決: 改用直接 API 下載
 
@@ -288,9 +294,12 @@ MODEL_CONFIG = {
 
 ### 專案文件
 - [README.md](README.md) - 專案介紹
+- [README_EN.md](README_EN.md) - English Version
 - [INSTALL.md](INSTALL.md) - 安裝指南
 - [CLAUDE.md](CLAUDE.md) - Claude Code 開發規範
 - [GPU_SETUP_GUIDE.md](GPU_SETUP_GUIDE.md) - GPU 設置指南
+- [docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md) - 🌟 霸凌偵測改進指南
+- [docs/DATASET_DOWNLOAD_GUIDE.md](docs/DATASET_DOWNLOAD_GUIDE.md) - 資料集下載指南
 - [docs/POLICY.md](docs/POLICY.md) - 內容審核政策
 - [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md) - 資料合約
 
@@ -338,7 +347,16 @@ MODEL_CONFIG = {
 
 ## 🎯 總結
 
-CyberPuppy 專案目前處於 **92% 完成度**，核心功能已全部實作並可正常運作。主要待處理事項為資料集整合和生產環境配置。專案程式碼品質優秀，測試覆蓋完整，文件齊全，已具備生產部署條件。
+CyberPuppy 專案目前處於 **85% 完成度**，核心功能已全部實作並可正常運作。
+
+**模型效能實測結果**：
+- ✅ **毒性偵測 F1: 0.77** (接近 0.78 目標)
+- ⚠️ **霸凌偵測 F1: 0.55** (需要改進，目標 0.75) ➡️ [改進指南](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
+- ✅ **情緒分析 F1: 1.00*** (超越 0.85 目標，但需大規模驗證)
+- ✅ **GPU 加速: 5-10x** (實測驗證)
+- ✅ **回應時間: <200ms** (達成目標)
+
+主要待處理事項為模型效能改進（特別是霸凌偵測）、資料集整合和生產環境配置。專案程式碼品質優秀，測試覆蓋完整，文件齊全。
 
 **關鍵成就**:
 - ✅ GPU 加速配置完成 (RTX 3050, CUDA 12.4)

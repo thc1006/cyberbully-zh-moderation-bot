@@ -192,3 +192,4 @@ Thumbs.db
 # Logs
 logs/
 *.log
+data/raw/cold/
