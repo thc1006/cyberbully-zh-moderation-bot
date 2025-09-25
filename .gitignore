@@ -108,14 +108,40 @@ hive-mind-prompt-*.txt
 # Large files over 100MB (can be regenerated via download scripts)
 # Model checkpoints (generated during training, use scripts/download_datasets.py to rebuild)
 models/**/best.ckpt
+models/**/best.ckpt.backup
+models/**/*.safetensors
+models/**/pytorch_model.bin
+models/macbert_base_demo/
+models/toxicity_only_demo/
+models/working_toxicity_model/pytorch_model.bin
+models/gpu_trained_model/model.safetensors
 
 # Large datasets (can be downloaded via scripts)
 data/raw/dmsc/DMSC.csv
 data/raw/dmsc/dmsc_kaggle.zip
+data/raw/dmsc/*.zip
+data/raw/**/*.csv
 
 # Other large generated files
 *.pkl
 *.bin
+*.safetensors
+*.ckpt
+*.ckpt.backup
+*.pth
+*.pt
+*.h5
+*.hdf5
+*.tar.gz
+*.zip
+
+# Specific large files found in scan
+models/gpu_trained_model/
+models/macbert_base_demo/
+models/toxicity_only_demo/
+models/working_toxicity_model/
+data/raw/dmsc/
+archive/
 
 # Python cache
 __pycache__/

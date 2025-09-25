@@ -1,0 +1,42 @@
+# LINE Bot Dockerfile
+FROM python:3.11-slim
+
+# 設定環境變數
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# 創建非 root 用戶
+RUN groupadd -r cyberpuppy && useradd -r -g cyberpuppy cyberpuppy
+
+# 設定工作目錄
+WORKDIR /app
+
+# 安裝系統依賴
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 複製並安裝依賴
+COPY bot/requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 複製應用程式碼
+COPY --chown=cyberpuppy:cyberpuppy bot/ /app/
+
+# 創建日誌目錄
+RUN mkdir -p /app/logs && chown -R cyberpuppy:cyberpuppy /app
+
+# 切換到非 root 用戶
+USER cyberpuppy
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+# 暴露端口
+EXPOSE 5000
+
+# 啟動命令
+CMD ["python", "line_bot.py"]

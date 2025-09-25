@@ -43,8 +43,7 @@ def check_dataset_status():
         },
         "SCCD": {
             "path": external_dir / "sccd",
-            "require"
-                "d_files": [
+            "required_files": ["sccd_events.json", "sccd_annotations.json"],
             "status": "Not Found"
         },
         "CHNCI": {

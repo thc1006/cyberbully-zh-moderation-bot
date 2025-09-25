@@ -1,0 +1,72 @@
+# Multi-stage build for API service
+FROM python:3.11-slim as builder
+
+# 設定工作目錄
+WORKDIR /build
+
+# 安裝構建依賴
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 複製 requirements
+COPY requirements.txt .
+COPY requirements-dev.txt .
+
+# 安裝 Python 依賴
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
+
+# 最終映像
+FROM python:3.11-slim
+
+# 設定環境變數
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    MODEL_CACHE_DIR=/app/models \
+    DATA_DIR=/app/data
+
+# 創建非 root 用戶
+RUN groupadd -r cyberpuppy && useradd -r -g cyberpuppy cyberpuppy
+
+# 設定工作目錄
+WORKDIR /app
+
+# 安裝運行時依賴
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 從 builder 複製 wheels
+COPY --from=builder /build/wheels /wheels
+
+# 安裝 Python 套件
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && \
+    rm -rf /wheels
+
+# 複製應用程式碼
+COPY --chown=cyberpuppy:cyberpuppy api/ /app/api/
+COPY --chown=cyberpuppy:cyberpuppy src/ /app/src/
+COPY --chown=cyberpuppy:cyberpuppy cyberpuppy/ /app/cyberpuppy/
+
+# 創建必要目錄
+RUN mkdir -p /app/logs /app/models /app/data && \
+    chown -R cyberpuppy:cyberpuppy /app
+
+# 切換到非 root 用戶
+USER cyberpuppy
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/healthz || exit 1
+
+# 暴露端口
+EXPOSE 8000
+
+# 啟動命令
+WORKDIR /app/api
+CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
