@@ -22,6 +22,7 @@ from cyberpuppy.cli import (
 )
 
 
+@pytest.mark.unit
 class TestCLIArgumentParsing:
     """Test CLI argument parsing for all commands."""
 
@@ -154,6 +155,7 @@ class TestCLIArgumentParsing:
             self.parser.parse_args(["invalid_command"])
 
 
+@pytest.mark.unit
 class TestAnalyzeCommand:
     """Test the analyze command functionality."""
 
@@ -380,6 +382,7 @@ class TestAnalyzeCommand:
             os.unlink(invalid_file)
 
 
+@pytest.mark.unit
 class TestTrainCommand:
     """Test the train command functionality."""
 
@@ -497,6 +500,7 @@ class TestTrainCommand:
             self.command.execute(args)
 
 
+@pytest.mark.unit
 class TestEvaluateCommand:
     """Test the evaluate command functionality."""
 
@@ -590,6 +594,7 @@ class TestEvaluateCommand:
             self.command.execute(args)
 
 
+@pytest.mark.unit
 class TestExportCommand:
     """Test the export command functionality."""
 
@@ -650,6 +655,7 @@ class TestExportCommand:
             self.command.execute(args)
 
 
+@pytest.mark.unit
 class TestConfigCommand:
     """Test the config command functionality."""
 
@@ -695,6 +701,7 @@ class TestConfigCommand:
             self.mock_console.print.assert_called_with("hfl/chinese-macbert-base")
 
 
+@pytest.mark.unit
 class TestCLIErrorHandling:
     """Test CLI error handling and user-friendly messages."""
 
@@ -730,6 +737,7 @@ class TestCLIErrorHandling:
             assert result == 130  # Standard exit code for SIGINT
 
 
+@pytest.mark.unit
 class TestCLIIntegration:
     """Test CLI integration with core components."""
 
@@ -796,6 +804,7 @@ training:
             os.unlink(config_file)
 
 
+@pytest.mark.unit
 class TestCLIProgressBars:
     """Test CLI progress bar functionality."""
 
@@ -817,6 +826,7 @@ class TestCLIProgressBars:
             mock_progress.add_task.assert_called_once()
 
 
+@pytest.mark.unit
 class TestCLIOutputFormatting:
     """Test CLI output formatting with Rich."""
 

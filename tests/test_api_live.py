@@ -8,8 +8,10 @@ import subprocess
 import requests
 import sys
 from pathlib import Path
+import pytest
 
 
+@pytest.mark.integration
 def test_api_server():
     """Test the live API server."""
     base_url = "http://localhost:8000"

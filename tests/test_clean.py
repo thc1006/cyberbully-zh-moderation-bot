@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+import pytest
 
 # 添加專案路徑到系統路徑
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -19,6 +20,7 @@ from scripts.clean_normalize import (
 )
 
 
+@pytest.mark.unit
 class TestTextNormalizer(unittest.TestCase):
     """測試文字正規化器"""
 
@@ -191,6 +193,7 @@ class TestTextNormalizer(unittest.TestCase):
                 self.assertIn(result, [None, ""])
 
 
+@pytest.mark.unit
 class TestDatasetCleaner(unittest.TestCase):
     """測試資料集清理器"""
 
@@ -311,6 +314,7 @@ class TestDatasetCleaner(unittest.TestCase):
         self.assertTrue(csv_file.exists())
 
 
+@pytest.mark.unit
 class TestIntegration(unittest.TestCase):
     """整合測試"""
 

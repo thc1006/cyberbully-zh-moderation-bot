@@ -23,6 +23,7 @@ from cyberpuppy.safety.rules import (
 )
 
 
+@pytest.mark.unit
 class TestPIIHandler:
     """PII 處理測試"""
 
@@ -82,6 +83,7 @@ class TestPIIHandler:
         assert "100" not in anon_ip
 
 
+@pytest.mark.unit
 class TestSafetyRules:
     """安全規則測試"""
 
@@ -183,6 +185,7 @@ class TestSafetyRules:
         assert protection["parental_notify"]  # 13歲以下需要家長通知
 
 
+@pytest.mark.unit
 class TestPrivacyLogger:
     """隱私日誌測試"""
 
@@ -242,6 +245,7 @@ class TestPrivacyLogger:
             assert log_data["event_type"] == "test_event"
 
 
+@pytest.mark.unit
 class TestAppealManager:
     """申訴管理測試"""
 
@@ -322,6 +326,7 @@ class TestAppealManager:
         assert stats["approval_rate"] == 50.0
 
 
+@pytest.mark.unit
 class TestHumanReviewInterface:
     """人工審核介面測試"""
 
