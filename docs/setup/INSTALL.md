@@ -99,7 +99,7 @@ cyberpuppy-zh-moderation-bot/
 如果自動下載腳本失敗：
 
 1. **檢查網路連接**
-2. **手動下載** - 參閱 [`docs/LARGE_FILES_SETUP.md`](docs/LARGE_FILES_SETUP.md)
+2. **手動下載** - 參閱 [`LARGE_FILES_SETUP.md`](LARGE_FILES_SETUP.md)
 3. **重新訓練模型**：
    ```bash
    python train.py --config configs/multitask_config.yaml
@@ -132,7 +132,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 如果遇到安裝問題：
 
 1. 查看 [Issues](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
-2. 檢查 [`docs/`](docs/) 目錄中的相關文檔
+2. 檢查[文件中心](../README.md)中的相關文檔
 3. 提交新的 Issue 並包含錯誤信息
 
 ---

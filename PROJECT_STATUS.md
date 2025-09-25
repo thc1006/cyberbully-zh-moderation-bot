@@ -167,7 +167,7 @@ cyberbully-zh-moderation-bot/
 1. **改善霸凌偵測效能** 🔴
    - 現狀: F1 = 0.55 (目標 0.75)
    - 根本原因: 100% 合成標籤，缺乏真實霸凌資料
-   - 解決方案: 請參閱 [霸凌偵測改進指南](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
+   - 解決方案: 請參閱 [霸凌偵測改進指南](docs/technical/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
 
 2. **修復 ChnSentiCorp 下載腳本**
    - 問題: Hugging Face 資料集腳本不支援
@@ -295,13 +295,13 @@ MODEL_CONFIG = {
 ### 專案文件
 - [README.md](README.md) - 專案介紹
 - [README_EN.md](README_EN.md) - English Version
-- [INSTALL.md](INSTALL.md) - 安裝指南
-- [CLAUDE.md](CLAUDE.md) - Claude Code 開發規範
-- [GPU_SETUP_GUIDE.md](GPU_SETUP_GUIDE.md) - GPU 設置指南
-- [docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md) - 🌟 霸凌偵測改進指南
-- [docs/DATASET_DOWNLOAD_GUIDE.md](docs/DATASET_DOWNLOAD_GUIDE.md) - 資料集下載指南
-- [docs/POLICY.md](docs/POLICY.md) - 內容審核政策
-- [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md) - 資料合約
+- [INSTALL.md](docs/setup/INSTALL.md) - 安裝指南
+- [CLAUDE.md](CLAUDE.md) - Claude Code 開發規範 (本地端專用)
+- [GPU_SETUP_GUIDE.md](docs/setup/GPU_SETUP_GUIDE.md) - GPU 設置指南
+- [docs/technical/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md](docs/technical/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md) - 🌟 霸凌偵測改進指南
+- [docs/datasets/DATASET_DOWNLOAD_GUIDE.md](docs/datasets/DATASET_DOWNLOAD_GUIDE.md) - 資料集下載指南
+- [docs/technical/POLICY.md](docs/technical/POLICY.md) - 內容審核政策
+- [docs/datasets/DATA_CONTRACT.md](docs/datasets/DATA_CONTRACT.md) - 資料合約
 
 ### 外部資源
 - [COLD Dataset](https://github.com/thu-coai/COLDataset)
@@ -351,7 +351,7 @@ CyberPuppy 專案目前處於 **85% 完成度**，核心功能已全部實作並
 
 **模型效能實測結果**：
 - ✅ **毒性偵測 F1: 0.77** (接近 0.78 目標)
-- ⚠️ **霸凌偵測 F1: 0.55** (需要改進，目標 0.75) ➡️ [改進指南](docs/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
+- ⚠️ **霸凌偵測 F1: 0.55** (需要改進，目標 0.75) ➡️ [改進指南](docs/technical/BULLYING_DETECTION_IMPROVEMENT_GUIDE.md)
 - ✅ **情緒分析 F1: 1.00*** (超越 0.85 目標，但需大規模驗證)
 - ✅ **GPU 加速: 5-10x** (實測驗證)
 - ✅ **回應時間: <200ms** (達成目標)

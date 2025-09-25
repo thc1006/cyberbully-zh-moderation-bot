@@ -124,10 +124,10 @@ export PYTHONIOENCODING=utf-8
 
 ## 📚 更多資源
 
-- [完整 API 文檔](docs/API.md)
-- [模型訓練指南](docs/TRAINING.md)
-- [部署最佳實踐](docs/DEPLOYMENT.md)
-- [資料標註規範](docs/DATA_CONTRACT.md)
+- [完整 API 文檔](../api/API.md)
+- [文件中心](../README.md)
+- [部署最佳實踐](../deployment/DEPLOYMENT.md)
+- [資料標註規範](../datasets/DATA_CONTRACT.md)
 
 ## 💬 取得協助
 
