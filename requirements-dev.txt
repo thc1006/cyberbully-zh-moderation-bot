@@ -43,6 +43,9 @@ myst-parser==3.0.1
 # Development Tools
 ipython==8.24.0
 ipdb==0.13.13
+ipykernel>=6.27.0
+notebook>=7.0.0
+jupyterlab>=4.0.0
 pre-commit==3.7.1
 pip-licenses==4.4.0
 locust==2.27.0
