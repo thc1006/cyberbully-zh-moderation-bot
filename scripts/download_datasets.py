@@ -47,8 +47,7 @@ DATASETS_META = {
     "cold": {
         "name": "COLD (Chinese Offensive Language Dataset)",
         "source": "github",
-        "repo"
-            "_url": os.getenv(
+        "repo_url": os.getenv("COLD_REPO_URL", "https://github.com/thu-coai/COLDataset"),
         "branch": os.getenv("COLD_DATA_BRANCH", "main"),
         "description": "中文冒犯語言資料集，適合訓練毒性分類器",
         "files": {
@@ -67,8 +66,7 @@ DATASETS_META = {
     "dmsc": {
         "name": "DMSC v2 (豆瓣電影短評)",
         "source": "github",
-        "repo"
-            "_url": os.getenv(
+        "repo_url": os.getenv("DMSC_REPO_URL", "https://github.com/yhpc/DMSC"),
         "branch": os.getenv("DMSC_DATA_BRANCH", "master"),
         "description": "豆瓣電影短評資料集，含評分",
         "large_files": [
@@ -80,8 +78,7 @@ DATASETS_META = {
     "ntusd": {
         "name": "NTUSD (臺大情感字典)",
         "source": "github",
-        "repo"
-            "_url": os.getenv(
+        "repo_url": os.getenv("NTUSD_REPO_URL", "https://github.com/candlewill/NTUSD"),
         "branch": os.getenv("NTUSD_DATA_BRANCH", "master"),
         "description": "繁體中文情感詞典（正負極性）",
         "files": {
@@ -174,8 +171,7 @@ class DatasetDownloader:
 
             with open(temp_path, mode) as f:
                 with tqdm(total=total_size, initial=resume_pos,
-                          unit='B', unit_scale=True, desc=dest_path.name) as
-                              pbar:
+                          unit='B', unit_scale=True, desc=dest_path.name) as pbar:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
@@ -199,8 +195,7 @@ class DatasetDownloader:
 
     def verify_hash(self, file_path: Path, expected_hash: str) -> bool:
         """驗證檔案雜湊"""
-        hash_obj = hashlib.md5() if len(expected_hash) == 32 else
-            hashlib.sha256()
+        hash_obj = hashlib.md5() if len(expected_hash) == 32 else hashlib.sha256()
 
         with open(file_path, 'rb') as f:
             for chunk in iter(lambda: f.read(8192), b''):
@@ -236,8 +231,7 @@ class DatasetDownloader:
         meta = DATASETS_META["cold"]
         dest_dir = self.base_dir / "cold"
 
-        if not self.clone_github_repo(meta["repo"
-            "_url"], dest_dir, meta[
+        if not self.clone_github_repo(meta["repo_url"], dest_dir, meta["branch"]):
             return False
 
         # 驗證關鍵檔案
@@ -273,8 +267,7 @@ class DatasetDownloader:
             metadata = {
                 "source": meta["dataset_name"],
                 "splits": list(dataset.keys()),
-                "total_"
-                    "samples": sum(len(dataset[split]) for split in dataset.keys())
+                "total_samples": sum(len(dataset[split]) for split in dataset.keys())
             }
             with open(dest_dir / "metadata.json", 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)
@@ -319,8 +312,7 @@ class DatasetDownloader:
         meta = DATASETS_META["ntusd"]
         dest_dir = self.base_dir / "ntusd"
 
-        if not self.clone_github_repo(meta["repo"
-            "_url"], dest_dir, meta[
+        if not self.clone_github_repo(meta["repo_url"], dest_dir, meta["branch"]):
             return False
 
         # 檢查關鍵檔案
@@ -397,8 +389,7 @@ class DatasetDownloader:
             print("\nDatasets requiring manual download:")
             for dataset_name in manual_datasets:
                 print(f"  - {DATASETS_META[dataset_name]['name']}")
-                print(f"    View instructions: python {_"
-                    "_file__} --dataset {dataset_name}")
+                print(f"    View instructions: python {__file__} --dataset {dataset_name}")
         print("="*60)
 
         return results

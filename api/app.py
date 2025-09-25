@@ -24,8 +24,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-# Import model loader (using simple version for testing)
-from model_loader_simple import get_model_loader
+# Import model loader
+from model_loader import get_model_loader
 
 # 設定日誌
 logging.basicConfig(

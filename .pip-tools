@@ -1,6 +1,0 @@
-# pip-tools configuration directory
-# This file ensures the .pip-tools directory is tracked in git
-# The directory is used by pip-tools to cache compilation state
-
-# Configuration is stored in pyproject.toml under [tool.pip-tools]
-# See pyproject.toml for detailed pip-tools settings

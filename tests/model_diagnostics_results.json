@@ -1,0 +1,14 @@
+{
+  "results": {
+    "directory_structure": true,
+    "checkpoint_validity": false,
+    "config_files": true,
+    "tokenizer_files": true,
+    "pytorch_loading": false,
+    "transformers_compatibility": true,
+    "model_inference": false
+  },
+  "timestamp": "None",
+  "python_version": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+  "pytorch_version": "2.7.1+cpu"
+}
