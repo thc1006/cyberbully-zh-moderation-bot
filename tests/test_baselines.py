@@ -290,8 +290,8 @@ class MockTokenizer:
     def __call__(self, text, **kwargs):
         return {
             "input_ids": torch.randint(1, 1000, (1, kwargs.get("max_length", 128))),
-            "attention_mask": torch.ones(1, kwargs.get("max_length", 128)),
-            "token_type_ids": torch.zeros(1, kwargs.get("max_length", 128)),
+            "attention_mask": torch.ones(1, kwargs.get("max_length", 128), dtype=torch.long),
+            "token_type_ids": torch.zeros(1, kwargs.get("max_length", 128), dtype=torch.long),
         }
 
     def save_pretrained(self, path):

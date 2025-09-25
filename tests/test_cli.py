@@ -160,7 +160,10 @@ class TestAnalyzeCommand:
     def setup_method(self):
         """Set up test fixtures with mocked dependencies."""
         self.mock_detector = Mock()
-        self.mock_console = Mock()
+        self.mock_console = MagicMock()
+        # Ensure console supports context manager protocol
+        self.mock_console.__enter__ = Mock(return_value=self.mock_console)
+        self.mock_console.__exit__ = Mock(return_value=None)
         self.command = AnalyzeCommand(self.mock_detector, self.mock_console)
 
     def _create_mock_detection_result(
@@ -273,6 +276,8 @@ class TestAnalyzeCommand:
 
             with patch.object(self.command, "_create_progress_bar") as mock_progress:
                 mock_progress_bar = MagicMock()
+                mock_progress_bar.__enter__ = Mock(return_value=mock_progress_bar)
+                mock_progress_bar.__exit__ = Mock(return_value=None)
                 mock_progress_bar.add_task.return_value = "task_id"
                 mock_progress.return_value = mock_progress_bar
 
@@ -317,9 +322,17 @@ class TestAnalyzeCommand:
             args.output = output_file_name
             args.format = "json"
 
-            result = self.command.execute(args)
+            # Mock the progress bar to support context manager protocol
+            with patch.object(self.command, "_create_progress_bar") as mock_create_progress:
+                mock_progress_bar = MagicMock()
+                mock_progress_bar.__enter__ = Mock(return_value=mock_progress_bar)
+                mock_progress_bar.__exit__ = Mock(return_value=None)
+                mock_progress_bar.add_task.return_value = "task_id"
+                mock_create_progress.return_value = mock_progress_bar
 
-            assert result == 0
+                result = self.command.execute(args)
+
+                assert result == 0
 
             # Verify output file was written
             with open(output_file_name, "r", encoding="utf-8") as f:
@@ -373,7 +386,10 @@ class TestTrainCommand:
     def setup_method(self):
         """Set up test fixtures with mocked dependencies."""
         self.mock_trainer = Mock()
-        self.mock_console = Mock()
+        self.mock_console = MagicMock()
+        # Ensure console supports context manager protocol
+        self.mock_console.__enter__ = Mock(return_value=self.mock_console)
+        self.mock_console.__exit__ = Mock(return_value=None)
         self.command = TrainCommand(self.mock_trainer, self.mock_console)
 
     def test_train_with_cold_dataset(self):
@@ -455,6 +471,9 @@ class TestTrainCommand:
 
         with patch.object(self.command, "_create_training_progress") as mock_progress:
             mock_progress_bar = MagicMock()
+            mock_progress_bar.__enter__ = Mock(return_value=mock_progress_bar)
+            mock_progress_bar.__exit__ = Mock(return_value=None)
+            mock_progress_bar.add_task.return_value = "task_id"
             mock_progress.return_value = mock_progress_bar
 
             result = self.command.execute(args)
@@ -484,7 +503,10 @@ class TestEvaluateCommand:
     def setup_method(self):
         """Set up test fixtures with mocked dependencies."""
         self.mock_evaluator = Mock()
-        self.mock_console = Mock()
+        self.mock_console = MagicMock()
+        # Ensure console supports context manager protocol
+        self.mock_console.__enter__ = Mock(return_value=self.mock_console)
+        self.mock_console.__exit__ = Mock(return_value=None)
         self.command = EvaluateCommand(self.mock_evaluator, self.mock_console)
 
     def test_evaluate_with_metrics_report(self):
@@ -574,7 +596,10 @@ class TestExportCommand:
     def setup_method(self):
         """Set up test fixtures with mocked dependencies."""
         self.mock_exporter = Mock()
-        self.mock_console = Mock()
+        self.mock_console = MagicMock()
+        # Ensure console supports context manager protocol
+        self.mock_console.__enter__ = Mock(return_value=self.mock_console)
+        self.mock_console.__exit__ = Mock(return_value=None)
         self.command = ExportCommand(self.mock_exporter, self.mock_console)
 
     def test_export_to_onnx(self):
@@ -630,7 +655,10 @@ class TestConfigCommand:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_console = Mock()
+        self.mock_console = MagicMock()
+        # Ensure console supports context manager protocol
+        self.mock_console.__enter__ = Mock(return_value=self.mock_console)
+        self.mock_console.__exit__ = Mock(return_value=None)
         self.command = ConfigCommand(self.mock_console)
 
     def test_show_config(self):
