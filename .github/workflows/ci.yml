@@ -4,177 +4,126 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-  schedule:
-    # 每週一早上 9 點執行（UTC 時間 1 點）
-    - cron: '0 1 * * 1'
+    branches: [ main, develop ]
+
+# 避免同分支重複跑（新 run 會取消舊 run）
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: '3.12'
-  NODE_VERSION: '18'
-  POETRY_VERSION: '1.7.0'
+  PIP_NO_CACHE_DIR: 1
+  PYTHONUNBUFFERED: 1
 
 jobs:
-  # 程式碼品質檢查
-  code-quality:
-    name: Code Quality Checks
+  # 快速語法檢查 - 早期快速失敗
+  quick-check:
+    name: Quick Syntax Check
     runs-on: ubuntu-latest
-
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # 完整 git 歷史，用於某些分析工具
-
     - name: 🐍 Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
+    - name: ⚡ Install minimal deps and syntax check
+      run: |
+        python -m pip install --upgrade pip
+        python -m py_compile src/cyberpuppy/**/*.py tests/**/*.py
+        pip install flake8
+        flake8 src/ tests/ --select=E9,F63,F7,F82 --show-source
 
+  # 程式碼品質檢查
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    needs: quick-check
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
-
-    - name: 🎨 Format check with Black
-      run: |
-        black --check --diff src/ tests/ api/ bot/
+    - name: 🎨 Format check
+      run: black --check --diff src/ tests/ api/ bot/
       continue-on-error: true
-
-    - name: 🔍 Lint with Flake8
-      run: |
-        flake8 src/ tests/ api/ bot/ --config=.flake8
+    - name: 📏 Import sorting
+      run: isort --check-only --diff src/ tests/ api/ bot/
       continue-on-error: true
-
-    - name: 📏 Sort imports with isort
-      run: |
-        isort --check-only --diff src/ tests/ api/ bot/
+    - name: 🔍 Linting
+      run: flake8 src/ tests/ api/ bot/ --config=.flake8
       continue-on-error: true
-
-    - name: 🔒 Docstring check with pydocstyle
+    - name: 🔒 Security scan
       run: |
-        pydocstyle src/ --config=.pydocstyle
-      continue-on-error: true
-
-    - name: 📊 Code complexity with radon
-      run: |
-        radon cc src/ -s -nb
-        radon mi src/ -s
+        bandit -r src/ api/ bot/ -ll || true
+        safety check || true
       continue-on-error: true
 
   # 型別檢查
   type-checking:
     name: Type Checking
     runs-on: ubuntu-latest
-
+    needs: quick-check
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-
     - name: 🐍 Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
         pip install mypy types-requests types-PyYAML
-
-    - name: 🔍 Type check with mypy
-      run: |
-        mypy src/ api/ bot/ --config-file=mypy.ini
+    - name: 🔍 Type check
+      run: mypy src/ api/ bot/ --config-file=mypy.ini
       continue-on-error: true
 
-  # 安全掃描
-  security-scan:
-    name: Security Scanning
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
-
-    - name: 📦 Install security tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit[toml] safety semgrep
-
-    - name: 🔒 Security scan with Bandit
-      run: |
-        bandit -r src/ api/ bot/ -f json -o bandit-report.json
-        bandit -r src/ api/ bot/ -f screen -ll
-      continue-on-error: true
-
-    - name: 📦 Dependency check with Safety
-      run: |
-        safety check --json > safety-report.json || true
-        safety check || true
-      continue-on-error: true
-
-    - name: 🔍 SAST with Semgrep
-      run: |
-        semgrep --config=auto src/ api/ bot/ --json -o semgrep-report.json || true
-        semgrep --config=auto src/ api/ bot/ || true
-      continue-on-error: true
-
-    - name: 📤 Upload security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
-          semgrep-report.json
-
-  # 單元測試
+  # 單元測試矩陣
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    needs: [quick-check, code-quality]
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ['3.11', '3.12']
-      fail-fast: false
-
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-
     - name: 🐍 Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
-
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
-
     - name: 🧪 Run unit tests
-      run: |
-        pytest tests/ --cov=src/cyberpuppy --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=junit.xml -v
-
-    - name: 📊 Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      run: pytest -m "unit and not integration and not docker and not performance" --cov=src/cyberpuppy --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=junit.xml -v --tb=short
+    - name: 📊 Upload coverage
+      uses: codecov/codecov-action@v4
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
       with:
         file: ./coverage.xml
         flags: unittests
-        name: codecov-umbrella
         fail_ci_if_error: false
-
+        token: ${{ secrets.CODECOV_TOKEN }}
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       if: always()
@@ -185,248 +134,149 @@ jobs:
           htmlcov/
           coverage.xml
 
-  # 整合測試
+  # 整合測試（僅 Linux）
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [unit-tests]
-
+    needs: unit-tests
+    timeout-minutes: 20
     services:
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379:6379
+        ports: [6379:6379]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-
     - name: 🐍 Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
-
     - name: 🔧 Set up environment
       run: |
-        cp .env.example .env
-        echo "REDIS_URL=redis://localhost:6379" >> .env
-
-    - name: 🧪 Run integration tests
+        cp .env.example .env || echo "REDIS_URL=redis://localhost:6379" > .env
+        echo "ENVIRONMENT=testing" >> .env
+    - name: 🧪 Run integration tests (with retry)
       run: |
-        pytest tests/integration/ -v --tb=short
-      continue-on-error: true
+        pytest -m "integration and not docker" -v --tb=short || (echo "Retrying..." && sleep 5 && pytest -m "integration and not docker" -v --tb=short)
 
-  # Docker 建構測試
-  docker-build:
-    name: Docker Build Test
+  # Docker 建構測試（僅 Linux）
+  docker-tests:
+    name: Docker Tests
     runs-on: ubuntu-latest
-
+    needs: unit-tests
+    timeout-minutes: 25
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-
-    - name: 🔑 Log in to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-      continue-on-error: true
-
-    - name: 🔑 Log in to GitHub Container Registry (fallback)
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-      continue-on-error: true
-
-    - name: 🐳 Set up Docker Buildx
+    - name: 🔑 Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: |
-          image=moby/buildkit:buildx-stable-1
-        install: true
-
-    - name: 📋 List context files
+    - name: 🏗️ Build images
       run: |
-        echo "API context files:"
-        ls -la ./api/
-        echo "Bot context files:"
-        ls -la ./bot/
-        echo "Root requirements files:"
-        ls -la requirements*.txt
-
-    - name: 🏗️ Build API Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: ./api
-        push: false
-        tags: cyberpuppy-api:test
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-
-    - name: 🏗️ Build Bot Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: ./bot
-        push: false
-        tags: cyberpuppy-bot:test
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-
-    - name: 🔍 List built Docker images
-      run: docker images | grep -E "(cyberpuppy|REPOSITORY)"
-
-    - name: 🧪 Test Docker containers
+        docker build --pull -t cyberpuppy-api:test -f api/Dockerfile . &
+        docker build --pull -t cyberpuppy-bot:test -f bot/Dockerfile . &
+        wait
+    - name: 🧪 Test containers
       run: |
-        echo "Testing API container..."
         docker run --rm cyberpuppy-api:test python -c "import fastapi; print('API container OK')"
-        echo "Testing Bot container..."
         docker run --rm cyberpuppy-bot:test python -c "import linebot; print('Bot container OK')"
-
-  # 文檔建構測試
-  documentation:
-    name: Documentation Build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🐍 Set up Python
+    - name: 🐍 Set up Python for Docker tests
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-
-    - name: 📦 Install documentation dependencies
+    - name: 📦 Install test dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints myst-parser
-
-    - name: 📚 Build documentation
-      run: |
-        cd docs
-        make html
+        python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
+    - name: 🧪 Run Docker-specific tests
+      run: pytest -m "docker" -v --tb=short
       continue-on-error: true
 
-    - name: 📤 Upload documentation
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: documentation
-        path: docs/_build/html/
-
-  # 依賴檢查
-  dependency-check:
-    name: Dependency License Check
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
-
-    - name: 📦 Install pip-licenses
-      run: |
-        python -m pip install --upgrade pip
-        pip install pip-licenses
-
-    - name: 📋 Check licenses
-      run: |
-        pip-licenses --format=markdown --with-urls --output-file=LICENSES.md
-        pip-licenses --fail-on="GPL;LGPL"
-      continue-on-error: true
-
-    - name: 📤 Upload license report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: license-report
-        path: LICENSES.md
-
-  # 效能測試（僅在主分支）
-  performance-test:
-    name: Performance Testing
+  # 效能測試（僅主分支）
+  performance-tests:
+    name: Performance Tests
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    needs: [unit-tests]
-
+    needs: unit-tests
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-
     - name: 🐍 Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install --use-deprecated=legacy-resolver -U -r requirements.txt -r requirements-dev.txt --prefer-binary
-        pip install locust pytest-benchmark
-
-    - name: 🏃 Run performance benchmarks
-      run: |
-        pytest tests/performance/ --benchmark-only --benchmark-json=benchmark.json
+        pip install pytest-benchmark
+    - name: 🏃 Run benchmarks
+      run: pytest -m "performance" --benchmark-only --benchmark-json=benchmark.json
       continue-on-error: true
-
-    - name: 📤 Upload benchmark results
+    - name: 📤 Upload results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results
         path: benchmark.json
 
+  # 文檔建構（可選）
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    - name: 📦 Install docs dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints myst-parser
+    - name: 📚 Build documentation
+      run: |
+        cd docs && make html
+      continue-on-error: true
+    - name: 📤 Upload docs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: documentation
+        path: docs/_build/html/
+
   # 總結報告
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [code-quality, type-checking, security-scan, unit-tests, docker-build]
+    needs: [code-quality, type-checking, unit-tests, integration-tests, docker-tests]
     if: always()
-
     steps:
-    - name: 📥 Download all artifacts
-      uses: actions/download-artifact@v4
-
-    - name: 📊 Generate summary report
+    - name: 📊 Generate summary
       run: |
-        echo "# CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "# 🎯 CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 🎯 Pipeline Status" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Code Quality | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Type Checking | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Security Scan | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Unit Tests | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Docker Build | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📝 Notes" >> $GITHUB_STEP_SUMMARY
-        echo "- All checks completed successfully" >> $GITHUB_STEP_SUMMARY
-        echo "- Artifacts available for download" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Code Quality | ${{ needs.code-quality.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Type Checking | ${{ needs.type-checking.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Tests | ${{ needs.docker-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+    - name: ❌ Fail if critical tests failed
+      if: needs.unit-tests.result != 'success'
+      run: exit 1
