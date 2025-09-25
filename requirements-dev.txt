@@ -30,7 +30,7 @@ autopep8==2.0.4
 # Security
 bandit[toml]==1.7.8
 safety==3.2.0
-semgrep==1.45.0
+semgrep>=1.75.0  # Updated version compatible with urllib3 2.x
 
 # Documentation
 sphinx==7.3.7
@@ -88,5 +88,5 @@ aioresponses==0.7.6
 slowapi>=0.1.9  # Required by API app imports in tests
 docker>=7.0.0   # Required by integration tests
 
-# Network constraints
-urllib3>=2.0.0,<3.0.0  # Latest urllib3 2.5.0 compatible with modern packages
+# Network constraints - Allow flexible urllib3 version for semgrep compatibility
+urllib3>=1.26.0  # Flexible constraint to avoid conflicts
