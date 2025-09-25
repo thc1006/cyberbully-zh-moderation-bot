@@ -122,6 +122,25 @@ class Settings(BaseSettings):
             raise ValueError("model_name cannot be empty")
         return v or "hfl/chinese-macbert-base"
 
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def validate_debug(cls, v):
+        """Parse boolean values from environment variables."""
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "on")
+        return v
+
+    @field_validator("TOXICITY_LABELS", "BULLYING_LABELS", "ROLE_LABELS", "EMOTION_LABELS", mode="before")
+    @classmethod
+    def validate_labels(cls, v):
+        """Parse JSON string labels from environment variables."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return v
+        return v
+
     @field_validator("CONFIDENCE_THRESHOLD", mode="before")
     @classmethod
     def validate_confidence_threshold(cls, v):
