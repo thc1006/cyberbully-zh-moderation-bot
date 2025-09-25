@@ -1,0 +1,25 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pydantic in c:\users\thc1006\appdata\roaming\python\python313\site-packages (1.10.23)
+Collecting pydantic
+  Using cached pydantic-2.11.9-py3-none-any.whl.metadata (68 kB)
+Requirement already satisfied: pydantic-settings in c:\users\thc1006\appdata\roaming\python\python313\site-packages (2.10.1)
+Collecting pydantic-settings
+  Downloading pydantic_settings-2.11.0-py3-none-any.whl.metadata (3.4 kB)
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\thc1006\appdata\roaming\python\python313\site-packages (from pydantic) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in c:\users\thc1006\appdata\roaming\python\python313\site-packages (from pydantic) (2.33.2)
+Requirement already satisfied: typing-extensions>=4.12.2 in c:\users\thc1006\appdata\roaming\python\python313\site-packages (from pydantic) (4.14.1)
+Requirement already satisfied: typing-inspection>=0.4.0 in c:\users\thc1006\appdata\roaming\python\python313\site-packages (from pydantic) (0.4.1)
+Requirement already satisfied: python-dotenv>=0.21.0 in c:\users\thc1006\appdata\roaming\python\python313\site-packages (from pydantic-settings) (1.1.1)
+Using cached pydantic-2.11.9-py3-none-any.whl (444 kB)
+Downloading pydantic_settings-2.11.0-py3-none-any.whl (48 kB)
+Installing collected packages: pydantic, pydantic-settings
+  Attempting uninstall: pydantic
+    Found existing installation: pydantic 1.10.23
+    Uninstalling pydantic-1.10.23:
+      Successfully uninstalled pydantic-1.10.23
+  Attempting uninstall: pydantic-settings
+    Found existing installation: pydantic-settings 2.10.1
+    Uninstalling pydantic-settings-2.10.1:
+      Successfully uninstalled pydantic-settings-2.10.1
+
+Successfully installed pydantic-2.11.9 pydantic-settings-2.11.0

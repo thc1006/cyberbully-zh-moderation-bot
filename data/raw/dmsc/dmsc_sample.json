@@ -1,0 +1,17 @@
+[
+  {
+    "comment": "這部電影太精彩了！",
+    "rating": 5,
+    "movie": "sample_movie_1"
+  },
+  {
+    "comment": "劇情拖沓，不推薦",
+    "rating": 2,
+    "movie": "sample_movie_2"
+  },
+  {
+    "comment": "還可以，中規中矩",
+    "rating": 3,
+    "movie": "sample_movie_3"
+  }
+]

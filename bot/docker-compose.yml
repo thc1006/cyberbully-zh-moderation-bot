@@ -1,0 +1,71 @@
+# CyberPuppy LINE Bot Docker Compose 配置
+version: '3.8'
+
+services:
+  cyberpuppy-linebot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - LOG_LEVEL=info
+      - CYBERPUPPY_API_URL=http://cyberpuppy-api:8000
+    env_file:
+      - .env
+    depends_on:
+      - cyberpuppy-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - cyberpuppy-network
+
+  # CyberPuppy API 服務
+  cyberpuppy-api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONPATH=/app
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - cyberpuppy-network
+
+  # Nginx 反向代理（生產環境用）
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl:ro  # SSL 憑證目錄
+    depends_on:
+      - cyberpuppy-linebot
+      - cyberpuppy-api
+    restart: unless-stopped
+    networks:
+      - cyberpuppy-network
+    profiles:
+      - production  # 使用 docker-compose --profile production up
+
+networks:
+  cyberpuppy-network:
+    driver: bridge

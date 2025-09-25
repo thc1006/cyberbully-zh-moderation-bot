@@ -1,0 +1,94 @@
+# Development Dependencies
+# 開發環境所需的額外套件 (僅限開發工具，運行時依賴請放在 requirements.txt)
+
+-r requirements.txt
+
+# Testing - 固定相容版本
+pytest==8.3.3
+pytest-cov==4.1.0
+coverage[toml]==7.3.4  # 不要用 7.4+，有相容性問題
+pytest-asyncio==0.23.8
+pytest-aiohttp==1.0.5
+pytest-mock==3.14.0
+pytest-timeout==2.3.1
+pytest-xdist==3.6.1
+pytest-benchmark==4.0.0
+hypothesis==6.100.8
+faker==28.4.1
+
+# Code Quality
+black==24.4.2
+flake8==7.0.0
+flake8-docstrings==1.7.0
+flake8-bugbear==23.12.2
+flake8-comprehensions==3.14.0
+isort==5.13.2
+mypy==1.10.0
+pylint==3.2.3
+pydocstyle==6.3.0
+radon==6.0.1
+autopep8==2.0.4
+
+# Security
+bandit[toml]==1.7.8
+safety==3.2.0
+semgrep>=1.75.0  # Updated version compatible with urllib3 2.x
+
+# Documentation
+sphinx==7.3.7
+sphinx-rtd-theme==2.0.0
+sphinx-autodoc-typehints==2.1.0
+myst-parser==3.0.1
+
+# Development Tools
+ipython==8.24.0
+ipdb==0.13.13
+pre-commit==3.7.1
+pip-licenses==4.4.0
+locust==2.27.0
+memory-profiler==0.61.0
+line-profiler==4.1.2
+py-spy==0.3.14
+
+# Type Stubs
+types-requests==2.32.0.20240602
+types-PyYAML==6.0.12.20240311
+types-python-dateutil==2.9.0.20250822
+
+# Mock and Test Data
+factory-boy==3.3.0
+responses==0.24.1
+freezegun==1.4.0
+
+# API Testing
+httpx>=0.25.2,<0.26.0
+httpie>=3.2.2,<4.0.0
+
+# Development Utilities
+colorlog==6.8.0
+environs==11.0.0
+cookiecutter==2.5.0
+watchdog==3.0.0
+python-json-logger==2.0.7
+codecov==2.1.13
+
+# Build Tools
+twine==4.0.2
+wheel==0.42.0
+setuptools==69.0.3
+
+# CI/CD Tools
+tox==4.11.4
+nox==2023.4.22
+
+# Async Testing (解決 resolution-too-deep 問題)
+aiohttp>=3.8.0,<4.0.0
+yarl>=1.7.0,<2.0.0
+aioresponses==0.7.6
+
+# Missing dependencies for tests
+slowapi>=0.1.9  # Required by API app imports in tests
+docker>=7.0.0   # Required by integration tests
+
+# Network constraints - Allow flexible urllib3 version for semgrep compatibility
+urllib3>=1.26.0  # Flexible constraint to avoid conflicts

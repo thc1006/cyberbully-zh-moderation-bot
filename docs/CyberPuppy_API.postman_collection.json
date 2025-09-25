@@ -1,0 +1,996 @@
+{
+  "info": {
+    "name": "CyberPuppy API",
+    "description": "中文網路霸凌防治與毒性偵測 API 測試集合\n\n## 功能特色\n- 中文毒性與霸凌偵測\n- 多任務分析（毒性、霸凌、角色、情緒）\n- 高可解釋性（重要詞彙分析）\n- 隱私保護（不儲存原始文本）\n\n## 使用說明\n1. 設定環境變數 `{{api_key}}` 為你的 API 密鑰\n2. 選擇適當的環境（Production/Development）\n3. 執行測試請求\n\n## 測試流程\n1. 健康檢查 - 確認 API 服務正常\n2. 基本文本分析 - 測試正常文本\n3. 毒性文本檢測 - 測試有害內容\n4. 批次分析 - 測試多文本處理\n5. 錯誤處理 - 測試各種錯誤情況",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "cyberpuppy",
+    "_collection_link": "https://docs.cyberpuppy.ai/api"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 設定常用變數",
+          "pm.collectionVariables.set('timestamp', new Date().toISOString());",
+          "pm.collectionVariables.set('request_id', pm.variables.replaceIn('{{$randomUUID}}'));",
+          "",
+          "// 檢查 API 密鑰",
+          "if (!pm.collectionVariables.get('api_key')) {",
+          "  console.warn('請設定 api_key 環境變數');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 通用回應時間檢查",
+          "pm.test('Response time is acceptable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// 通用狀態碼檢查",
+          "if (pm.response.code >= 400) {",
+          "    pm.test('Error response has proper structure', function () {",
+          "        const response = pm.response.json();",
+          "        pm.expect(response).to.have.property('error', true);",
+          "        pm.expect(response).to.have.property('message');",
+          "        pm.expect(response).to.have.property('timestamp');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "api_key",
+      "value": "cp_your_api_key_here",
+      "type": "string",
+      "description": "CyberPuppy API 密鑰"
+    },
+    {
+      "key": "base_url",
+      "value": "{{url}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Health check response structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "    pm.expect(response).to.have.property('version');",
+                  "    pm.expect(response).to.have.property('uptime_seconds');",
+                  "});",
+                  "",
+                  "pm.test('Service is healthy', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.be.oneOf(['healthy', 'starting', 'degraded']);",
+                  "});",
+                  "",
+                  "// 儲存健康狀態供其他測試使用",
+                  "pm.collectionVariables.set('service_status', pm.response.json().status);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "CyberPuppy-Postman-Tests/1.0",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": ["{{base_url}}"],
+              "path": ["healthz"]
+            },
+            "description": "檢查 API 服務健康狀態，包含模型載入狀況"
+          },
+          "response": [
+            {
+              "name": "Healthy Response",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2024-12-30T10:15:30Z\",\n  \"version\": \"1.0.0\",\n  \"uptime_seconds\": 86400.5,\n  \"model_status\": {\n    \"models_loaded\": true,\n    \"device\": \"cuda:0\",\n    \"warmup_complete\": true,\n    \"total_predictions\": 1250,\n    \"average_processing_time\": 0.125\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "API Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('API info response structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('name');",
+                  "    pm.expect(response).to.have.property('description');",
+                  "    pm.expect(response).to.have.property('version');",
+                  "    pm.expect(response).to.have.property('features').that.is.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "取得 API 基本資訊與功能列表"
+          }
+        },
+        {
+          "name": "Model Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Model info response structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('models_loaded');",
+                  "    pm.expect(response).to.have.property('device');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/model-info",
+              "host": ["{{base_url}}"],
+              "path": ["model-info"]
+            },
+            "description": "取得模型詳細資訊與載入狀態"
+          }
+        },
+        {
+          "name": "API Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Metrics response structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('total_predictions');",
+                  "    pm.expect(response).to.have.property('successful_predictions');",
+                  "    pm.expect(response).to.have.property('success_rate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            },
+            "description": "取得 API 效能指標與統計資料"
+          }
+        }
+      ],
+      "description": "系統健康檢查與基本資訊取得"
+    },
+    {
+      "name": "2. Text Analysis - Basic",
+      "item": [
+        {
+          "name": "Analyze Positive Text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Analysis response structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('toxicity');",
+                  "    pm.expect(response).to.have.property('bullying');",
+                  "    pm.expect(response).to.have.property('role');",
+                  "    pm.expect(response).to.have.property('emotion');",
+                  "    pm.expect(response).to.have.property('emotion_strength');",
+                  "    pm.expect(response).to.have.property('scores');",
+                  "    pm.expect(response).to.have.property('explanations');",
+                  "    pm.expect(response).to.have.property('text_hash');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "    pm.expect(response).to.have.property('processing_time_ms');",
+                  "});",
+                  "",
+                  "pm.test('Positive text classification', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.toxicity).to.equal('none');",
+                  "    pm.expect(response.emotion).to.be.oneOf(['pos', 'neu']);",
+                  "});",
+                  "",
+                  "pm.test('Scores are valid probabilities', function () {",
+                  "    const response = pm.response.json();",
+                  "    const scores = response.scores;",
+                  "    ",
+                  "    // 檢查毒性分數",
+                  "    const toxScores = scores.toxicity;",
+                  "    const toxSum = toxScores.none + toxScores.toxic + toxScores.severe;",
+                  "    pm.expect(toxSum).to.be.closeTo(1.0, 0.01);",
+                  "    ",
+                  "    // 檢查情緒分數",
+                  "    const emoScores = scores.emotion;",
+                  "    const emoSum = emoScores.positive + emoScores.neutral + emoScores.negative;",
+                  "    pm.expect(emoSum).to.be.closeTo(1.0, 0.01);",
+                  "});",
+                  "",
+                  "pm.test('Explanations are provided', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.explanations.important_words).to.be.an('array');",
+                  "    pm.expect(response.explanations.method).to.be.a('string');",
+                  "    pm.expect(response.explanations.confidence).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"今天天氣真好，心情很棒！謝謝大家的關心。\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "分析正面情緒文本，應該識別為無毒性且情緒正面"
+          },
+          "response": [
+            {
+              "name": "Positive Text Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"toxicity\": \"none\",\n  \"bullying\": \"none\",\n  \"role\": \"none\",\n  \"emotion\": \"pos\",\n  \"emotion_strength\": 3,\n  \"scores\": {\n    \"toxicity\": {\"none\": 0.85, \"toxic\": 0.12, \"severe\": 0.03},\n    \"bullying\": {\"none\": 0.90, \"harassment\": 0.08, \"threat\": 0.02},\n    \"role\": {\"none\": 0.80, \"perpetrator\": 0.08, \"victim\": 0.07, \"bystander\": 0.05},\n    \"emotion\": {\"positive\": 0.75, \"neutral\": 0.20, \"negative\": 0.05}\n  },\n  \"explanations\": {\n    \"important_words\": [\n      {\"word\": \"好\", \"importance\": 0.72},\n      {\"word\": \"棒\", \"importance\": 0.68},\n      {\"word\": \"謝謝\", \"importance\": 0.65}\n    ],\n    \"method\": \"IG\",\n    \"confidence\": 0.91\n  },\n  \"text_hash\": \"a1b2c3d4\",\n  \"timestamp\": \"2024-12-30T10:15:30Z\",\n  \"processing_time_ms\": 125.4\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze Neutral Text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Neutral text classification', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.toxicity).to.equal('none');",
+                  "    pm.expect(response.emotion).to.be.oneOf(['neu', 'pos']);",
+                  "    pm.expect(response.emotion_strength).to.be.at.most(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"請問今天的會議是幾點開始？\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "分析中性文本，測試日常對話的分類"
+          }
+        },
+        {
+          "name": "Analyze with Context",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Context analysis works', function () {",
+                  "    const response = pm.response.json();",
+                  "    // 帶上下文的分析應該更準確",
+                  "    pm.expect(response.explanations.confidence).to.be.above(0.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"我不同意你的看法\",\n  \"context\": \"剛才討論的是關於教育政策的議題，大家都在理性討論\",\n  \"thread_id\": \"edu_discussion_001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試帶上下文的文本分析，應該更準確地識別意圖"
+          }
+        }
+      ],
+      "description": "基本文本分析測試，包含正面、中性文本與上下文分析"
+    },
+    {
+      "name": "3. Text Analysis - Toxic Content",
+      "item": [
+        {
+          "name": "Analyze Toxic Text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Toxic text classification', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.toxicity).to.be.oneOf(['toxic', 'severe']);",
+                  "    pm.expect(response.emotion).to.equal('neg');",
+                  "    pm.expect(response.emotion_strength).to.be.at.least(3);",
+                  "});",
+                  "",
+                  "pm.test('Bullying detection works', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.bullying).to.be.oneOf(['harassment', 'threat']);",
+                  "});",
+                  "",
+                  "pm.test('Role classification for perpetrator', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.role).to.equal('perpetrator');",
+                  "});",
+                  "",
+                  "pm.test('Important words identified', function () {",
+                  "    const response = pm.response.json();",
+                  "    const importantWords = response.explanations.important_words;",
+                  "    ",
+                  "    // 應該識別出毒性詞彙",
+                  "    const highImportanceWords = importantWords.filter(w => w.importance > 0.7);",
+                  "    pm.expect(highImportanceWords).to.have.lengthOf.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"你這個笨蛋，滾開！不要再煩我了。\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "分析毒性文本，測試霸凌與毒性偵測能力"
+          },
+          "response": [
+            {
+              "name": "Toxic Text Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"toxicity\": \"toxic\",\n  \"bullying\": \"harassment\",\n  \"role\": \"perpetrator\",\n  \"emotion\": \"neg\",\n  \"emotion_strength\": 4,\n  \"scores\": {\n    \"toxicity\": {\"none\": 0.15, \"toxic\": 0.70, \"severe\": 0.15},\n    \"bullying\": {\"none\": 0.20, \"harassment\": 0.65, \"threat\": 0.15},\n    \"role\": {\"none\": 0.10, \"perpetrator\": 0.75, \"victim\": 0.10, \"bystander\": 0.05},\n    \"emotion\": {\"positive\": 0.05, \"neutral\": 0.15, \"negative\": 0.80}\n  },\n  \"explanations\": {\n    \"important_words\": [\n      {\"word\": \"笨蛋\", \"importance\": 0.89},\n      {\"word\": \"滾開\", \"importance\": 0.94},\n      {\"word\": \"煩\", \"importance\": 0.76}\n    ],\n    \"method\": \"IG\",\n    \"confidence\": 0.87\n  },\n  \"text_hash\": \"e5f6g7h8\",\n  \"timestamp\": \"2024-12-30T10:15:32Z\",\n  \"processing_time_ms\": 156.7\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze Severe Threat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Severe threat classification', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.toxicity).to.equal('severe');",
+                  "    pm.expect(response.bullying).to.equal('threat');",
+                  "    pm.expect(response.emotion_strength).to.equal(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"你等著瞧，我會讓你後悔的！\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "分析威脅性文本，測試嚴重等級的檢測"
+          }
+        },
+        {
+          "name": "Analyze Victim Expression",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Victim role detection', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.role).to.equal('victim');",
+                  "    pm.expect(response.emotion).to.equal('neg');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"請大家幫幫我，我一直被欺負，不知道該怎麼辦...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試受害者角色識別，檢測求助訊息"
+          }
+        }
+      ],
+      "description": "毒性與霸凌內容檢測測試，包含不同嚴重等級與角色識別"
+    },
+    {
+      "name": "4. Error Handling",
+      "item": [
+        {
+          "name": "Empty Text Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Empty text error response', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.be.true;",
+                  "    pm.expect(response.message).to.include('文本不能為空');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試空文本錯誤處理"
+          }
+        },
+        {
+          "name": "Text Too Long Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Text too long error response', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"{{$randomLoremParagraph}}\".repeat(50)\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試文本長度超過限制的錯誤處理"
+          }
+        },
+        {
+          "name": "Invalid JSON Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"測試文本\",\n  \"invalid_field\": [1, 2, 3,\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試無效 JSON 格式的錯誤處理"
+          }
+        },
+        {
+          "name": "Invalid API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Authentication error response', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.be.true;",
+                  "    pm.expect(response.message).to.include('Invalid API key');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "invalid_api_key",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"測試無效 API 密鑰\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試無效 API 密鑰的認證錯誤"
+          }
+        },
+        {
+          "name": "Rate Limit Test",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 快速發送多個請求測試限流",
+                  "pm.collectionVariables.set('rate_limit_test', true);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 這個測試可能會通過（如果還沒達到限流）或失敗（如果達到限流）",
+                  "if (pm.response.code === 429) {",
+                  "    pm.test('Rate limit error response', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.error).to.be.true;",
+                  "        pm.expect(response.message).to.include('Rate limit');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Request processed normally', function () {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"限流測試 - {{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試 API 限流機制（每分鐘 30 次請求）"
+          }
+        }
+      ],
+      "description": "各種錯誤情況的處理測試"
+    },
+    {
+      "name": "5. LINE Bot Webhook",
+      "item": [
+        {
+          "name": "LINE Webhook - Text Message",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 生成 LINE Webhook 簽名（需要 channel secret）",
+                  "const CryptoJS = require('crypto-js');",
+                  "",
+                  "const channelSecret = 'your_line_channel_secret';",
+                  "const requestBody = pm.request.body.raw;",
+                  "",
+                  "if (channelSecret && channelSecret !== 'your_line_channel_secret') {",
+                  "    const signature = CryptoJS.HmacSHA256(requestBody, channelSecret);",
+                  "    const base64Signature = CryptoJS.enc.Base64.stringify(signature);",
+                  "    pm.request.headers.add({key: 'X-Line-Signature', value: base64Signature});",
+                  "} else {",
+                  "    console.warn('請設定 LINE Channel Secret 以進行簽名驗證測試');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 如果沒有設定正確的簽名，應該會收到 400 錯誤",
+                  "if (pm.response.code === 400) {",
+                  "    pm.test('Signature verification works', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.message).to.include('Invalid signature');",
+                  "    });",
+                  "} else if (pm.response.code === 200) {",
+                  "    pm.test('LINE webhook processed successfully', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.status).to.equal('ok');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "LineBotWebhook/2.0"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"events\": [\n    {\n      \"type\": \"message\",\n      \"message\": {\n        \"type\": \"text\",\n        \"text\": \"你這個笨蛋！\",\n        \"id\": \"test_message_id\"\n      },\n      \"source\": {\n        \"type\": \"user\",\n        \"userId\": \"U1234567890abcdef\"\n      },\n      \"replyToken\": \"test_reply_token\",\n      \"timestamp\": {{$timestamp}}\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["webhook"]
+            },
+            "description": "測試 LINE Bot Webhook 文字訊息處理"
+          }
+        }
+      ],
+      "description": "LINE Bot Webhook 整合測試（需要設定 LINE Channel Secret）"
+    },
+    {
+      "name": "6. Performance Tests",
+      "item": [
+        {
+          "name": "Batch Analysis Simulation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response time under 2 seconds', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Long text analysis works', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    ",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.processing_time_ms).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"這是一段較長的文本，用來測試 API 的效能。我們需要確保即使是較長的文本，API 也能在合理的時間內完成分析。這段話包含了多種情緒和語調，可以測試模型的綜合分析能力。希望系統能準確識別出這段話的整體情緒傾向和可能的風險等級。\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試較長文本的處理效能"
+          }
+        },
+        {
+          "name": "Concurrent Requests Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Concurrent request handled', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// 記錄響應時間",
+                  "pm.collectionVariables.set('concurrent_response_time_' + pm.info.iterationCount, pm.response.responseTime);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"並行請求測試 {{$randomInt}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["analyze"]
+            },
+            "description": "測試並行請求處理能力（建議配合 Collection Runner 使用）"
+          }
+        }
+      ],
+      "description": "效能與負載測試"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "api_key",
+      "value": "cp_your_api_key_here",
+      "type": "string"
+    }
+  ],
+  "protocolProfileBehavior": {
+    "disableBodyPruning": true
+  }
+}

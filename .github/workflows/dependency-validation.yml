@@ -1,0 +1,436 @@
+name: Dependency Validation & Security
+
+on:
+  # Temporarily disabled due to pip-compile issues
+  # push:
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'requirements*.in'
+  #     - 'requirements*.txt'
+  #     - 'constraints.txt'
+  #     - 'pyproject.toml'
+  #     - '.github/workflows/dependency-validation.yml'
+  # pull_request:
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'requirements*.in'
+  #     - 'requirements*.txt'
+  #     - 'constraints.txt'
+  #     - 'pyproject.toml'
+  #     - '.github/workflows/dependency-validation.yml'
+  schedule:
+    # Weekly security check on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency-validation:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better security scanning
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install pip-tools and security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools pipdeptree safety bandit pip-audit
+
+    - name: Validate requirements files exist
+      run: |
+        test -f requirements.in || { echo "requirements.in missing"; exit 1; }
+        test -f requirements-dev.in || { echo "requirements-dev.in missing"; exit 1; }
+        test -f constraints.txt || { echo "constraints.txt missing"; exit 1; }
+
+    - name: Check requirements.in syntax
+      run: |
+        python -c "
+        import pkg_resources
+
+        def validate_requirements_file(filename):
+            try:
+                with open(filename, 'r') as f:
+                    content = f.read()
+
+                # Parse each line as a requirement
+                for line_num, line in enumerate(content.split('\n'), 1):
+                    line = line.strip()
+                    if line and not line.startswith('#') and not line.startswith('-r'):
+                        try:
+                            pkg_resources.Requirement.parse(line)
+                        except Exception as e:
+                            print(f'Invalid requirement on line {line_num} in {filename}: {line}')
+                            print(f'Error: {e}')
+                            return False
+                return True
+            except Exception as e:
+                print(f'Failed to read {filename}: {e}')
+                return False
+
+        valid = True
+        for filename in ['requirements.in', 'requirements-dev.in']:
+            if not validate_requirements_file(filename):
+                valid = False
+
+        exit(0 if valid else 1)
+        "
+
+    - name: Compile requirements (Production)
+      run: |
+        pip-compile \
+          --constraint constraints.txt \
+          --output-file requirements-test.txt \
+          --resolver=backtracking \
+          --strip-extras \
+          --annotation-style=line \
+          requirements.in
+
+    - name: Compile requirements (Development)
+      run: |
+        pip-compile \
+          --constraint constraints.txt \
+          --output-file requirements-dev-test.txt \
+          --resolver=backtracking \
+          --strip-extras \
+          --annotation-style=line \
+          requirements-dev.in
+
+    - name: Check if compiled requirements are up-to-date
+      run: |
+        # Compare production requirements
+        if ! cmp -s requirements.txt requirements-test.txt; then
+          echo "❌ requirements.txt is not up-to-date with requirements.in"
+          echo "Please run 'make deps-compile' and commit the changes"
+          echo ""
+          echo "Differences found:"
+          diff requirements.txt requirements-test.txt || true
+          exit 1
+        fi
+
+        # Compare development requirements
+        if ! cmp -s requirements-dev.txt requirements-dev-test.txt; then
+          echo "❌ requirements-dev.txt is not up-to-date with requirements-dev.in"
+          echo "Please run 'make deps-dev-compile' and commit the changes"
+          echo ""
+          echo "Differences found:"
+          diff requirements-dev.txt requirements-dev-test.txt || true
+          exit 1
+        fi
+
+        echo "✅ All compiled requirements are up-to-date"
+
+    - name: Install dependencies for validation
+      run: |
+        pip-sync requirements-test.txt
+
+    - name: Check for dependency conflicts
+      run: |
+        python -m pip check
+
+    - name: Generate dependency tree
+      run: |
+        pipdeptree --warn silence > dependency-tree.txt
+        echo "📦 Dependency tree generated:"
+        head -20 dependency-tree.txt
+
+    - name: Security audit with Safety
+      run: |
+        echo "🔒 Running Safety security audit..."
+        safety check --json --output safety-report.json || true
+
+        # Show summary even if there are vulnerabilities
+        if [ -f safety-report.json ]; then
+          python -c "
+          import json
+          try:
+              with open('safety-report.json', 'r') as f:
+                  data = json.load(f)
+
+              if isinstance(data, list) and len(data) > 0:
+                  print(f'⚠️  Found {len(data)} security vulnerabilities:')
+                  for vuln in data[:5]:  # Show first 5
+                      if isinstance(vuln, dict):
+                          pkg = vuln.get('package_name', 'Unknown')
+                          vuln_id = vuln.get('vulnerability_id', 'Unknown')
+                          severity = vuln.get('severity', 'Unknown')
+                          print(f'  - {pkg}: {vuln_id} (Severity: {severity})')
+                  if len(data) > 5:
+                      print(f'  ... and {len(data) - 5} more')
+                  exit(1)
+              else:
+                  print('✅ No security vulnerabilities found')
+          except Exception as e:
+              print(f'⚠️  Error parsing safety report: {e}')
+              exit(1)
+          "
+        fi
+
+    - name: Security audit with pip-audit
+      run: |
+        echo "🔍 Running pip-audit security scan..."
+        pip-audit --format=json --output=pip-audit-report.json || true
+
+        if [ -f pip-audit-report.json ]; then
+          python -c "
+          import json
+          try:
+              with open('pip-audit-report.json', 'r') as f:
+                  data = json.load(f)
+
+              vulnerabilities = data.get('vulnerabilities', [])
+              if vulnerabilities:
+                  print(f'⚠️  pip-audit found {len(vulnerabilities)} vulnerabilities:')
+                  for vuln in vulnerabilities[:5]:
+                      package = vuln.get('package', {}).get('name', 'Unknown')
+                      vuln_id = vuln.get('id', 'Unknown')
+                      print(f'  - {package}: {vuln_id}')
+                  if len(vulnerabilities) > 5:
+                      print(f'  ... and {len(vulnerabilities) - 5} more')
+              else:
+                  print('✅ pip-audit found no vulnerabilities')
+          except Exception as e:
+              print(f'⚠️  Error parsing pip-audit report: {e}')
+          "
+        fi
+
+    - name: Check for outdated packages
+      run: |
+        echo "📅 Checking for outdated packages..."
+        pip list --outdated --format=json > outdated-packages.json
+
+        python -c "
+        import json
+        try:
+            with open('outdated-packages.json', 'r') as f:
+                data = json.load(f)
+
+            if data:
+                print(f'📦 Found {len(data)} outdated packages:')
+                for pkg in data[:10]:  # Show first 10
+                    name = pkg.get('name', 'Unknown')
+                    current = pkg.get('version', 'Unknown')
+                    latest = pkg.get('latest_version', 'Unknown')
+                    print(f'  - {name}: {current} → {latest}')
+                if len(data) > 10:
+                    print(f'  ... and {len(data) - 10} more')
+
+                # Check for critical outdated packages
+                critical_packages = {'urllib3', 'requests', 'cryptography', 'pyjwt', 'fastapi', 'torch'}
+                outdated_critical = [pkg for pkg in data if pkg.get('name', '').lower() in critical_packages]
+
+                if outdated_critical:
+                    print(f'⚠️  Critical packages are outdated:')
+                    for pkg in outdated_critical:
+                        name = pkg.get('name', 'Unknown')
+                        current = pkg.get('version', 'Unknown')
+                        latest = pkg.get('latest_version', 'Unknown')
+                        print(f'  - {name}: {current} → {latest}')
+                    print('Consider updating these packages for security and compatibility.')
+            else:
+                print('✅ All packages are up-to-date')
+        except Exception as e:
+            print(f'Error checking outdated packages: {e}')
+        "
+
+    - name: Validate constraints effectiveness
+      run: |
+        echo "🔐 Validating constraints effectiveness..."
+
+        # Check if constraints are actually being used
+        python -c "
+        import pkg_resources
+        import re
+
+        def parse_constraints():
+            constraints = {}
+            try:
+                with open('constraints.txt', 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#'):
+                            # Parse constraint line
+                            match = re.match(r'^([a-zA-Z0-9_.-]+)(.*)', line)
+                            if match:
+                                pkg_name = match.group(1).lower()
+                                constraint = match.group(2)
+                                constraints[pkg_name] = constraint
+                return constraints
+            except Exception as e:
+                print(f'Error reading constraints: {e}')
+                return {}
+
+        def check_installed_vs_constraints():
+            constraints = parse_constraints()
+            if not constraints:
+                print('⚠️  No constraints found')
+                return
+
+            import subprocess
+            result = subprocess.run(['pip', 'list', '--format=json'],
+                                  capture_output=True, text=True)
+
+            if result.returncode != 0:
+                print('Error getting installed packages')
+                return
+
+            import json
+            installed = json.loads(result.stdout)
+
+            constrained_count = 0
+            for pkg in installed:
+                pkg_name = pkg['name'].lower()
+                if pkg_name in constraints:
+                    constrained_count += 1
+
+            print(f'📊 Constraints coverage: {constrained_count}/{len(installed)} packages')
+            if constrained_count > 0:
+                print('✅ Constraints are being applied')
+            else:
+                print('⚠️  No constraints seem to be active')
+
+        check_installed_vs_constraints()
+        "
+
+    - name: Upload dependency reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-reports-python-${{ matrix.python-version }}
+        path: |
+          requirements-test.txt
+          requirements-dev-test.txt
+          dependency-tree.txt
+          safety-report.json
+          pip-audit-report.json
+          outdated-packages.json
+        retention-days: 30
+
+  dependency-update-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install pip-tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools
+
+    - name: Check for dependency updates
+      run: |
+        # Create updated requirements files
+        pip-compile --constraint constraints.txt --upgrade --output-file requirements-updated.txt requirements.in
+        pip-compile --constraint constraints.txt --upgrade --output-file requirements-dev-updated.txt requirements-dev.in
+
+        # Check if there are any changes
+        changes_prod=false
+        changes_dev=false
+
+        if ! cmp -s requirements.txt requirements-updated.txt; then
+          changes_prod=true
+          echo "📦 Production dependencies have updates available"
+        fi
+
+        if ! cmp -s requirements-dev.txt requirements-dev-updated.txt; then
+          changes_dev=true
+          echo "🔧 Development dependencies have updates available"
+        fi
+
+        if [ "$changes_prod" = true ] || [ "$changes_dev" = true ]; then
+          echo "UPDATE_AVAILABLE=true" >> $GITHUB_ENV
+
+          # Generate update summary
+          echo "## Dependency Update Summary" > update-summary.md
+          echo "Automated dependency check found available updates:" >> update-summary.md
+          echo "" >> update-summary.md
+
+          if [ "$changes_prod" = true ]; then
+            echo "### Production Dependencies" >> update-summary.md
+            echo '```diff' >> update-summary.md
+            diff requirements.txt requirements-updated.txt | head -50 >> update-summary.md
+            echo '```' >> update-summary.md
+          fi
+
+          if [ "$changes_dev" = true ]; then
+            echo "### Development Dependencies" >> update-summary.md
+            echo '```diff' >> update-summary.md
+            diff requirements-dev.txt requirements-dev-updated.txt | head -50 >> update-summary.md
+            echo '```' >> update-summary.md
+          fi
+
+          echo "" >> update-summary.md
+          echo "Run \`make deps-upgrade\` to update dependencies." >> update-summary.md
+        else
+          echo "✅ All dependencies are up-to-date"
+          echo "UPDATE_AVAILABLE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Create issue for dependency updates
+      if: env.UPDATE_AVAILABLE == 'true'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('update-summary.md', 'utf8');
+
+          // Check if there's already an open issue
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'dependencies,automated'
+          });
+
+          const existingIssue = issues.data.find(issue =>
+            issue.title.includes('Dependency Updates Available')
+          );
+
+          const issueBody = `${summary}
+
+          ---
+          *This issue was automatically created by the dependency validation workflow.*
+          *Created on: ${new Date().toISOString()}*`;
+
+          if (existingIssue) {
+            // Update existing issue
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: issueBody
+            });
+
+            console.log(`Updated existing issue #${existingIssue.number}`);
+          } else {
+            // Create new issue
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📦 Dependency Updates Available',
+              body: issueBody,
+              labels: ['dependencies', 'automated', 'maintenance']
+            });
+
+            console.log(`Created new issue #${issue.data.number}`);
+          }
