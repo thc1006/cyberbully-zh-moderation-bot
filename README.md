@@ -3,7 +3,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![CUDA 12.4](https://img.shields.io/badge/CUDA-12.4-green.svg)](https://developer.nvidia.com/cuda-downloads)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
 
 [English Version](README_EN.md) | [專案狀態](PROJECT_STATUS.md) | [API 文件](http://localhost:8000/docs)
@@ -270,7 +270,7 @@ mypy src/
 
 ## 📜 授權條款
 
-MIT License - 詳見 [LICENSE](LICENSE)
+Apache License 2.0 - 詳見 [LICENSE](LICENSE)
 
 ## 🌟 致謝
 
