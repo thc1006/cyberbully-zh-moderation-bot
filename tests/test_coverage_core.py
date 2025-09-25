@@ -11,6 +11,7 @@ import tempfile
 import json
 from pathlib import Path
 from datetime import datetime
+import pytest
 
 # Import core modules that should work
 from cyberpuppy.config import Settings, get_config
@@ -18,6 +19,7 @@ from cyberpuppy.labeling.label_map import LabelMapper, TaskLabelConfig
 from cyberpuppy.models.result import DetectionResult, ModelOutput
 
 
+@pytest.mark.unit
 class TestConfigModule(unittest.TestCase):
     """Extended tests for config module to improve coverage"""
 
@@ -129,6 +131,7 @@ class TestConfigModule(unittest.TestCase):
         self.assertTrue(str(model_path).endswith("model.bin"))
 
 
+@pytest.mark.unit
 class TestLabelMapperModule(unittest.TestCase):
     """Extended tests for label mapper to improve coverage"""
 
@@ -256,6 +259,7 @@ class TestLabelMapperModule(unittest.TestCase):
         self.assertEqual(stats["num_classes"], 3)
 
 
+@pytest.mark.unit
 class TestModelOutputModule(unittest.TestCase):
     """Extended tests for model output classes"""
 
@@ -311,6 +315,7 @@ class TestModelOutputModule(unittest.TestCase):
         self.assertTrue(torch.equal(bullying_preds, expected_bullying))
 
 
+@pytest.mark.unit
 class TestDetectionResultModule(unittest.TestCase):
     """Extended tests for detection result"""
 
@@ -498,6 +503,7 @@ class TestDetectionResultModule(unittest.TestCase):
         self.assertIsInstance(safe_dict["text"], str)
 
 
+@pytest.mark.unit
 class TestEdgeCasesAndErrorHandling(unittest.TestCase):
     """Test edge cases and error handling across modules"""
 

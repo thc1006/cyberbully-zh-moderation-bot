@@ -29,6 +29,7 @@ from cyberpuppy.models.baselines import (
 )
 
 
+@pytest.mark.unit
 class TestModelConfig:
     """測試模型配置"""
 
@@ -76,6 +77,7 @@ class TestModelConfig:
         assert config.task_weights == custom_weights
 
 
+@pytest.mark.unit
 class TestFocalLoss:
     """測試Focal Loss"""
 
@@ -119,6 +121,7 @@ class TestFocalLoss:
         assert loss_none.shape == torch.Size([4])
 
 
+@pytest.mark.unit
 class TestMultiTaskDataset:
     """測試多任務資料集"""
 
@@ -200,6 +203,7 @@ class TestMultiTaskDataset:
         assert item["emotion_label"].item() == 0  # POSITIVE
 
 
+@pytest.mark.unit
 class TestMultiTaskHead:
     """測試多任務頭"""
 
@@ -298,6 +302,7 @@ class MockTokenizer:
         pass
 
 
+@pytest.mark.unit
 class TestBaselineModel:
     """測試基線模型"""
 
@@ -440,6 +445,7 @@ class TestBaselineModel:
             assert loaded_model.config.model_name == config.model_name
 
 
+@pytest.mark.unit
 class TestModelEvaluator:
     """測試模型評估器"""
 
@@ -473,6 +479,7 @@ class TestModelEvaluator:
         assert 0 <= f1 <= 1
 
 
+@pytest.mark.unit
 class TestCreateModelVariants:
     """測試模型變體建立"""
 
@@ -502,6 +509,7 @@ class TestCreateModelVariants:
         assert toxicity_only_config.task_weights["bullying"] == 0.0
 
 
+@pytest.mark.unit
 class TestIntegration:
     """整合測試"""
 

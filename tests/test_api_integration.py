@@ -9,11 +9,13 @@ from pathlib import Path
 api_dir = Path(__file__).parent.parent / "api"
 sys.path.insert(0, str(api_dir))
 
+import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from app import app  # noqa: E402
 from model_loader_simple import get_model_loader  # noqa: E402
 
 
+@pytest.mark.integration
 def test_api_analyze_endpoint():
     """Test the /analyze endpoint returns valid response structure."""
     # Initialize model loader manually for testing
@@ -76,6 +78,7 @@ def test_api_analyze_endpoint():
     return data
 
 
+@pytest.mark.integration
 def test_api_healthz_endpoint():
     """Test the /healthz endpoint."""
     client = TestClient(app)

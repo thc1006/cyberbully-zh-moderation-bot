@@ -10,6 +10,7 @@ import pytest
 from cyberpuppy.config import DevelopmentConfig, ProductionConfig, Settings, get_config
 
 
+@pytest.mark.unit
 class TestSettings:
     """Test Settings class."""
 
@@ -100,6 +101,7 @@ class TestSettings:
         assert cache_path == temp_dir / ".cache/temp.pkl"
 
 
+@pytest.mark.unit
 class TestConfigPresets:
     """Test configuration presets."""
 
@@ -142,6 +144,7 @@ class TestConfigPresets:
         assert settings.LOG_LEVEL == "DEBUG"
 
 
+@pytest.mark.unit
 class TestLabels:
     """Test label configurations."""
 
