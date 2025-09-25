@@ -1,6 +1,8 @@
 # Development Dependencies
 # 開發環境所需的額外套件 (僅限開發工具，運行時依賴請放在 requirements.txt)
 
+-r requirements.txt
+
 # Testing - 固定相容版本
 pytest==8.3.3
 pytest-cov==4.1.0

@@ -51,9 +51,7 @@ line-bot-sdk>=3.5.0  # LINE Bot SDK
 shap>=0.44.0,<1.0.0
 captum>=0.7.0,<1.0.0  # PyTorch 可解釋性工具
 
-# Testing
-pytest-cov>=4.1.0
-pytest-asyncio>=0.21.0
+# Testing (dev-only deps moved to requirements-dev.txt)
 
 # Development tools
 black>=23.12.0
