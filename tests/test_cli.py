@@ -7,7 +7,7 @@ import json
 import csv
 import tempfile
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 from cyberpuppy.cli import (
     CyberPuppyCLI,
@@ -272,11 +272,8 @@ class TestAnalyzeCommand:
             args.format = "table"
 
             with patch.object(self.command, "_create_progress_bar") as mock_progress:
-                mock_progress_bar = Mock()
-                mock_progress_bar.__enter__ = Mock(return_value=mock_progress_bar)
-                mock_progress_bar.__exit__ = Mock(return_value=None)
-                mock_progress_bar.add_task = Mock(return_value="task_id")
-                mock_progress_bar.update = Mock()
+                mock_progress_bar = MagicMock()
+                mock_progress_bar.add_task.return_value = "task_id"
                 mock_progress.return_value = mock_progress_bar
 
                 result = self.command.execute(args)
@@ -395,6 +392,7 @@ class TestTrainCommand:
         args.learning_rate = 2e-5
         args.output = "model.pt"
         args.config = None
+        args.config = None
 
         result = self.command.execute(args)
 
@@ -421,6 +419,8 @@ class TestTrainCommand:
             args.epochs = 15
             args.config = config_file
             args.output = "sentiment_model.pt"
+            args.batch_size = None
+            args.learning_rate = None
 
             self.mock_trainer.train.return_value = {"status": "completed"}
 
@@ -448,9 +448,13 @@ class TestTrainCommand:
         args = Mock()
         args.dataset = "COLD"
         args.epochs = 10
+        args.config = None  # No config file
+        args.batch_size = None  # Use default
+        args.learning_rate = None  # Use default
+        args.output = None  # Use default
 
         with patch.object(self.command, "_create_training_progress") as mock_progress:
-            mock_progress_bar = Mock()
+            mock_progress_bar = MagicMock()
             mock_progress.return_value = mock_progress_bar
 
             result = self.command.execute(args)
@@ -465,6 +469,10 @@ class TestTrainCommand:
         args = Mock()
         args.dataset = "COLD"
         args.epochs = 10
+        args.config = None
+        args.batch_size = None
+        args.learning_rate = None
+        args.output = None
 
         with pytest.raises(CLIError, match="Training failed"):
             self.command.execute(args)
@@ -766,7 +774,7 @@ class TestCLIProgressBars:
     def test_progress_bar_creation(self):
         """Test progress bar creation and updates."""
         with patch("src.cyberpuppy.cli.Progress") as mock_progress_class:
-            mock_progress = Mock()
+            mock_progress = MagicMock()
             mock_task = Mock()
             mock_progress_class.return_value = mock_progress
             mock_progress.add_task.return_value = mock_task

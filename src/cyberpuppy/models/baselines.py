@@ -879,7 +879,7 @@ def create_model_variants() -> Dict[str, ModelConfig]:
     # 單任務毒性偵測
     variants["toxicity_only"] = ModelConfig(
         model_name="hfl/chinese-macbert-base",
-        task_weights={"toxicity": 1.0, "emotion": 1.0, "bullying": 1.0, "role": 1.0},
+        task_weights={"toxicity": 1.0, "emotion": 0.0, "bullying": 0.0, "role": 0.0},
     )
 
     return variants

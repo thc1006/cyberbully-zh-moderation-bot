@@ -25,9 +25,9 @@ class TestSettings:
 
     def test_env_override(self, monkeypatch):
         """Test environment variable override."""
-        monkeypatch.setenv("DEBUG", "true")
-        monkeypatch.setenv("BATCH_SIZE", "32")
-        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        monkeypatch.setenv("CYBERPUPPY_DEBUG", "true")
+        monkeypatch.setenv("CYBERPUPPY_BATCH_SIZE", "32")
+        monkeypatch.setenv("CYBERPUPPY_LOG_LEVEL", "DEBUG")
 
         settings = Settings()
 
@@ -159,7 +159,7 @@ class TestLabels:
         import json
 
         custom_labels = ["safe", "warning", "danger"]
-        monkeypatch.setenv("TOXICITY_LABELS", json.dumps(custom_labels))
+        monkeypatch.setenv("CYBERPUPPY_TOXICITY_LABELS", json.dumps(custom_labels))
 
         settings = Settings()
         assert settings.TOXICITY_LABELS == custom_labels
