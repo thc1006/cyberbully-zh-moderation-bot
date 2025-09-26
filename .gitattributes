@@ -1,0 +1,5 @@
+data/processed/**/*.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/**/*.json filter=lfs diff=lfs merge=lfs -text
+models/bullying_improved/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+models/bullying_improved/**/*.bin filter=lfs diff=lfs merge=lfs -text
+models/bullying_improved/**/*.pt filter=lfs diff=lfs merge=lfs -text

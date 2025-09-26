@@ -135,6 +135,13 @@ data/raw/**/*.csv
 *.tar.gz
 *.zip
 
+# EXCEPTION: Allow trained models in production directory
+# These will be tracked by Git LFS
+!models/bullying_improved/**/*.bin
+!models/bullying_improved/**/*.safetensors
+!models/bullying_improved/**/*.pt
+!models/bullying_improved/**/*.pth
+
 # Specific large files found in scan
 models/gpu_trained_model/
 models/macbert_base_demo/
