@@ -1,0 +1,171 @@
+# 專門針對霸凌偵測F1優化的訓練配置
+# 目標: 霸凌偵測 F1 ≥ 0.75, 毒性偵測 F1 ≥ 0.78
+
+model:
+  base_model: "hfl/chinese-macbert-base"
+  architecture: "improved_detector"  # 使用改進的架構
+  use_focal_loss: true
+  use_class_weights: true
+  use_label_smoothing: true
+
+  # 模型配置
+  hidden_size: 768
+  max_length: 384  # RTX 3050 記憶體優化
+  num_attention_heads: 12
+  attention_dropout: 0.1
+
+  # 任務特定配置
+  toxicity_classes: 3  # none, toxic, severe
+  bullying_classes: 3  # none, harassment, threat
+  role_classes: 4      # none, perpetrator, victim, bystander
+  emotion_classes: 3   # pos, neu, neg
+
+  # 損失函數參數
+  focal_loss:
+    alpha: [0.25, 0.75, 1.0]  # 對霸凌類別加重
+    gamma: 2.0
+
+  label_smoothing:
+    epsilon: 0.1
+
+  task_weights:
+    toxicity: 1.0
+    bullying: 1.5    # 重點優化霸凌偵測
+    role: 0.8
+    emotion: 0.6
+
+data:
+  train_path: "data/processed/training_dataset/train.json"
+  val_path: "data/processed/training_dataset/val.json"
+  test_path: "data/processed/training_dataset/test.json"
+  cache_dir: "data/cache"
+
+  # RTX 3050 記憶體優化
+  num_workers: 1
+  pin_memory: true
+  prefetch_factor: 1
+
+  # 資料增強
+  augmentation:
+    enabled: true
+    techniques: ["synonym_replacement", "random_insertion"]
+    aug_p: 0.15
+
+training:
+  # 批次大小配置 (RTX 3050 4GB)
+  batch_size: 4
+  gradient_accumulation_steps: 8  # 等效batch_size=32
+  auto_batch_size: true
+
+  # 學習率排程
+  learning_rate: 2e-5
+  warmup_ratio: 0.1
+  lr_scheduler: "cosine_with_restarts"
+
+  # 訓練設定
+  num_epochs: 15
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+  # 記憶體優化
+  fp16: true
+  gradient_checkpointing: true
+  memory_efficient_attention: true
+  dataloader_drop_last: true
+
+optimization:
+  optimizer: "AdamW"
+  betas: [0.9, 0.999]
+  eps: 1e-8
+
+  # 早停設定 - 專注霸凌F1
+  early_stopping:
+    patience: 3
+    metric: "bullying_f1"
+    mode: "max"
+    min_delta: 0.001
+
+  # 類別權重自動計算
+  class_weights:
+    auto_calculate: true
+    strategy: "balanced"  # 平衡類別權重
+
+callbacks:
+  # 模型檢查點
+  model_checkpoint:
+    monitor: "bullying_f1"
+    mode: "max"
+    save_best_only: true
+    save_top_k: 3
+    save_last: true
+
+  # 學習率監控
+  lr_monitor:
+    logging_interval: "step"
+
+  # GPU記憶體監控
+  gpu_stats:
+    temperature: true
+    memory: true
+
+  # TensorBoard日誌
+  tensorboard:
+    log_dir: "logs/tensorboard/bullying_f1_optimization"
+    log_graph: true
+    log_hparams: true
+
+validation:
+  # 驗證頻率
+  check_val_every_n_epoch: 1
+  val_check_interval: 0.5  # 每半個epoch驗證一次
+
+  # 指標計算
+  metrics:
+    primary: "bullying_f1"  # 主要優化目標
+    secondary: ["toxicity_f1", "overall_macro_f1"]
+
+  # 詳細評估
+  compute_class_metrics: true
+  compute_confusion_matrix: true
+  save_predictions: true
+
+experiment:
+  name: "bullying_f1_075_v1"
+  version: "1.0"
+  output_dir: "experiments/bullying_f1_optimization"
+
+  # 實驗追蹤
+  tags: ["bullying_detection", "f1_optimization", "rtx3050"]
+  description: "專門優化霸凌偵測F1分數至0.75+"
+
+  # 再現性
+  seed: 42
+  deterministic: true
+
+  # 日誌設定
+  log_level: "INFO"
+  log_every_n_steps: 50
+
+  # 檢查點恢復
+  resume_from_checkpoint: null
+  auto_resume: true
+
+# 高級配置
+advanced:
+  # 不確定性估計
+  uncertainty_estimation: true
+  monte_carlo_dropout: true
+  mc_samples: 10
+
+  # 對抗訓練
+  adversarial_training:
+    enabled: false  # 首次訓練關閉
+    method: "fgsm"
+    epsilon: 0.01
+
+  # 知識蒸餾
+  knowledge_distillation:
+    enabled: false  # 後續優化時啟用
+    teacher_model: null
+    temperature: 4.0
+    alpha: 0.7
