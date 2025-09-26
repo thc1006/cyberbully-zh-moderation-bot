@@ -1,0 +1,117 @@
+{
+  "annotator_id": "bob",
+  "task_id": "demo_task",
+  "completed_at": "2025-09-27T02:04:06.028377",
+  "annotations": {
+    "sample_001": {
+      "toxicity": "none",
+      "bullying": "none",
+      "role": "none",
+      "emotion": "pos",
+      "emotion_strength": "1",
+      "note": "",
+      "difficult": false,
+      "timestamp": "2025-09-27T02:04:06.028319",
+      "annotator_id": "bob"
+    },
+    "sample_002": {
+      "toxicity": "severe",
+      "bullying": "harassment",
+      "role": "perpetrator",
+      "emotion": "neg",
+      "emotion_strength": "4",
+      "note": "示範標註 by bob",
+      "difficult": true,
+      "timestamp": "2025-09-27T02:04:06.028328",
+      "annotator_id": "bob"
+    },
+    "sample_003": {
+      "toxicity": "none",
+      "bullying": "none",
+      "role": "none",
+      "emotion": "neu",
+      "emotion_strength": "0",
+      "note": "",
+      "difficult": false,
+      "timestamp": "2025-09-27T02:04:06.028334",
+      "annotator_id": "bob"
+    },
+    "sample_004": {
+      "toxicity": "severe",
+      "bullying": "harassment",
+      "role": "perpetrator",
+      "emotion": "neg",
+      "emotion_strength": "4",
+      "note": "示範標註 by bob",
+      "difficult": true,
+      "timestamp": "2025-09-27T02:04:06.028338",
+      "annotator_id": "bob"
+    },
+    "sample_005": {
+      "toxicity": "none",
+      "bullying": "none",
+      "role": "none",
+      "emotion": "pos",
+      "emotion_strength": "1",
+      "note": "",
+      "difficult": false,
+      "timestamp": "2025-09-27T02:04:06.028355",
+      "annotator_id": "bob"
+    },
+    "sample_006": {
+      "toxicity": "severe",
+      "bullying": "harassment",
+      "role": "perpetrator",
+      "emotion": "neg",
+      "emotion_strength": "4",
+      "note": "示範標註 by bob",
+      "difficult": true,
+      "timestamp": "2025-09-27T02:04:06.028359",
+      "annotator_id": "bob"
+    },
+    "sample_007": {
+      "toxicity": "none",
+      "bullying": "none",
+      "role": "none",
+      "emotion": "neu",
+      "emotion_strength": "0",
+      "note": "",
+      "difficult": false,
+      "timestamp": "2025-09-27T02:04:06.028364",
+      "annotator_id": "bob"
+    },
+    "sample_008": {
+      "toxicity": "severe",
+      "bullying": "threat",
+      "role": "perpetrator",
+      "emotion": "neg",
+      "emotion_strength": "4",
+      "note": "示範標註 by bob",
+      "difficult": true,
+      "timestamp": "2025-09-27T02:04:06.028368",
+      "annotator_id": "bob"
+    },
+    "sample_009": {
+      "toxicity": "none",
+      "bullying": "none",
+      "role": "none",
+      "emotion": "pos",
+      "emotion_strength": "1",
+      "note": "",
+      "difficult": false,
+      "timestamp": "2025-09-27T02:04:06.028373",
+      "annotator_id": "bob"
+    },
+    "sample_010": {
+      "toxicity": "severe",
+      "bullying": "harassment",
+      "role": "perpetrator",
+      "emotion": "neg",
+      "emotion_strength": "4",
+      "note": "示範標註 by bob",
+      "difficult": true,
+      "timestamp": "2025-09-27T02:04:06.028375",
+      "annotator_id": "bob"
+    }
+  }
+}

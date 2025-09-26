@@ -36,7 +36,7 @@ from transformers import (
 
 from .config import TrainingPipelineConfig
 from .monitor import TrainingMonitor
-from .checkpoint import CheckpointManager
+from .checkpoint_manager import CheckpointManager
 from ..models.multitask import MultiTaskBullyingDetector
 
 

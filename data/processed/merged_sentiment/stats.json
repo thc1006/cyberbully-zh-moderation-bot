@@ -1,16 +1,3 @@
-{
-  "total_samples": 68809,
-  "sources": [
-    "dmsc",
-    "chnsenticorp"
-  ],
-  "splits": {
-    "train": 46789,
-    "dev": 8258,
-    "test": 13762
-  },
-  "label_distribution": {
-    "positive": 48310,
-    "negative": 20499
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:e2ee95e75a2f714c9a69c207fffe2ff42ca7e2349bfecf4ebec71aef9b27d567
+size 244

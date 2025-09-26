@@ -1,0 +1,222 @@
+[
+  {
+    "id": "sample_001",
+    "text": "今天天氣真好，心情也很棒！",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025884",
+    "annotation_metadata": {
+      "original_index": 0,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_002",
+    "text": "你這個白痴，什麼都不懂還敢說話",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025905",
+    "annotation_metadata": {
+      "original_index": 1,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_003",
+    "text": "我覺得這個想法不錯，值得考慮",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025911",
+    "annotation_metadata": {
+      "original_index": 2,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_004",
+    "text": "滾開啦，沒人想聽你廢話",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025915",
+    "annotation_metadata": {
+      "original_index": 3,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_005",
+    "text": "謝謝大家的建議，我會參考的",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025920",
+    "annotation_metadata": {
+      "original_index": 4,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_006",
+    "text": "你就是個垃圾，活著浪費空氣",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025924",
+    "annotation_metadata": {
+      "original_index": 5,
+      "selection_method": "manual",
+      "annotation_priority": "high"
+    }
+  },
+  {
+    "id": "sample_007",
+    "text": "這個問題確實需要更多討論",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025928",
+    "annotation_metadata": {
+      "original_index": 6,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_008",
+    "text": "像你這種人就應該去死",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025938",
+    "annotation_metadata": {
+      "original_index": 7,
+      "selection_method": "manual",
+      "annotation_priority": "high"
+    }
+  },
+  {
+    "id": "sample_009",
+    "text": "很高興能和大家一起討論",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025941",
+    "annotation_metadata": {
+      "original_index": 8,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_010",
+    "text": "你真的很煩，可以閉嘴嗎",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025945",
+    "annotation_metadata": {
+      "original_index": 9,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_011",
+    "text": "期待下次的聚會活動",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025949",
+    "annotation_metadata": {
+      "original_index": 10,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_012",
+    "text": "你這麼醜還敢出來見人？",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025952",
+    "annotation_metadata": {
+      "original_index": 11,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_013",
+    "text": "這個計畫很有前景",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025956",
+    "annotation_metadata": {
+      "original_index": 12,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_014",
+    "text": "我要讓你付出代價，等著瞧",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025960",
+    "annotation_metadata": {
+      "original_index": 13,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_015",
+    "text": "大家合作愉快！",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025963",
+    "annotation_metadata": {
+      "original_index": 14,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_016",
+    "text": "你全家都是垃圾，去死吧",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025967",
+    "annotation_metadata": {
+      "original_index": 15,
+      "selection_method": "manual",
+      "annotation_priority": "high"
+    }
+  },
+  {
+    "id": "sample_017",
+    "text": "學習新知識真是令人興奮",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025970",
+    "annotation_metadata": {
+      "original_index": 16,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_018",
+    "text": "誰理你啊，自以為是的傢伙",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025974",
+    "annotation_metadata": {
+      "original_index": 17,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_019",
+    "text": "感謝老師的耐心指導",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025977",
+    "annotation_metadata": {
+      "original_index": 18,
+      "selection_method": "manual",
+      "annotation_priority": "medium"
+    }
+  },
+  {
+    "id": "sample_020",
+    "text": "我會找人修理你的",
+    "source": "demo_data",
+    "timestamp": "2025-09-27T02:04:06.025981",
+    "annotation_metadata": {
+      "original_index": 19,
+      "selection_method": "manual",
+      "annotation_priority": "high"
+    }
+  }
+]

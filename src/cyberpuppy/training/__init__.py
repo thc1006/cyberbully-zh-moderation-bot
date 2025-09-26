@@ -4,84 +4,96 @@ CyberPuppy 訓練模組
 """
 
 from .config import (
-    TrainingMasterConfig,
+    TrainingPipelineConfig,
     ModelConfig,
     DataConfig,
     TrainingConfig,
-    OptimizationConfig,
-    CallbackConfig,
+    OptimizerConfig,
+    ResourceConfig,
     ExperimentConfig,
-    create_arg_parser,
-    load_config_with_overrides
+    ConfigManager,
+    get_config
 )
 
-from .trainer import CyberPuppyTrainer, create_trainer_from_config
+# Note: Commented out temporarily due to missing dependencies
+# from .trainer import CyberPuppyTrainer, create_trainer_from_config
 
-from .callbacks import (
-    BaseCallback,
-    EarlyStoppingCallback,
-    ModelCheckpointCallback,
-    GPUMemoryCallback,
-    TensorBoardCallback,
-    MetricsLoggerCallback,
-    ProgressCallback,
-    CallbackManager,
-    create_default_callbacks,
-    TrainingState
-)
+# from .callbacks import (
+#     BaseCallback,
+#     EarlyStoppingCallback,
+#     ModelCheckpointCallback,
+#     GPUMemoryCallback,
+#     TensorBoardCallback,
+#     MetricsLoggerCallback,
+#     ProgressCallback,
+#     CallbackManager,
+#     create_default_callbacks,
+#     TrainingState
+# )
 
-from .utils import (
-    AutoBatchSizeFinder,
-    MemoryOptimizer,
-    GradientAccumulator,
-    WarmupScheduler,
-    TrainingMonitor,
-    ExperimentTracker,
-    set_seed,
-    count_parameters,
-    create_optimizer,
-    estimate_training_time,
-    save_predictions
+# from .utils import (
+#     AutoBatchSizeFinder,
+#     MemoryOptimizer,
+#     GradientAccumulator,
+#     WarmupScheduler,
+#     TrainingMonitor,
+#     ExperimentTracker,
+#     set_seed,
+#     count_parameters,
+#     create_optimizer,
+#     estimate_training_time,
+#     save_predictions
+# )
+
+from .checkpoint_manager import (
+    CheckpointManager,
+    TrainingMetrics,
+    CheckpointInfo
 )
 
 __all__ = [
     # Config
-    'TrainingMasterConfig',
+    'TrainingPipelineConfig',
     'ModelConfig',
     'DataConfig',
     'TrainingConfig',
-    'OptimizationConfig',
-    'CallbackConfig',
+    'OptimizerConfig',
+    'ResourceConfig',
     'ExperimentConfig',
-    'create_arg_parser',
-    'load_config_with_overrides',
+    'ConfigManager',
+    'get_config',
 
-    # Trainer
-    'CyberPuppyTrainer',
-    'create_trainer_from_config',
+    # Trainer (commented out due to missing dependencies)
+    # 'CyberPuppyTrainer',
+    # 'create_trainer_from_config',
 
-    # Callbacks
-    'BaseCallback',
-    'EarlyStoppingCallback',
-    'ModelCheckpointCallback',
-    'GPUMemoryCallback',
-    'TensorBoardCallback',
-    'MetricsLoggerCallback',
-    'ProgressCallback',
-    'CallbackManager',
-    'create_default_callbacks',
-    'TrainingState',
+    # Callbacks (commented out due to missing dependencies)
+    # 'BaseCallback',
+    # 'EarlyStoppingCallback',
+    # 'ModelCheckpointCallback',
+    # 'GPUMemoryCallback',
+    # 'TensorBoardCallback',
+    # 'MetricsLoggerCallback',
+    # 'ProgressCallback',
+    # 'CallbackManager',
+    # 'create_default_callbacks',
+    # 'TrainingState',
 
-    # Utils
-    'AutoBatchSizeFinder',
-    'MemoryOptimizer',
-    'GradientAccumulator',
-    'WarmupScheduler',
-    'TrainingMonitor',
-    'ExperimentTracker',
-    'set_seed',
-    'count_parameters',
-    'create_optimizer',
-    'estimate_training_time',
-    'save_predictions'
+    # Utils (commented out due to missing dependencies)
+    # 'AutoBatchSizeFinder',
+    # 'MemoryOptimizer',
+    # 'GradientAccumulator',
+    # 'WarmupScheduler',
+    # 'TrainingMonitor',
+    # 'ExperimentTracker',
+    # 'set_seed',
+    # 'count_parameters',
+    # 'create_optimizer',
+    # 'estimate_training_time',
+    # 'save_predictions',
+
+    # Checkpoint Management
+    'CheckpointManager',
+    'TrainingMetrics',
+    'CheckpointInfo'
 ]
