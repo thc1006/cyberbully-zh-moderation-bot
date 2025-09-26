@@ -1,0 +1,61 @@
+{
+  "timestamp": 1758915263.8112257,
+  "checks": {
+    "gpu": {
+      "available": true,
+      "name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+      "memory_gb": 3.99957275390625,
+      "cuda_version": "12.4",
+      "status": "success"
+    },
+    "resources": {
+      "ram_gb": 15.788383483886719,
+      "ram_available_gb": 2.82281494140625,
+      "disk_space_gb": 17.538299560546875,
+      "cpu_count": 8,
+      "status": "success"
+    },
+    "data": {
+      "datasets_found": [
+        [
+          "data/processed/training_dataset/train.json",
+          25659
+        ],
+        [
+          "data/processed/training_dataset/dev.json",
+          6430
+        ],
+        [
+          "data/processed/training_dataset/test.json",
+          5320
+        ]
+      ],
+      "total_samples": 37409,
+      "status": "success"
+    },
+    "configs": {
+      "configs_found": [
+        "src/cyberpuppy/training/config.py"
+      ],
+      "status": "success"
+    },
+    "dependencies": {
+      "missing_packages": [],
+      "optional_missing": [
+        "wandb",
+        "ckip_transformers"
+      ],
+      "status": "warning"
+    }
+  },
+  "recommendations": {
+    "batch_size": 8,
+    "gradient_accumulation_steps": 4,
+    "use_amp": true,
+    "num_workers": 4,
+    "epochs": 3,
+    "empty_cache_steps": 10
+  },
+  "python_version": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+  "platform": "win32"
+}

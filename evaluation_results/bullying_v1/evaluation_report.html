@@ -1,0 +1,179 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberPuppy 模型評估報告</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .metric-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; }
+        .status-pass { background-color: #28a745; }
+        .status-fail { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; color: #212529; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        .error-sample { background: #f8f9fa; border-left: 4px solid #dc3545; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .improvement-section { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin: 20px 0; border-radius: 4px; }
+        .chart-container { text-align: center; margin: 20px 0; }
+        .chart-container img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px; }
+        .summary-stats { display: flex; justify-content: space-around; flex-wrap: wrap; margin: 20px 0; }
+        .stat-item { text-align: center; padding: 15px; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 CyberPuppy 霸凌偵測模型評估報告</h1>
+        <p>評估時間: 2025-09-27 01:52:28</p>
+        <p>模型路徑: models/gpu_trained_model</p>
+    </div>
+
+    <div class="metric-card">
+        <h2>📊 評估總結</h2>
+        <div class="summary-stats">
+            <div class="stat-item">
+                <div class="stat-value">0.613</div>
+                <div class="stat-label">整體準確率</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">0.516</div>
+                <div class="stat-label">整體 F1 分數</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">0.162</div>
+                <div class="stat-label">霸凌偵測 F1</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">2062</div>
+                <div class="stat-label">錯誤案例數</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <h2>🎯 關鍵指標達標狀況</h2>
+        <div class="metric-grid">
+            <div>
+                <h3>霸凌偵測 F1 分數</h3>
+                <span class="status-badge status-fail">
+                    0.162 ✗ 未達標 (目標: ≥0.75)
+                </span>
+            </div>
+            <div>
+                <h3>霸凌偵測 Precision</h3>
+                <span class="status-badge status-fail">
+                    0.564 ✗ 未達標 (目標: ≥0.70)
+                </span>
+            </div>
+            <div>
+                <h3>霸凌偵測 Recall</h3>
+                <span class="status-badge status-fail">
+                    0.094 ✗ 未達標 (目標: ≥0.70)
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <h2>📈 詳細指標</h2>
+        <table>
+            <tr>
+                <th>類別</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1-Score</th>
+                <th>Support</th>
+            </tr>
+        
+            <tr>
+                <td>none</td>
+                <td>0.616</td>
+                <td>0.952</td>
+                <td>0.748</td>
+                <td>3216</td>
+            </tr>
+            
+            <tr>
+                <td>toxic</td>
+                <td>0.564</td>
+                <td>0.094</td>
+                <td>0.162</td>
+                <td>2107</td>
+            </tr>
+            
+        </table>
+    </div>
+
+    <div class="metric-card">
+        <h2>🔍 錯誤分析</h2>
+        <h3>錯誤模式分布</h3>
+        <table>
+            <tr><th>錯誤類型</th><th>數量</th><th>百分比</th></tr>
+        
+            <tr>
+                <td>toxic -> none</td>
+                <td>1908</td>
+                <td>92.5%</td>
+            </tr>
+            
+            <tr>
+                <td>none -> toxic</td>
+                <td>154</td>
+                <td>7.5%</td>
+            </tr>
+            
+        </table>
+
+        <h3>高置信度錯誤案例 (前5個)</h3>
+        
+    </div>
+
+    <div class="chart-container">
+        <h2>📊 視覺化分析</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+            <div>
+                <h3>混淆矩陣</h3>
+                <img src="confusion_matrix.png" alt="混淆矩陣">
+            </div>
+            <div>
+                <h3>每類別指標對比</h3>
+                <img src="per_class_metrics.png" alt="每類別指標">
+            </div>
+            <div style="grid-column: span 2;">
+                <h3>錯誤分析</h3>
+                <img src="error_analysis.png" alt="錯誤分析">
+            </div>
+        </div>
+    </div>
+        
+    <div class="improvement-section">
+        <h2>💡 改進建議</h2>
+        <ul>
+        <li>霸凌偵測 F1 分數未達標準 (0.75)，建議增加訓練數據或調整模型架構</li><li>霸凌偵測 Precision 偏低，可能存在較多誤報，建議提高決策閾值或改進特徵提取</li><li>霸凌偵測 Recall 偏低，可能漏檢較多真實案例，建議增加負樣本數據或調整損失函數</li><li>主要錯誤模式為 'toxic -> none'，建議針對此類案例進行數據增強</li>
+        </ul>
+    </div>
+            
+    <div class="metric-card">
+        <h2>📋 評估總結</h2>
+        <p>本次評估完成了對 CyberPuppy 霸凌偵測模型的全面測試，包括基礎指標計算、錯誤分析和視覺化展示。</p>
+        <p><strong>建議下一步行動:</strong></p>
+        <ul>
+            <li>根據錯誤分析結果優化訓練數據</li>
+            <li>考慮模型架構調整以提升性能</li>
+            <li>實施更嚴格的數據清理流程</li>
+            <li>進行更多樣化的測試場景驗證</li>
+        </ul>
+    </div>
+
+    <footer style="text-align: center; margin-top: 50px; color: #666;">
+        <p>CyberPuppy 霸凌偵測系統 - 讓網路環境更安全</p>
+    </footer>
+</body>
+</html>
+        

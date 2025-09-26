@@ -1,0 +1,62 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 3.313386039128379,
+    "val_loss": 3.329553410410881,
+    "train_metrics": {
+      "toxicity_accuracy": 0.333,
+      "bullying_accuracy": 0.333,
+      "emotion_accuracy": 0.3595,
+      "overall_accuracy": 0.3418333333333333
+    },
+    "val_metrics": {
+      "toxicity_accuracy": 0.35,
+      "bullying_accuracy": 0.346,
+      "emotion_accuracy": 0.3,
+      "overall_accuracy": 0.332
+    },
+    "learning_rate": 0.001,
+    "timestamp": "2025-09-27T03:38:36.053660",
+    "duration_seconds": 0.7386705875396729
+  },
+  {
+    "epoch": 2,
+    "train_loss": 2.7868414795587935,
+    "val_loss": 3.9139097034931183,
+    "train_metrics": {
+      "toxicity_accuracy": 0.63,
+      "bullying_accuracy": 0.619,
+      "emotion_accuracy": 0.637,
+      "overall_accuracy": 0.6286666666666667
+    },
+    "val_metrics": {
+      "toxicity_accuracy": 0.314,
+      "bullying_accuracy": 0.32,
+      "emotion_accuracy": 0.296,
+      "overall_accuracy": 0.31
+    },
+    "learning_rate": 0.001,
+    "timestamp": "2025-09-27T03:38:36.364536",
+    "duration_seconds": 0.28481078147888184
+  },
+  {
+    "epoch": 3,
+    "train_loss": 3.480187461489723,
+    "val_loss": 3.299112170934677,
+    "train_metrics": {
+      "toxicity_accuracy": 0.3225,
+      "bullying_accuracy": 0.3175,
+      "emotion_accuracy": 0.3115,
+      "overall_accuracy": 0.31716666666666665
+    },
+    "val_metrics": {
+      "toxicity_accuracy": 0.318,
+      "bullying_accuracy": 0.346,
+      "emotion_accuracy": 0.342,
+      "overall_accuracy": 0.3353333333333333
+    },
+    "learning_rate": 0.001,
+    "timestamp": "2025-09-27T03:38:50.179759",
+    "duration_seconds": 0.47622060775756836
+  }
+]

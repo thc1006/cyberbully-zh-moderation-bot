@@ -1,32 +1,3 @@
-{
-  "train": {
-    "total_samples": 25726,
-    "toxicity_distribution": {
-      "toxic": 12723,
-      "none": 13003
-    },
-    "emotion_distribution": {
-      "neutral": 25726
-    }
-  },
-  "dev": {
-    "total_samples": 6431,
-    "toxicity_distribution": {
-      "toxic": 3211,
-      "none": 3220
-    },
-    "emotion_distribution": {
-      "neutral": 6431
-    }
-  },
-  "test": {
-    "total_samples": 5323,
-    "toxicity_distribution": {
-      "toxic": 2107,
-      "none": 3216
-    },
-    "emotion_distribution": {
-      "neutral": 5323
-    }
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:b74d02db885af0df8afa9632a8fcfb9c3f1d08a1d6af7f247d73ddd89a52a54c
+size 577

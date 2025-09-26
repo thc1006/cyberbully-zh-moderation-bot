@@ -20,6 +20,13 @@ from .label_map import (
     to_sentiment_label,
 )
 
+from .improved_label_map import (
+    ImprovedLabelMapper,
+    TextFeatures,
+    improved_cold_to_unified,
+    analyze_text_bullying_features,
+)
+
 __all__ = [
     "LabelMapper",
     "UnifiedLabel",
@@ -35,4 +42,9 @@ __all__ = [
     "to_sccd_label",
     "to_chnci_label",
     "to_sentiment_label",
+    # 改進的映射功能
+    "ImprovedLabelMapper",
+    "TextFeatures",
+    "improved_cold_to_unified",
+    "analyze_text_bullying_features",
 ]
