@@ -1,0 +1,124 @@
+# CyberPuppy .dockerignore
+# 排除不必要的檔案和目錄，減少 Docker 映像大小
+
+# Git 相關
+.git/
+.gitignore
+.gitattributes
+
+# Python 編譯檔案
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# 環境變數檔
+.env*
+!.env.example
+
+# 開發工具
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 測試和覆蓋率
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# 文檔
+*.md
+!README.md
+docs/
+
+# Notebook 檔案
+notebooks/
+*.ipynb
+
+# 日誌檔案
+logs/
+*.log
+
+# 備份和時存檔
+*.bak
+*.tmp
+*.temp
+
+# 大型資料檔
+data/raw/
+data/external/
+*.csv
+*.json
+*.pkl
+*.pickle
+
+# 訓練結果
+models/checkpoints/
+models/temp/
+evaluation_results/
+experiments/
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# Docker 相關
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Makefile
+
+# 存放檔
+archive/
+
+# 配置檔案 (除了生產環境所需的)
+configs/
+!configs/docker/
+
+# 腳本
+scripts/
+
+# 時存目錄
+.tmp/
+.temp/
+
+# IDE 配置
+.vscode/
+.idea/
+
+# 虛擬環境
+venv/
+env/
+.venv/
+
+# 其他
+README_EN.md
+CONTRIBUTING.md
+LICENSE

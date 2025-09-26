@@ -15,7 +15,17 @@ from typing import AsyncGenerator, Generator
 import docker
 import psutil
 import os
-from . import PROJECT_ROOT, FIXTURES_DIR, TIMEOUT_SECONDS, TEST_API_BASE, TEST_BOT_BASE
+# 設定測試環境路徑 - 修復模組導入問題
+from pathlib import Path
+TEST_ROOT = Path(__file__).parent
+PROJECT_ROOT = TEST_ROOT.parent.parent
+FIXTURES_DIR = TEST_ROOT / "fixtures"
+
+# 測試常數
+TIMEOUT_SECONDS = 30
+MAX_RESPONSE_TIME_MS = 2000
+TEST_API_BASE = "http://localhost:8000"
+TEST_BOT_BASE = "http://localhost:8080"
 
 
 @pytest.fixture(scope="session")

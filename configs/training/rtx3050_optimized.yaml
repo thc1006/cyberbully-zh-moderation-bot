@@ -9,9 +9,9 @@ model:
   max_sequence_length: 384  # 降低序列長度節省記憶體
 
 data:
-  train_path: "data/processed/train.json"
-  val_path: "data/processed/val.json"
-  test_path: "data/processed/test.json"
+  train_path: "data/processed/training_dataset/train.json"
+  val_path: "data/processed/training_dataset/dev.json"
+  test_path: "data/processed/training_dataset/test.json"
   cache_dir: "data/cache"
   num_workers: 1  # 降低工作進程數
   pin_memory: true

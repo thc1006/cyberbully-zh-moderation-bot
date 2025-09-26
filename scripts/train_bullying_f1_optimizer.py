@@ -121,15 +121,22 @@ class CyberBullyDataset(torch.utils.data.Dataset):
             'attention_mask': encoding['attention_mask'].squeeze(),
         }
 
-        # 標籤映射
-        if 'toxicity' in item:
-            result['toxicity_labels'] = torch.tensor(item['toxicity'], dtype=torch.long)
-        if 'bullying' in item:
-            result['bullying_labels'] = torch.tensor(item['bullying'], dtype=torch.long)
-        if 'role' in item:
-            result['role_labels'] = torch.tensor(item['role'], dtype=torch.long)
-        if 'emotion' in item:
-            result['emotion_labels'] = torch.tensor(item['emotion'], dtype=torch.long)
+        # 標籤映射字典
+        label_maps = {
+            'toxicity': {'none': 0, 'toxic': 1, 'severe': 2},
+            'bullying': {'none': 0, 'harassment': 1, 'threat': 2},
+            'role': {'none': 0, 'perpetrator': 1, 'victim': 2, 'bystander': 3},
+            'emotion': {'pos': 0, 'neu': 1, 'neg': 2}
+        }
+
+        # 從嵌套結構獲取標籤
+        labels = item.get('label', {})
+
+        for task, label_map in label_maps.items():
+            if task in labels:
+                label_str = labels[task]
+                label_id = label_map.get(label_str, 0)  # 默認為 0 (none)
+                result[f'{task}_labels'] = torch.tensor(label_id, dtype=torch.long)
 
         return result
 
@@ -355,17 +362,8 @@ class BullyingF1Optimizer:
         # 建立模型
         self.model = ImprovedDetector(model_config)
 
-        # 計算類別權重
-        if self.config["model"]["use_class_weights"]:
-            class_weights = compute_class_weights(self.train_dataset)
-            self.model.set_class_weights(class_weights)
-
         # 移到GPU
         self.model.to(self.device)
-
-        # 啟用梯度檢查點
-        if self.config["training"].get("gradient_checkpointing", False):
-            self.model.gradient_checkpointing_enable()
 
         # 記錄模型資訊
         total_params = sum(p.numel() for p in self.model.parameters())
@@ -394,9 +392,9 @@ class BullyingF1Optimizer:
 
         self.optimizer = AdamW(
             optimizer_grouped_parameters,
-            lr=self.config["training"]["learning_rate"],
-            betas=self.config["optimization"].get("betas", [0.9, 0.999]),
-            eps=self.config["optimization"].get("eps", 1e-8)
+            lr=float(self.config["training"]["learning_rate"]),
+            betas=tuple(self.config["optimization"].get("betas", [0.9, 0.999])),
+            eps=float(self.config["optimization"].get("eps", 1e-8))
         )
 
         # 學習率排程器
@@ -436,10 +434,21 @@ class BullyingF1Optimizer:
             # 移動到GPU
             batch = {k: v.to(self.device) for k, v in batch.items()}
 
+            # 分離輸入和標籤
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = {
+                "toxicity_label": batch["toxicity_labels"],
+                "bullying_label": batch["bullying_labels"],
+                "role_label": batch["role_labels"],
+                "emotion_label": batch["emotion_labels"]
+            }
+
             # 前向傳播
             with torch.cuda.amp.autocast(enabled=self.config["training"]["fp16"]):
-                outputs = self.model(**batch)
-                loss = outputs["loss"] / gradient_accumulation_steps
+                outputs = self.model(input_ids, attention_mask)
+                loss_dict = self.model.compute_loss(outputs, labels)
+                loss = loss_dict["total"] / gradient_accumulation_steps
 
             # 反向傳播
             if self.scaler is not None:
@@ -451,8 +460,8 @@ class BullyingF1Optimizer:
 
             # 記錄任務損失
             for task in task_losses.keys():
-                if f"{task}_loss" in outputs:
-                    task_losses[task] += outputs[f"{task}_loss"].item()
+                if task in loss_dict:
+                    task_losses[task] += loss_dict[task].item()
 
             # 梯度更新
             if (batch_idx + 1) % gradient_accumulation_steps == 0:

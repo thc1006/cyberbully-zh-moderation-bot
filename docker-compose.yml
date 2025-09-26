@@ -1,0 +1,115 @@
+# CyberPuppy Docker Compose Configuration
+# 中文網路霸凌防治系統容器化部署
+
+services:
+  # CyberPuppy API 服務
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: cyberpuppy-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+      - ./data:/app/data:ro
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - WORKERS=1
+      # 可從 .env 檔案加載環境變數
+    env_file:
+      - ./configs/docker/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cyberpuppy-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # CyberPuppy LINE Bot 服務
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: cyberpuppy-bot
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - CYBERPUPPY_API_URL=http://api:8000
+      # LINE Bot 環境變數將從 .env 檔案加載
+    env_file:
+      - ./configs/docker/.env
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - cyberpuppy-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# 網路配置
+networks:
+  cyberpuppy-network:
+    driver: bridge
+    name: cyberpuppy-net
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 持久化儲存
+volumes:
+  # 模型檔案的持久化儲存
+  models_data:
+    driver: local
+    driver_opts:
+      type: bind
+      o: bind
+      device: ./models
+  
+  # 日誌檔案的持久化儲存
+  logs_data:
+    driver: local
+    driver_opts:
+      type: bind
+      o: bind
+      device: ./logs

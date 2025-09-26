@@ -109,9 +109,10 @@ class ClassBalancedFocalLoss(nn.Module):
         # Focal loss權重
         focal_weight = (1 - pt) ** self.gamma
 
-        # Alpha權重
+        # Alpha權重 - 確保在正確的設備上
         if self.alpha is not None:
-            alpha_t = self.alpha[targets].to(inputs.device)
+            # 將alpha移到正確設備，將targets移到CPU進行索引
+            alpha_t = self.alpha[targets.cpu()].to(inputs.device)
             focal_weight = alpha_t * focal_weight
 
         # 類別平衡權重

@@ -154,7 +154,7 @@ class ResultVisualizer:
 
         # 5. 錯誤類型分析
         if error_analysis and 'statistics' in error_analysis:
-            error_stats = error_analysis['statistics'].get('error_types', {}))
+            error_stats = error_analysis['statistics'].get('error_types', {})
             error_types = list(error_stats.keys())
             error_counts = list(error_stats.values())
 
