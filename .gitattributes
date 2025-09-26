@@ -3,3 +3,5 @@ data/processed/**/*.json filter=lfs diff=lfs merge=lfs -text
 models/bullying_improved/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
 models/bullying_improved/**/*.bin filter=lfs diff=lfs merge=lfs -text
 models/bullying_improved/**/*.pt filter=lfs diff=lfs merge=lfs -text
+models/bullying_a100_best/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+models/bullying_a100_best/**/*.bin filter=lfs diff=lfs merge=lfs -text
