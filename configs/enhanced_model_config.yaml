@@ -1,0 +1,250 @@
+# CyberPuppy Enhanced Model Configuration
+# 優化版霸凌檢測模型配置
+
+# 版本資訊
+version: "2.0.0"
+created_date: "2025-09-27"
+description: "Enhanced configuration for improved bullying detection (F1: 0.55 → 0.75+)"
+
+# 基礎模型配置
+base_model:
+  name: "hfl/chinese-macbert-base"
+  alternative: "hfl/chinese-roberta-wwm-ext"  # 備選方案
+  max_length: 384  # 增加以捕捉更多脈絡
+  hidden_size: 768
+  num_attention_heads: 12
+  dropout_rate: 0.1
+
+# 多任務配置
+tasks:
+  toxicity:
+    num_classes: 3  # none, toxic, severe
+    weight: 0.8
+    loss_type: "focal"
+    focal_gamma: 2.0
+    focal_alpha: [1.0, 2.0, 3.0]
+
+  bullying:
+    num_classes: 3  # none, harassment, threat
+    weight: 1.5     # 提高霸凌任務權重
+    loss_type: "weighted_focal"
+    focal_gamma: 2.5
+    class_weights: [1.0, 3.0, 4.0]  # 針對類別不平衡
+
+  role:
+    num_classes: 4  # none, perpetrator, victim, bystander
+    weight: 0.6
+    loss_type: "cross_entropy"
+    label_smoothing: 0.1
+
+  emotion:
+    num_classes: 3  # positive, neutral, negative
+    weight: 0.7
+    loss_type: "cross_entropy"
+    label_smoothing: 0.1
+
+  contrastive:
+    enabled: true
+    weight: 0.4
+    temperature: 0.07
+    projection_dim: 256
+
+# 架構增強
+architecture_enhancements:
+  # 霸凌專用模組
+  bullying_detector:
+    enabled: true
+    attention_heads: 12
+    lstm_hidden_size: 384
+    lstm_layers: 2
+    intensity_levels: 3
+
+  # 對比學習
+  contrastive_learning:
+    enabled: true
+    supervised: true
+    hard_negative_mining: true
+    temperature: 0.07
+
+  # 脈絡感知
+  context_awareness:
+    dialogue_history:
+      max_history: 10
+      temporal_embedding: true
+      role_aware_attention: true
+
+    event_aggregation:
+      event_types: 5
+      severity_levels: 4
+      temporal_window_attention: true
+
+# 訓練配置 (針對 RTX 3050 4GB 優化)
+training:
+  # 基礎參數
+  batch_size: 6               # 降低以適應 4GB VRAM
+  gradient_accumulation: 4    # 模擬 batch_size=24
+  max_epochs: 20
+  learning_rate: 1.5e-5       # 稍微降低
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  max_grad_norm: 1.0
+
+  # 記憶體優化
+  mixed_precision: true       # FP16 節省記憶體
+  gradient_checkpointing: true
+  empty_cache_frequency: 50
+
+  # 學習率調度
+  scheduler:
+    type: "cosine_with_restarts"
+    T_0: 5
+    T_mult: 2
+    eta_min: 1e-6
+
+  # 早停
+  early_stopping:
+    patience: 5
+    monitor: "bullying_f1"
+    min_delta: 0.001
+    mode: "max"
+
+# 課程學習配置
+curriculum_learning:
+  enabled: true
+  stages:
+    - name: "easy_samples"
+      epochs: 3
+      confidence_threshold: 0.8
+      focus_tasks: ["toxicity", "emotion"]
+
+    - name: "medium_samples"
+      epochs: 4
+      confidence_threshold: 0.5
+      focus_tasks: ["toxicity", "emotion", "bullying"]
+
+    - name: "hard_samples"
+      epochs: 5
+      confidence_threshold: 0.0
+      focus_tasks: ["bullying", "role"]
+      hard_negative_mining: true
+
+# 資料增強
+data_augmentation:
+  enabled: true
+  target_bullying_ratio: 0.3
+
+  strategies:
+    synonym_replacement:
+      enabled: true
+      ratio: 0.2
+      preserve_keywords: true
+
+    contextual_paraphrasing:
+      enabled: true
+      model: "chinese-paraphrase"
+      max_variations: 2
+
+    severity_scaling:
+      enabled: true
+      levels: [0.8, 1.0, 1.2]
+
+    role_perspective_shift:
+      enabled: true
+      victim_to_bystander: true
+
+    temporal_context_injection:
+      enabled: true
+      history_sampling: true
+
+# 評估配置
+evaluation:
+  metrics:
+    primary: "bullying_macro_f1"
+    secondary: ["toxicity_f1", "emotion_f1", "overall_accuracy"]
+
+  thresholds:
+    bullying_f1_target: 0.75
+    toxicity_f1_target: 0.78
+    emotion_f1_target: 0.85
+
+  validation:
+    split_ratio: 0.15
+    stratified: true
+    session_level_eval: true  # 針對 SCCD
+
+# 硬體與效能配置
+hardware:
+  device: "cuda"              # 自動偵測
+  gpu_memory_limit: 3.8       # GB, 為 RTX 3050 優化
+  cpu_workers: 2              # 資料載入工作程序
+  pin_memory: false           # 小記憶體設備不使用
+
+  # 效能目標
+  targets:
+    inference_latency: 180    # ms
+    throughput: 300           # samples/minute
+    memory_usage: 3.8         # GB
+
+# 部署配置
+deployment:
+  model_format: "pytorch"
+  quantization:
+    enabled: false            # 訓練完成後再考慮
+    method: "dynamic"
+
+  onnx_export:
+    enabled: false
+    opset_version: 11
+
+  serving:
+    batch_size: 8
+    max_sequence_length: 384
+    timeout: 5000             # ms
+
+# 監控與日誌
+monitoring:
+  wandb:
+    enabled: true
+    project: "cyberpuppy-enhanced"
+    tags: ["bullying", "multi-task", "chinese"]
+
+  tensorboard:
+    enabled: true
+    log_dir: "logs/enhanced_training"
+
+  checkpoints:
+    save_top_k: 3
+    monitor: "bullying_f1"
+    mode: "max"
+    save_weights_only: false
+
+# 偵錯與開發
+debug:
+  enabled: false
+  log_level: "INFO"
+  profile_training: false
+  validate_gradients: false
+  detect_anomaly: false
+
+  # 快速測試配置
+  fast_dev_run:
+    enabled: false
+    batches: 5
+
+# 安全與隱私
+security:
+  log_user_content: false
+  hash_user_ids: true
+  data_anonymization: true
+
+# 實驗追蹤
+experiments:
+  version_control: true
+  reproducible_seeds: true
+  save_hyperparameters: true
+
+  # A/B 測試配置
+  ab_testing:
+    enabled: false
+    control_ratio: 0.5
+    metrics_comparison: ["bullying_f1", "precision", "recall"]

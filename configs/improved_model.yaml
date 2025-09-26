@@ -1,0 +1,233 @@
+# 改進霸凌偵測模型配置
+# 針對F1分數從0.55提升至0.75+優化
+
+model:
+  # 基礎模型配置
+  model_name: "hfl/chinese-macbert-base"
+  hidden_size: 768
+  max_length: 512
+
+  # 任務配置
+  num_toxicity_classes: 3  # none, toxic, severe
+  num_bullying_classes: 3  # none, harassment, threat
+  num_role_classes: 4      # none, perpetrator, victim, bystander
+  num_emotion_classes: 3   # pos, neu, neg
+
+# 注意力機制配置
+attention:
+  num_attention_heads: 12
+  attention_dropout: 0.1
+  use_cross_attention: true
+  use_self_attention: true
+  position_aware_pooling: true
+
+# 損失函數配置
+loss:
+  # Focal Loss設定
+  use_focal_loss: true
+  focal_gamma: 2.0
+  focal_alpha:
+    toxicity: [0.25, 0.5, 0.25]     # none, toxic, severe權重
+    bullying: [0.25, 0.5, 0.25]     # none, harassment, threat權重
+    role: [0.4, 0.2, 0.2, 0.2]      # none, perpetrator, victim, bystander權重
+    emotion: [0.3, 0.4, 0.3]        # pos, neu, neg權重
+
+  # 類別平衡
+  use_class_balanced_loss: true
+  class_balanced_beta: 0.9999
+
+  # Label Smoothing
+  label_smoothing: 0.1
+
+# 正規化配置
+regularization:
+  dropout_rate: 0.1
+  layer_norm_eps: 1e-12
+  use_gradient_clipping: true
+  max_grad_norm: 1.0
+  weight_decay: 0.01
+
+# 對抗訓練配置
+adversarial_training:
+  use_adversarial_training: true
+  adversarial_epsilon: 0.01
+  adversarial_alpha: 0.3
+  attack_method: "fgsm"  # fgsm 或 pgd
+  pgd_steps: 3
+
+# 動態任務權重配置
+multi_task:
+  use_dynamic_task_weighting: true
+  task_weight_lr: 0.01
+  initial_task_weights:
+    toxicity: 1.0
+    bullying: 1.0
+    role: 0.5
+    emotion: 0.8
+
+  # 溫度縮放
+  temperature_scaling: true
+  initial_temperatures:
+    toxicity: 1.0
+    bullying: 1.0
+    role: 1.0
+    emotion: 1.0
+
+# 不確定性估計配置
+uncertainty:
+  use_uncertainty_estimation: true
+  monte_carlo_dropout: true
+  mc_samples: 10
+  uncertainty_threshold: 0.5  # 高不確定性閾值
+
+# 知識蒸餾配置（可選）
+knowledge_distillation:
+  use_knowledge_distillation: false
+  teacher_model_path: null
+  teacher_temperature: 4.0
+  distillation_alpha: 0.7
+  student_loss_weight: 0.3
+
+# 訓練配置
+training:
+  batch_size: 16
+  learning_rate: 2e-5
+  num_epochs: 15
+  warmup_steps: 1000
+
+  # 學習率調度
+  scheduler: "cosine"  # linear, cosine, polynomial
+  num_cycles: 1
+
+  # 早停
+  early_stopping:
+    patience: 3
+    min_delta: 0.001
+    monitor: "val_macro_f1"
+    mode: "max"
+
+# 資料增強配置
+data_augmentation:
+  use_back_translation: false
+  use_synonym_replacement: false
+  use_random_insertion: false
+  use_random_deletion: false
+  augmentation_probability: 0.1
+
+# 評估配置
+evaluation:
+  metrics:
+    - "accuracy"
+    - "macro_f1"
+    - "micro_f1"
+    - "weighted_f1"
+    - "precision"
+    - "recall"
+    - "auc"
+    - "aucpr"
+
+  # 閾值優化
+  threshold_optimization:
+    enable: true
+    method: "f1"  # f1, precision, recall, youden
+    search_range: [0.1, 0.9]
+    search_steps: 81
+
+# 模型集成配置
+ensemble:
+  use_ensemble: false
+  ensemble_methods: ["voting", "stacking"]
+  base_models:
+    - "improved_detector"
+    - "contextual_model"
+    - "baseline_model"
+  voting_strategy: "soft"  # hard, soft
+  stacking_meta_learner: "logistic_regression"
+
+# 推理配置
+inference:
+  batch_size: 32
+  use_fp16: true
+  enable_optimization: true
+
+  # TensorRT優化（可選）
+  tensorrt:
+    enable: false
+    precision: "fp16"
+    max_batch_size: 64
+
+# 模型保存配置
+checkpoint:
+  save_top_k: 3
+  save_last: true
+  monitor: "val_macro_f1"
+  mode: "max"
+  filename: "improved_detector_epoch_{epoch:02d}_f1_{val_macro_f1:.4f}"
+
+# 日誌配置
+logging:
+  log_every_n_steps: 50
+  save_dir: "logs"
+  experiment_name: "improved_bullying_detector"
+  version: "v1.0"
+
+# 資源配置
+resources:
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+
+# 設備配置
+device:
+  use_gpu: true
+  gpu_id: 0
+  mixed_precision: true
+  compile_model: false  # PyTorch 2.0編譯優化
+
+# 隱私配置
+privacy:
+  differential_privacy:
+    enable: false
+    noise_multiplier: 1.0
+    max_grad_norm: 1.0
+    delta: 1e-5
+
+  data_anonymization:
+    hash_user_ids: true
+    remove_personal_info: true
+
+# 實驗追蹤配置
+experiment_tracking:
+  use_wandb: false
+  use_tensorboard: true
+  use_mlflow: false
+
+  wandb:
+    project: "cyberpuppy"
+    entity: null
+    tags: ["improved_detector", "bullying_detection"]
+
+# 效能基準配置
+performance_targets:
+  # 主要指標目標
+  toxicity_macro_f1_target: 0.78
+  bullying_macro_f1_target: 0.75
+  emotion_macro_f1_target: 0.85
+
+  # 推理效能目標
+  max_inference_time_ms: 100
+  max_memory_usage_mb: 2048
+
+  # 不確定性校準目標
+  uncertainty_calibration_ece: 0.05  # Expected Calibration Error
+
+# 部署配置
+deployment:
+  model_format: "pytorch"  # pytorch, onnx, tensorrt
+  quantization: "fp16"     # fp32, fp16, int8
+
+  api:
+    max_requests_per_minute: 1000
+    timeout_seconds: 30
+    enable_caching: true
+    cache_ttl_seconds: 300

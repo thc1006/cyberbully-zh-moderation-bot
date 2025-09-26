@@ -1,0 +1,54 @@
+# CyberPuppy 預設訓練配置
+# 針對RTX 3050 4GB GPU優化
+
+model:
+  name: "hfl/chinese-macbert-base"
+  num_labels: 3
+  dropout_rate: 0.1
+  hidden_size: 768
+  max_sequence_length: 512
+
+data:
+  train_path: "data/processed/train.json"
+  val_path: "data/processed/val.json"
+  test_path: "data/processed/test.json"
+  cache_dir: "data/cache"
+  num_workers: 2
+  pin_memory: true
+  prefetch_factor: 2
+
+training:
+  batch_size: 8
+  auto_batch_size: true
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  num_epochs: 10
+  warmup_ratio: 0.1
+  lr_scheduler: "cosine"
+  fp16: true
+  dataloader_drop_last: true
+
+optimization:
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  optimizer: "AdamW"
+  memory_efficient_attention: true
+  cpu_offload: false
+
+callbacks:
+  early_stopping_patience: 3
+  early_stopping_metric: "eval_f1_macro"
+  early_stopping_mode: "max"
+  save_best_only: true
+  save_top_k: 2
+  monitor_gpu_memory: true
+  tensorboard_log_dir: "logs/tensorboard"
+
+experiment:
+  name: ""  # 自動生成
+  output_dir: "experiments"
+  resume_from_checkpoint: null
+  seed: 42
+  log_level: "INFO"
+  save_predictions: true

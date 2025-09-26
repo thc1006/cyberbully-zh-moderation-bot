@@ -1,0 +1,54 @@
+# 超參數搜索配置
+# 用於找到最佳訓練參數組合
+
+model:
+  name: "hfl/chinese-macbert-base"
+  num_labels: 3
+  dropout_rate: 0.15
+  hidden_size: 768
+  max_sequence_length: 400  # 稍短以節省記憶體
+
+data:
+  train_path: "data/processed/train.json"
+  val_path: "data/processed/val.json"
+  test_path: "data/processed/test.json"
+  cache_dir: "data/cache"
+  num_workers: 1
+  pin_memory: false
+  prefetch_factor: 1
+
+training:
+  batch_size: 4  # 小批次開始
+  auto_batch_size: true
+  gradient_accumulation_steps: 16  # 大累積補償小批次
+  learning_rate: 5.0e-5  # 稍高學習率進行搜索
+  weight_decay: 0.02
+  num_epochs: 8
+  warmup_ratio: 0.2  # 更長預熱
+  lr_scheduler: "cosine"
+  fp16: true
+  dataloader_drop_last: true
+
+optimization:
+  gradient_checkpointing: true
+  max_grad_norm: 0.5  # 更嚴格的梯度裁剪
+  optimizer: "AdamW"
+  memory_efficient_attention: true
+  cpu_offload: false
+
+callbacks:
+  early_stopping_patience: 2  # 快速搜索
+  early_stopping_metric: "eval_f1_macro"
+  early_stopping_mode: "max"
+  save_best_only: true
+  save_top_k: 1
+  monitor_gpu_memory: true
+  tensorboard_log_dir: "logs/tensorboard"
+
+experiment:
+  name: "hyperparameter_search"
+  output_dir: "experiments"
+  resume_from_checkpoint: null
+  seed: 42
+  log_level: "INFO"
+  save_predictions: false  # 節省空間

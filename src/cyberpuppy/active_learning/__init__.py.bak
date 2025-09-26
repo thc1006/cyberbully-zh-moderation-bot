@@ -1,0 +1,36 @@
+"""
+Active Learning Framework for CyberPuppy
+
+This module provides intelligent sample selection strategies for annotation,
+combining uncertainty sampling and diversity sampling to maximize labeling efficiency.
+"""
+
+from .base import ActiveLearner
+from .uncertainty import (
+    EntropySampling,
+    LeastConfidenceSampling,
+    MarginSampling,
+    BayesianUncertaintySampling
+)
+from .diversity import (
+    ClusteringSampling,
+    CoreSetSampling,
+    RepresentativeSampling
+)
+from .query_strategy import HybridQueryStrategy
+from .annotator import InteractiveAnnotator
+from .loop import ActiveLearningLoop
+
+__all__ = [
+    'ActiveLearner',
+    'EntropySampling',
+    'LeastConfidenceSampling',
+    'MarginSampling',
+    'BayesianUncertaintySampling',
+    'ClusteringSampling',
+    'CoreSetSampling',
+    'RepresentativeSampling',
+    'HybridQueryStrategy',
+    'InteractiveAnnotator',
+    'ActiveLearningLoop'
+]
