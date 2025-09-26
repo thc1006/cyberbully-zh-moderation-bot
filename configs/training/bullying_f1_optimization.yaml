@@ -20,23 +20,23 @@ model:
   role_classes: 4      # none, perpetrator, victim, bystander
   emotion_classes: 3   # pos, neu, neg
 
-  # 損失函數參數
+  # 損失函數參數 - 極大化霸凌偵測權重
   focal_loss:
-    alpha: [0.25, 0.75, 1.0]  # 對霸凌類別加重
-    gamma: 2.0
+    alpha: [0.2, 0.8, 1.0]  # 更加重視霸凌類別
+    gamma: 3.0  # 增加gamma以更關注難分類樣本
 
   label_smoothing:
-    epsilon: 0.1
+    epsilon: 0.05  # 降低平滑度以保持決策邊界清晰
 
   task_weights:
-    toxicity: 1.0
-    bullying: 1.5    # 重點優化霸凌偵測
-    role: 0.8
-    emotion: 0.6
+    toxicity: 0.8
+    bullying: 2.0    # 極大化霸凌偵測權重
+    role: 0.5
+    emotion: 0.3
 
 data:
   train_path: "data/processed/training_dataset/train.json"
-  val_path: "data/processed/training_dataset/val.json"
+  val_path: "data/processed/training_dataset/dev.json"
   test_path: "data/processed/training_dataset/test.json"
   cache_dir: "data/cache"
 
@@ -53,23 +53,23 @@ data:
 
 training:
   # 批次大小配置 (RTX 3050 4GB)
-  batch_size: 4
-  gradient_accumulation_steps: 8  # 等效batch_size=32
+  batch_size: 8
+  gradient_accumulation_steps: 4  # 等效batch_size=32
   auto_batch_size: true
 
-  # 學習率排程
-  learning_rate: 2e-5
-  warmup_ratio: 0.1
+  # 學習率排程 - 調低以更穩定訓練
+  learning_rate: 1e-5
+  warmup_ratio: 0.15
   lr_scheduler: "cosine_with_restarts"
 
-  # 訓練設定
-  num_epochs: 15
-  weight_decay: 0.01
-  max_grad_norm: 1.0
+  # 訓練設定 - 增加epochs以充分學習
+  num_epochs: 20
+  weight_decay: 0.02
+  max_grad_norm: 0.5
 
   # 記憶體優化
   fp16: true
-  gradient_checkpointing: true
+  gradient_checkpointing: false  # 關閉以避免相容性問題
   memory_efficient_attention: true
   dataloader_drop_last: true
 
@@ -78,12 +78,12 @@ optimization:
   betas: [0.9, 0.999]
   eps: 1e-8
 
-  # 早停設定 - 專注霸凌F1
+  # 早停設定 - 專注霸凌F1，更有耐心
   early_stopping:
-    patience: 3
+    patience: 5
     metric: "bullying_f1"
     mode: "max"
-    min_delta: 0.001
+    min_delta: 0.005
 
   # 類別權重自動計算
   class_weights:

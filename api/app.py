@@ -24,7 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-# Import model loader
+# Import model loader and SHAP explainer
 from model_loader import get_model_loader
 
 # 設定日誌
@@ -193,6 +193,121 @@ class ExplanationData(BaseModel):
     important_words: List[ImportantWord] = Field(..., description="重要詞彙與權重")
     method: str = Field(..., description="解釋方法 (IG/SHAP)")
     confidence: float = Field(..., ge=0, le=1, description="預測信心度")
+
+
+class SHAPExplanationRequest(BaseModel):
+    """SHAP解釋請求模型"""
+
+    text: str = Field(
+        ..., min_length=1, max_length=MAX_TEXT_LENGTH, description="待解釋文本"
+    )
+    task: str = Field(
+        "toxicity", description="解釋任務: toxicity|bullying|role|emotion"
+    )
+    max_evals: int = Field(
+        500, ge=100, le=2000, description="最大評估次數（影響準確性和速度）"
+    )
+    visualization_type: str = Field(
+        "waterfall", description="可視化類型: force|waterfall|text|summary"
+    )
+
+    @field_validator("task")
+    @classmethod
+    def validate_task(cls, v: str) -> str:
+        allowed_tasks = ["toxicity", "bullying", "role", "emotion"]
+        if v not in allowed_tasks:
+            raise ValueError(f"任務必須是以下之一: {', '.join(allowed_tasks)}")
+        return v
+
+    @field_validator("visualization_type")
+    @classmethod
+    def validate_visualization_type(cls, v: str) -> str:
+        allowed_types = ["force", "waterfall", "text", "summary"]
+        if v not in allowed_types:
+            raise ValueError(f"可視化類型必須是以下之一: {', '.join(allowed_types)}")
+        return v
+
+
+class SHAPToken(BaseModel):
+    """SHAP Token資訊"""
+
+    token: str = Field(..., description="Token文字")
+    shap_value: float = Field(..., description="SHAP值")
+    position: int = Field(..., description="Token位置")
+
+
+class SHAPExplanationResponse(BaseModel):
+    """SHAP解釋回應模型"""
+
+    # 預測結果
+    prediction: str = Field(..., description="預測標籤")
+    confidence: float = Field(..., ge=0, le=1, description="預測置信度")
+    base_value: float = Field(..., description="基線值")
+
+    # SHAP值
+    tokens: List[SHAPToken] = Field(..., description="Token SHAP值列表")
+    feature_importance: float = Field(..., description="總特徵重要性")
+
+    # 可視化資料（Base64編碼的圖片）
+    visualization_base64: Optional[str] = Field(None, description="可視化圖片（Base64）")
+
+    # 元資料
+    task: str = Field(..., description="解釋任務")
+    method: str = Field("SHAP", description="解釋方法")
+    text_hash: str = Field(..., description="輸入文本雜湊值")
+    timestamp: str = Field(..., description="分析時間戳記")
+    processing_time_ms: float = Field(..., description="處理時間（毫秒）")
+
+
+class MisclassificationAnalysisRequest(BaseModel):
+    """誤判分析請求模型"""
+
+    texts: List[str] = Field(
+        ..., min_items=1, max_items=100, description="文本列表（最多100個）"
+    )
+    true_labels: List[Dict[str, int]] = Field(
+        ..., description="真實標籤列表"
+    )
+    task: str = Field(
+        "toxicity", description="分析任務: toxicity|bullying|role|emotion"
+    )
+
+    @field_validator("texts")
+    @classmethod
+    def validate_texts(cls, v: List[str]) -> List[str]:
+        for text in v:
+            if not text or not text.strip():
+                raise ValueError("所有文本都不能為空")
+            if len(text) > MAX_TEXT_LENGTH:
+                raise ValueError(f"文本長度不能超過 {MAX_TEXT_LENGTH} 字符")
+        return [text.strip() for text in v]
+
+    @field_validator("true_labels")
+    @classmethod
+    def validate_true_labels(cls, v: List[Dict[str, int]]) -> List[Dict[str, int]]:
+        for label_dict in v:
+            for key, value in label_dict.items():
+                if not isinstance(value, int) or value < 0:
+                    raise ValueError("標籤值必須是非負整數")
+        return v
+
+
+class MisclassificationAnalysisResponse(BaseModel):
+    """誤判分析回應模型"""
+
+    misclassification_rate: float = Field(..., ge=0, le=1, description="誤判率")
+    total_cases: int = Field(..., description="總案例數")
+    misclassified_count: int = Field(..., description="誤判案例數")
+    correct_count: int = Field(..., description="正確案例數")
+
+    # 統計分析
+    error_statistics: Dict[str, float] = Field(..., description="錯誤統計")
+    top_error_features: List[Tuple[str, int]] = Field(..., description="高頻錯誤特徵")
+
+    # 元資料
+    task: str = Field(..., description="分析任務")
+    timestamp: str = Field(..., description="分析時間戳記")
+    processing_time_ms: float = Field(..., description="處理時間（毫秒）")
 
 
 class AnalyzeResponse(BaseModel):
@@ -478,6 +593,211 @@ async def get_model_info():
         )
 
 
+# SHAP解釋端點
+@app.post("/explain/shap", response_model=SHAPExplanationResponse)
+@limiter.limit("10/minute")  # SHAP計算較慢，限制更嚴格
+async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
+    """
+    SHAP可解釋性分析端點
+
+    使用SHAP方法解釋模型預測，提供token級別的貢獻度分析
+    """
+    start_time_ms = time.time() * 1000
+
+    try:
+        # 初始化SHAP解釋器
+        if model_loader is None or model_loader.detector is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="模型未載入，請稍後再試"
+            )
+
+        from cyberpuppy.explain.shap_explainer import SHAPExplainer, SHAPVisualizer
+        import base64
+        import io
+
+        # 創建SHAP解釋器
+        detector = model_loader.detector
+        device = getattr(detector, 'device', torch.device('cpu'))
+        shap_explainer = SHAPExplainer(detector, device)
+
+        # 生成文本雜湊
+        text_hash = generate_text_hash(data.text)
+
+        logger.info(
+            f"SHAP解釋請求 - Hash: {text_hash}, 任務: {data.task}, "
+            f"可視化: {data.visualization_type}, IP: {get_remote_address(request)}"
+        )
+
+        # 執行SHAP解釋
+        shap_result = shap_explainer.explain_text(data.text, max_evals=data.max_evals)
+
+        # 獲取任務相關的結果
+        prediction = getattr(shap_result, f"{data.task}_pred")
+        confidence = getattr(shap_result, f"{data.task}_prob")
+        base_value = getattr(shap_result, f"{data.task}_base_value")
+        shap_values = getattr(shap_result, f"{data.task}_shap_values")
+
+        # 構建Token列表
+        tokens = []
+        for i, token in enumerate(shap_result.tokens):
+            if token not in ["[CLS]", "[SEP]", "[PAD]"] and i < len(shap_values):
+                clean_token = token.replace("##", "")
+                tokens.append(SHAPToken(
+                    token=clean_token,
+                    shap_value=float(shap_values[i]),
+                    position=i
+                ))
+
+        # 生成可視化
+        visualization_base64 = None
+        if data.visualization_type != "none":
+            try:
+                visualizer = SHAPVisualizer(shap_explainer)
+
+                # 創建臨時文件保存圖片
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                    if data.visualization_type == "waterfall":
+                        fig = visualizer.create_waterfall_plot(
+                            shap_result, task=data.task, save_path=tmp_file.name
+                        )
+                    elif data.visualization_type == "text":
+                        fig = visualizer.create_text_plot(
+                            shap_result, task=data.task, save_path=tmp_file.name
+                        )
+                    elif data.visualization_type == "force":
+                        visualizer.create_force_plot(
+                            shap_result, task=data.task, save_path=tmp_file.name
+                        )
+
+                    # 讀取圖片並轉換為Base64
+                    with open(tmp_file.name, 'rb') as img_file:
+                        img_data = img_file.read()
+                        visualization_base64 = base64.b64encode(img_data).decode('utf-8')
+
+                    # 清理臨時文件
+                    import os
+                    os.unlink(tmp_file.name)
+
+            except Exception as viz_error:
+                logger.warning(f"可視化生成失敗: {viz_error}")
+                # 可視化失敗不影響主要功能
+
+        # 計算處理時間
+        processing_time = (time.time() * 1000) - start_time_ms
+
+        # 構建回應
+        response = SHAPExplanationResponse(
+            prediction=str(prediction),
+            confidence=confidence,
+            base_value=base_value,
+            tokens=tokens,
+            feature_importance=shap_result.feature_importance[data.task],
+            visualization_base64=visualization_base64,
+            task=data.task,
+            method="SHAP",
+            text_hash=text_hash,
+            timestamp=datetime.now().isoformat(),
+            processing_time_ms=round(processing_time, 2)
+        )
+
+        logger.info(
+            f"SHAP解釋完成 - Hash: {text_hash}, 任務: {data.task}, "
+            f"預測: {prediction}, 處理時間: {processing_time:.2f}ms"
+        )
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"SHAP解釋錯誤 - Hash: {generate_text_hash(data.text)}, 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SHAP解釋處理失敗，請稍後再試"
+        )
+
+
+@app.post("/explain/misclassification", response_model=MisclassificationAnalysisResponse)
+@limiter.limit("5/minute")  # 批量分析限制更嚴格
+async def analyze_misclassification(request: Request, data: MisclassificationAnalysisRequest):
+    """
+    誤判分析端點
+
+    分析多個文本的誤判模式，識別模型的錯誤傾向
+    """
+    start_time_ms = time.time() * 1000
+
+    try:
+        # 檢查模型狀態
+        if model_loader is None or model_loader.detector is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="模型未載入，請稍後再試"
+            )
+
+        from cyberpuppy.explain.shap_explainer import SHAPExplainer, MisclassificationAnalyzer
+
+        # 創建分析器
+        detector = model_loader.detector
+        device = getattr(detector, 'device', torch.device('cpu'))
+        shap_explainer = SHAPExplainer(detector, device)
+        analyzer = MisclassificationAnalyzer(shap_explainer)
+
+        logger.info(
+            f"誤判分析請求 - 文本數: {len(data.texts)}, 任務: {data.task}, "
+            f"IP: {get_remote_address(request)}"
+        )
+
+        # 執行誤判分析
+        analysis_result = analyzer.analyze_misclassifications(
+            data.texts, data.true_labels, data.task
+        )
+
+        # 提取統計數據
+        error_analysis = analysis_result.get("error_analysis", {})
+
+        # 計算處理時間
+        processing_time = (time.time() * 1000) - start_time_ms
+
+        # 構建回應
+        response = MisclassificationAnalysisResponse(
+            misclassification_rate=analysis_result["misclassification_rate"],
+            total_cases=len(data.texts),
+            misclassified_count=len(analysis_result["misclassified_cases"]),
+            correct_count=len(analysis_result["correct_cases"]),
+            error_statistics={
+                "avg_misclassified_confidence": error_analysis.get("avg_misclassified_confidence", 0),
+                "avg_correct_confidence": error_analysis.get("avg_correct_confidence", 0),
+                "confidence_gap": error_analysis.get("confidence_gap", 0),
+                "avg_misclassified_importance": error_analysis.get("avg_misclassified_importance", 0),
+                "avg_correct_importance": error_analysis.get("avg_correct_importance", 0)
+            },
+            top_error_features=error_analysis.get("top_error_features", [])[:10],
+            task=data.task,
+            timestamp=datetime.now().isoformat(),
+            processing_time_ms=round(processing_time, 2)
+        )
+
+        logger.info(
+            f"誤判分析完成 - 文本數: {len(data.texts)}, 任務: {data.task}, "
+            f"誤判率: {response.misclassification_rate:.2%}, "
+            f"處理時間: {processing_time:.2f}ms"
+        )
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"誤判分析錯誤 - 錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="誤判分析處理失敗，請稍後再試"
+        )
+
+
 # 管理端點 - 清理快取
 @app.post("/admin/clear-cache")
 async def clear_model_cache():
@@ -541,9 +861,19 @@ async def root():
             "Bullying behavior analysis",
             "Emotion classification",
             "Role identification",
-            "Model explainability",
+            "Model explainability (IG/SHAP)",
+            "SHAP visualization",
+            "Misclassification analysis",
             "Privacy-compliant logging",
         ],
+        "endpoints": {
+            "analyze": "/analyze",
+            "shap_explanation": "/explain/shap",
+            "misclassification_analysis": "/explain/misclassification",
+            "health_check": "/healthz",
+            "metrics": "/metrics",
+            "model_info": "/model-info"
+        },
     }
 
 

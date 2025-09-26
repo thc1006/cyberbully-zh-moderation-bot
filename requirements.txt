@@ -50,6 +50,8 @@ line-bot-sdk>=3.5.0  # LINE Bot SDK
 # Windows: These packages may require pre-compiled wheels
 shap>=0.44.0,<1.0.0
 captum>=0.7.0,<1.0.0  # PyTorch 可解釋性工具
+numba>=0.58.0  # Required by SHAP
+cloudpickle>=3.0.0  # Required by SHAP
 
 # Testing (dev-only deps moved to requirements-dev.txt)
 

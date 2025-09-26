@@ -1,0 +1,52 @@
+# CyberPuppy API Dockerfile
+# 基於 Python 3.10 slim 的 FastAPI 應用容器
+
+FROM python:3.10-slim
+
+# 設定維護者資訊
+LABEL maintainer="CyberPuppy Team"
+LABEL description="CyberPuppy Chinese Cyberbullying Detection API"
+LABEL version="1.0.0"
+
+# 設定工作目錄
+WORKDIR /app
+
+# 安裝系統依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# 升級 pip 和安裝 Python 依賴
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# 複製應用程式碼
+COPY src/ ./src/
+COPY api/ ./api/
+COPY models/ ./models/
+
+# 建立非 root 使用者以提高安全性
+RUN groupadd -r cyberpuppy && useradd -r -g cyberpuppy -s /bin/bash cyberpuppy \
+    && chown -R cyberpuppy:cyberpuppy /app
+
+# 切換到非 root 使用者
+USER cyberpuppy
+
+# 設定環境變數
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV WORKERS=1
+ENV HOST=0.0.0.0
+ENV PORT=8000
+
+# 暴露端口
+EXPOSE 8000
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/healthz || exit 1
+
+# 啟動命令
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
