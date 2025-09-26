@@ -1,0 +1,223 @@
+# Active Learning Configuration for CyberPuppy
+# 主動學習框架配置檔案
+
+# 模型設定
+model:
+  name: "hfl/chinese-roberta-wwm-ext"  # 使用中文 RoBERTa 模型
+  num_labels: 3  # none(0), toxic(1), severe(2)
+  max_length: 512  # 最大序列長度
+  cache_dir: "./model_cache"
+
+# 主動學習策略設定
+active_learning:
+  # 查詢策略類型: 'hybrid', 'adaptive', 'ensemble'
+  strategy: "hybrid"
+
+  # 不確定性採樣策略: 'entropy', 'confidence', 'margin', 'bayesian', 'bald'
+  uncertainty_strategy: "entropy"
+
+  # 多樣性採樣策略: 'clustering', 'coreset', 'representative', 'hybrid'
+  diversity_strategy: "clustering"
+
+  # 不確定性與多樣性的比例 (0-1)
+  uncertainty_ratio: 0.6
+
+  # 每次迭代選擇的樣本數
+  samples_per_iteration: 20
+
+  # 最大迭代次數
+  max_iterations: 50
+
+  # 目標 F1 分數（達到此分數後停止）
+  target_f1: 0.75
+
+  # 最大標註預算
+  max_budget: 1000
+
+  # MC Dropout 參數（適用於 Bayesian 策略）
+  n_dropout_samples: 10
+
+  # 聚類參數（適用於 clustering 策略）
+  n_clusters: null  # null 表示自動決定
+  distance_metric: "euclidean"  # "euclidean" 或 "cosine"
+
+  # 自適應策略參數
+  adaptation_rate: 0.1
+
+  # 集成策略配置
+  ensemble_strategies:
+    - uncertainty: "entropy"
+      diversity: "clustering"
+      ratio: 0.5
+    - uncertainty: "bald"
+      diversity: "coreset"
+      ratio: 0.6
+    - uncertainty: "margin"
+      diversity: "representative"
+      ratio: 0.4
+
+  # 投票方法: 'intersection', 'union', 'weighted'
+  voting_method: "intersection"
+
+# 訓練設定
+training:
+  batch_size: 16
+  learning_rate: 2e-5
+  epochs: 3
+  warmup_steps: 100
+  weight_decay: 0.01
+  early_stopping_patience: 5
+
+  # 訓練頻率：每 N 次迭代重新訓練
+  retrain_frequency: 1
+
+  # 是否使用混合精度訓練
+  use_amp: true
+
+# 資料設定
+data:
+  # 儲存目錄
+  save_dir: "./active_learning_results"
+  annotation_dir: "./annotations"
+  checkpoint_dir: "./checkpoints"
+
+  # 資料集路徑
+  initial_labeled_data: "./data/processed/initial_labeled.json"
+  unlabeled_pool: "./data/processed/unlabeled_pool.json"
+  test_data: "./data/processed/test.json"
+
+  # 資料預處理
+  text_column: "text"
+  label_column: "toxicity"
+
+  # 標籤映射
+  label_mapping:
+    none: 0
+    toxic: 1
+    severe: 2
+
+# 標註設定
+annotation:
+  # 批次標註大小
+  batch_size: 10
+
+  # 儲存頻率（每 N 個批次儲存一次）
+  save_frequency: 5
+
+  # 是否顯示模型預測
+  show_predictions: true
+
+  # 標註品質控制
+  min_confidence_threshold: 0.7
+  require_comments_for_uncertain: true
+
+  # 標註介面語言
+  language: "zh-TW"
+
+# 評估設定
+evaluation:
+  # 評估頻率（每 N 次迭代評估一次）
+  frequency: 1
+
+  # 評估指標
+  metrics:
+    - "f1_macro"
+    - "f1_micro"
+    - "f1_per_class"
+    - "accuracy"
+    - "precision"
+    - "recall"
+
+  # 是否計算混淆矩陣
+  compute_confusion_matrix: true
+
+  # 是否生成分類報告
+  generate_classification_report: true
+
+# 視覺化設定
+visualization:
+  # 是否自動生成圖表
+  auto_generate: true
+
+  # 圖表儲存格式
+  plot_format: "png"
+  dpi: 300
+
+  # 圖表類型
+  plot_types:
+    - "learning_curves"
+    - "annotation_efficiency"
+    - "annotation_distribution"
+    - "uncertainty_vs_diversity"
+
+  # 中文字體設定
+  chinese_font: "SimHei"
+
+  # 是否生成互動式圖表
+  interactive_plots: false
+
+# 停止條件設定
+stopping_criteria:
+  # 目標達成
+  target_f1_achieved: true
+
+  # 預算耗盡
+  budget_exhausted: true
+
+  # 效能停滯（連續 N 次迭代改善小於閾值）
+  performance_plateau:
+    enabled: true
+    patience: 3
+    min_improvement: 0.005
+
+  # 無更多未標註資料
+  no_unlabeled_data: true
+
+  # 最大迭代次數
+  max_iterations_reached: true
+
+# 日誌設定
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "./logs/active_learning.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # 是否記錄詳細的樣本選擇過程
+  log_sample_selection: true
+
+  # 是否記錄標註統計
+  log_annotation_stats: true
+
+# 系統設定
+system:
+  # 使用的設備: 'auto', 'cpu', 'cuda'
+  device: "auto"
+
+  # 隨機種子（可重現結果）
+  random_seed: 42
+
+  # 並行處理的工作進程數
+  num_workers: 4
+
+  # 記憶體管理
+  pin_memory: true
+
+  # 檢查點儲存頻率
+  checkpoint_frequency: 5
+
+# 進階設定
+advanced:
+  # 是否啟用不確定性校準
+  uncertainty_calibration: false
+
+  # 是否使用增量學習
+  incremental_learning: false
+
+  # 是否啟用主動學習的冷啟動
+  cold_start: true
+
+  # 樣本權重策略
+  sample_weighting: "uniform"  # "uniform", "confidence", "diversity"
+
+  # 是否使用預訓練嵌入進行特徵提取
+  use_pretrained_embeddings: true

@@ -1,0 +1,128 @@
+{
+  "timestamp": "2025-09-27T01:02:02.944307",
+  "base_directory": "data\\raw",
+  "datasets": {
+    "cold": {
+      "name": "COLD Dataset",
+      "description": "中文攻擊性語言檢測資料集",
+      "path": "data\\raw\\cold",
+      "files": [
+        {
+          "name": "COLDataset/train.csv",
+          "path": "COLDataset\\train.csv",
+          "size_mb": 3.964165687561035,
+          "exists": true
+        },
+        {
+          "name": "COLDataset/dev.csv",
+          "path": "COLDataset\\dev.csv",
+          "size_mb": 0.9753713607788086,
+          "exists": true
+        },
+        {
+          "name": "COLDataset/test.csv",
+          "path": "COLDataset\\test.csv",
+          "size_mb": 0.8318872451782227,
+          "exists": true
+        }
+      ],
+      "total_size_mb": 5.771424293518066,
+      "status": "complete",
+      "missing_files": []
+    },
+    "chnsenticorp": {
+      "name": "ChnSentiCorp",
+      "description": "中文情感分析資料集",
+      "path": "data\\raw\\chnsenticorp",
+      "files": [
+        {
+          "name": "train.arrow",
+          "path": "train.arrow",
+          "size_mb": 2.9630966186523438,
+          "exists": true
+        },
+        {
+          "name": "validation.arrow",
+          "path": "validation.arrow",
+          "size_mb": 0.36782073974609375,
+          "exists": true
+        },
+        {
+          "name": "test.arrow",
+          "path": "test.arrow",
+          "size_mb": 0.3635406494140625,
+          "exists": true
+        },
+        {
+          "name": "ChnSentiCorp_htl_all.csv",
+          "path": "ChnSentiCorp_htl_all.csv",
+          "size_mb": 2.777695655822754,
+          "exists": true
+        }
+      ],
+      "total_size_mb": 6.472153663635254,
+      "status": "complete",
+      "missing_files": [],
+      "metadata": {
+        "dataset_id": "seamew/ChnSentiCorp",
+        "download_method": "huggingface_hub",
+        "download_time": "2025-09-27T01:02:01.208085",
+        "success_count": 3,
+        "format": "parquet+arrow"
+      }
+    },
+    "dmsc": {
+      "name": "DMSC v2",
+      "description": "大眾點評情感分析資料集",
+      "path": "data\\raw\\dmsc",
+      "files": [
+        {
+          "name": "DMSC.csv",
+          "path": "DMSC.csv",
+          "size_mb": 386.8204565048218,
+          "exists": true
+        }
+      ],
+      "total_size_mb": 386.8204565048218,
+      "status": "complete",
+      "missing_files": []
+    },
+    "ntusd": {
+      "name": "NTUSD",
+      "description": "台大中文情感詞典",
+      "path": "data\\raw\\ntusd",
+      "files": [
+        {
+          "name": "data/正面詞無重複_9365詞.txt",
+          "path": "data\\正面詞無重複_9365詞.txt",
+          "size_mb": 0.07209205627441406,
+          "exists": true
+        },
+        {
+          "name": "data/負面詞無重複_11230詞.txt",
+          "path": "data\\負面詞無重複_11230詞.txt",
+          "size_mb": 0.08644771575927734,
+          "exists": true
+        }
+      ],
+      "total_size_mb": 0.1585397720336914,
+      "status": "complete",
+      "missing_files": [],
+      "metadata": {
+        "repository_url": "https://github.com/ntunlplab/NTUSD.git",
+        "download_method": "git_clone",
+        "download_time": "2025-09-27T00:58:02.478954",
+        "clone_depth": 1,
+        "file_count": 51,
+        "total_size_mb": 0.2729005813598633
+      }
+    }
+  },
+  "summary": {
+    "total": 4,
+    "complete": 4,
+    "partial": 0,
+    "missing": 0,
+    "error": 0
+  }
+}

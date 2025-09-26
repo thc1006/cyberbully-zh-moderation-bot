@@ -1,0 +1,187 @@
+{
+  "evaluation_config": {
+    "model_settings": {
+      "model_path": "./models/cyberpuppy_model",
+      "tokenizer_path": "./models/cyberpuppy_model",
+      "device": "auto",
+      "batch_size": 32,
+      "max_length": 512
+    },
+    "data_settings": {
+      "test_data_path": "./data/processed/test_dataset.csv",
+      "validation_data_path": "./data/processed/validation_dataset.csv",
+      "text_column": "text",
+      "label_column": "label",
+      "encoding": "utf-8"
+    },
+    "evaluation_settings": {
+      "output_dir": "./evaluation_results",
+      "enable_basic_metrics": true,
+      "enable_error_analysis": true,
+      "enable_explainability": true,
+      "enable_robustness": true,
+      "enable_visualization": true,
+      "enable_reports": true
+    },
+    "explainability_settings": {
+      "methods": ["integrated_gradients", "attention", "shap"],
+      "max_samples": 50,
+      "n_steps": 50,
+      "baseline_strategy": "zero",
+      "visualization": true,
+      "save_explanations": true
+    },
+    "robustness_settings": {
+      "test_types": [
+        "character_substitution",
+        "typo_injection",
+        "synonym_replacement",
+        "case_variation",
+        "punctuation_variation",
+        "space_insertion",
+        "repetition_attack",
+        "length_variation"
+      ],
+      "max_samples": 100,
+      "attack_strength": "medium",
+      "enable_adversarial": false,
+      "adversarial_epsilon": 0.01,
+      "adversarial_steps": 10
+    },
+    "visualization_settings": {
+      "create_dashboard": true,
+      "plot_confusion_matrix": true,
+      "plot_metrics_comparison": true,
+      "plot_confidence_distribution": true,
+      "plot_error_analysis": true,
+      "plot_robustness_results": true,
+      "save_plots": true,
+      "plot_format": "png",
+      "plot_dpi": 300,
+      "interactive_plots": true
+    },
+    "report_settings": {
+      "formats": ["html", "json", "pdf"],
+      "include_visualizations": true,
+      "include_detailed_analysis": true,
+      "include_recommendations": true,
+      "report_title": "CyberPuppy 霸凌偵測系統評估報告",
+      "report_subtitle": "模型效能與分析報告",
+      "author": "CyberPuppy Team",
+      "company": "網路霸凌防治系統"
+    },
+    "logging_settings": {
+      "level": "INFO",
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+      "log_file": "evaluation.log",
+      "console_output": true
+    },
+    "performance_settings": {
+      "enable_profiling": false,
+      "memory_monitoring": true,
+      "parallel_processing": true,
+      "max_workers": 4,
+      "cache_predictions": true,
+      "early_stopping": false
+    },
+    "quality_thresholds": {
+      "minimum_accuracy": 0.75,
+      "minimum_f1": 0.70,
+      "maximum_false_positive_rate": 0.15,
+      "maximum_false_negative_rate": 0.20,
+      "minimum_robustness_score": 0.60,
+      "maximum_attack_success_rate": 0.30
+    },
+    "class_weights": {
+      "none": 1.0,
+      "toxic": 1.5,
+      "severe": 2.0
+    },
+    "evaluation_metrics": [
+      "accuracy",
+      "precision",
+      "recall",
+      "f1",
+      "macro_precision",
+      "macro_recall",
+      "macro_f1",
+      "weighted_precision",
+      "weighted_recall",
+      "weighted_f1",
+      "specificity",
+      "sensitivity",
+      "auc_roc",
+      "auc_pr"
+    ]
+  },
+  "dataset_info": {
+    "description": "CyberPuppy 霸凌偵測測試數據集",
+    "version": "1.0.0",
+    "created_date": "2024-01-01",
+    "total_samples": 10000,
+    "class_distribution": {
+      "none": 6000,
+      "toxic": 3000,
+      "severe": 1000
+    },
+    "languages": ["zh-TW", "zh-CN"],
+    "data_sources": [
+      "COLD (Chinese Offensive Language Dataset)",
+      "ChnSentiCorp",
+      "DMSC v2",
+      "NTUSD"
+    ],
+    "preprocessing_steps": [
+      "text_normalization",
+      "traditional_simplified_conversion",
+      "ckip_tokenization",
+      "label_harmonization"
+    ]
+  },
+  "model_info": {
+    "architecture": "BERT-based Multi-task Model",
+    "base_model": "hfl/chinese-macbert-base",
+    "task_heads": [
+      "toxicity_classification",
+      "bullying_detection",
+      "role_identification",
+      "emotion_analysis"
+    ],
+    "training_data_size": 50000,
+    "validation_data_size": 10000,
+    "test_data_size": 10000,
+    "training_epochs": 10,
+    "learning_rate": 2e-5,
+    "batch_size": 16,
+    "max_sequence_length": 512,
+    "dropout_rate": 0.1,
+    "optimizer": "AdamW",
+    "scheduler": "linear_warmup"
+  },
+  "experiment_metadata": {
+    "experiment_name": "cyberpuppy_comprehensive_evaluation",
+    "experiment_id": "exp_001",
+    "researcher": "CyberPuppy Team",
+    "experiment_date": "2024-01-01",
+    "objectives": [
+      "評估模型在霸凌偵測任務上的效能",
+      "分析模型的錯誤模式和改進空間",
+      "測試模型的穩健性和可解釋性",
+      "生成詳細的評估報告和改進建議"
+    ],
+    "success_criteria": [
+      "整體 F1 分數 >= 0.80",
+      "各類別 F1 分數 >= 0.75",
+      "False Positive Rate <= 0.10",
+      "False Negative Rate <= 0.15",
+      "穩健性測試通過率 >= 70%"
+    ],
+    "tags": [
+      "cyberbullying_detection",
+      "chinese_nlp",
+      "multi_task_learning",
+      "bert_model",
+      "evaluation_framework"
+    ]
+  }
+}

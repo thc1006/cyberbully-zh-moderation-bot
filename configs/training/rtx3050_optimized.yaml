@@ -1,0 +1,54 @@
+# RTX 3050 4GB GPU 專用優化配置
+# 最大化記憶體利用效率
+
+model:
+  name: "hfl/chinese-macbert-base"
+  num_labels: 3
+  dropout_rate: 0.15  # 稍高的dropout防止過擬合
+  hidden_size: 768
+  max_sequence_length: 384  # 降低序列長度節省記憶體
+
+data:
+  train_path: "data/processed/train.json"
+  val_path: "data/processed/val.json"
+  test_path: "data/processed/test.json"
+  cache_dir: "data/cache"
+  num_workers: 1  # 降低工作進程數
+  pin_memory: true
+  prefetch_factor: 1
+
+training:
+  batch_size: 4  # 起始batch size
+  auto_batch_size: true
+  gradient_accumulation_steps: 8  # 增加累積步數模擬大batch
+  learning_rate: 3.0e-5
+  weight_decay: 0.01
+  num_epochs: 15
+  warmup_ratio: 0.1
+  lr_scheduler: "cosine"
+  fp16: true  # 必須啟用混合精度
+  dataloader_drop_last: true
+
+optimization:
+  gradient_checkpointing: true  # 必須啟用
+  max_grad_norm: 1.0
+  optimizer: "AdamW"
+  memory_efficient_attention: true
+  cpu_offload: false
+
+callbacks:
+  early_stopping_patience: 5
+  early_stopping_metric: "eval_f1_macro"
+  early_stopping_mode: "max"
+  save_best_only: true
+  save_top_k: 1  # 只保存最佳模型
+  monitor_gpu_memory: true
+  tensorboard_log_dir: "logs/tensorboard"
+
+experiment:
+  name: "rtx3050_optimized"
+  output_dir: "experiments"
+  resume_from_checkpoint: null
+  seed: 42
+  log_level: "INFO"
+  save_predictions: true

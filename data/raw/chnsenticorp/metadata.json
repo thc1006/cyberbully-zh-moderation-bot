@@ -1,0 +1,7 @@
+{
+  "dataset_id": "seamew/ChnSentiCorp",
+  "download_method": "huggingface_hub",
+  "download_time": "2025-09-27T01:02:01.208085",
+  "success_count": 3,
+  "format": "parquet+arrow"
+}
