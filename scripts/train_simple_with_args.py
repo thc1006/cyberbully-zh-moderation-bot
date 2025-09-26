@@ -149,8 +149,15 @@ def evaluate(model, dataloader, device):
     bullying_f1 = f1_score(bullying_true, bullying_preds, average='macro')
     toxicity_f1 = f1_score(toxicity_true, toxicity_preds, average='macro')
 
+    unique_labels = sorted(set(bullying_true))
+    label_names = ['none', 'harassment', 'threat']
+    target_names_actual = [label_names[i] for i in unique_labels]
+
     logger.info("\n霸凌偵測:\n" + classification_report(bullying_true, bullying_preds,
-                                                   target_names=['none', 'harassment', 'threat'], digits=4))
+                                                   labels=unique_labels,
+                                                   target_names=target_names_actual,
+                                                   digits=4,
+                                                   zero_division=0))
 
     return bullying_f1, toxicity_f1
 
