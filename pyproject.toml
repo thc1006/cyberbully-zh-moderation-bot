@@ -26,6 +26,8 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
@@ -37,7 +39,7 @@ dependencies = [
     "scikit-learn>=1.3.0,<2.0.0",
     # Windows: Use stable pre-compiled NumPy versions
     "numpy>=1.24.4,<2.0.0; python_version < '3.12'",
-    "numpy>=1.26.2,<2.0.0; python_version >= '3.12'",
+    "numpy>=1.26.2,<3.0.0; python_version >= '3.12'",
     "pandas>=2.1.0,<3.0.0",
 
     # Chinese NLP - Windows Compatible
@@ -46,8 +48,10 @@ dependencies = [
     "opencc-python-reimplemented>=0.1.7,<1.0.0",
 
     # Explainability
-    "captum>=0.6.0",
-    "shap>=0.42.0",
+    "captum>=0.7.0,<1.0.0",
+    "shap>=0.44.0,<1.0.0",
+    "numba>=0.58.0",
+    "cloudpickle>=3.0.0",
 
     # API & Bot
     "fastapi>=0.104.0",
@@ -145,7 +149,7 @@ markers = [
 
 [tool.black]
 line-length = 100
-target-version = ["py39", "py310", "py311"]
+target-version = ["py39", "py310", "py311", "py312", "py313"]
 include = '\.pyi?$'
 
 [tool.ruff]
