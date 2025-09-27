@@ -23,8 +23,15 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-import shap
 from transformers import AutoTokenizer
+
+# Conditional SHAP import to avoid numba/coverage conflicts
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except (ImportError, AttributeError):
+    SHAP_AVAILABLE = False
+    shap = None
 
 from ..models.improved_detector import ImprovedDetector
 from .ig import ExplanationResult

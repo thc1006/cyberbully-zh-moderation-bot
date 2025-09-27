@@ -269,6 +269,9 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
+# Backwards compatibility alias
+Config = Settings
+
 
 # Configuration presets for different environments
 class DevelopmentConfig:

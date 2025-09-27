@@ -767,8 +767,14 @@ def demo_integrated_gradients():
     logger.info("Demo completed. Check output files for results.")
 
 
-# Backwards compatibility alias
+# Backwards compatibility aliases
 IGExplainer = IntegratedGradientsExplainer
+
+# Mock config for compatibility
+class IGConfig:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 if __name__ == "__main__":
