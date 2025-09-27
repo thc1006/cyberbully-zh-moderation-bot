@@ -440,6 +440,7 @@ class SHAPVisualizer:
 
         # 計算累積值
         cumulative = base_value
+        prev_cumulative = base_value
         positions = []
         values = []
         colors = []

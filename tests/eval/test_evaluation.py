@@ -12,6 +12,7 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 import sys
 from pathlib import Path
+import torch
 
 # 添加項目根目錄到 Python 路徑
 project_root = Path(__file__).parent.parent.parent
