@@ -155,6 +155,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.hypothesis/
 
 # Build artifacts
 *.egg-info/
@@ -165,6 +166,15 @@ build/
 .coverage
 htmlcov/
 coverage.xml
+coverage.json
+*.coverage
+
+# Test reports
+.pytest_cache/
+.tox/
+junit.xml
+test-report.json
+report.html
 
 # Environment files
 .env

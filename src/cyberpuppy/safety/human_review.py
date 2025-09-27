@@ -414,31 +414,45 @@ class HumanReviewInterface:
                 appeals_in_period.append(appeal)
 
         # 統計資料
+        total_appeals_count = len(appeals_in_period)
+        approved_count = len(
+            [a for a in appeals_in_period if a.status == AppealStatus.APPROVED]
+        )
+        rejected_count = len(
+            [a for a in appeals_in_period if a.status == AppealStatus.REJECTED]
+        )
+        pending_count = len(
+            [a for a in appeals_in_period if a.status == AppealStatus.PENDING]
+        )
+        escalated_count = len(
+            [a for a in appeals_in_period if a.status == AppealStatus.ESCALATED]
+        )
+        reviewers_list = list(
+            set(a.reviewer for a in appeals_in_period if a.reviewer)
+        )
+
         stats = {
             "period": {
-                "total_appeals": len(appeals_in_period),
-                "approved": len(
-                    [a for a in appeals_in_period if a.status == AppealStatus.APPROVED]
-                ),
-                "rejected": len(
-                    [a for a in appeals_in_period if a.status == AppealStatus.REJECTED]
-                ),
-                "pending": len(
-                    [a for a in appeals_in_period if a.status == AppealStatus.PENDING]
-                ),
-                "escalated": len(
-                    [a for a in appeals_in_period if a.status == AppealStatus.ESCALATED]
-                ),
-                "reviewers": list(
-                    set(a.reviewer for a in appeals_in_period if a.reviewer)
-                ),
-            }
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat(),
+                "total_appeals": total_appeals_count,
+                "approved": approved_count,
+                "rejected": rejected_count,
+                "pending": pending_count,
+                "escalated": escalated_count,
+            },
+            "total_appeals": total_appeals_count,
+            "approved": approved_count,
+            "rejected": rejected_count,
+            "pending": pending_count,
+            "escalated": escalated_count,
+            "reviewers": reviewers_list,
         }
 
         # 計算批准率
-        reviewed = stats["period"]["approved"] + stats["period"]["rejected"]
+        reviewed = approved_count + rejected_count
         stats["approval_rate"] = round(
-            stats["period"]["approved"] / reviewed * 100 if reviewed > 0 else 0, 1
+            approved_count / reviewed * 100 if reviewed > 0 else 0, 1
         )
 
         if format == "json":
