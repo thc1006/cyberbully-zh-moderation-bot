@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import json
 import os
 from datetime import datetime
+from collections import defaultdict
 
 # 第三方可解釋性庫
 try:
