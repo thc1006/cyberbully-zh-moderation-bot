@@ -390,29 +390,59 @@ async def analyze_text_content(
             detector = model_loader.load_models()
 
         # Perform analysis
-        result = detector.analyze(text)
+        result_obj = detector.analyze(text)
 
         # Track successful prediction
         model_metrics["successful_predictions"] += 1
         processing_time = time.time() - start_time
         model_metrics["total_processing_time"] += processing_time
 
-        # Extract labels from dict results (detector returns dicts, API expects strings)
+        # Convert DetectionResult object to dict if needed
+        if hasattr(result_obj, 'to_dict'):
+            result = result_obj.to_dict()
+        elif isinstance(result_obj, dict):
+            result = result_obj
+        else:
+            # Fallback: try to convert object attributes to dict
+            result = {}
+            for attr in ['toxicity', 'bullying', 'role', 'emotion', 'emotion_strength', 'scores', 'explanations']:
+                if hasattr(result_obj, attr):
+                    result[attr] = getattr(result_obj, attr)
+
+        # Extract labels from nested dicts/objects (handle multiple formats)
         toxicity_label = result.get("toxicity")
-        if isinstance(toxicity_label, dict):
-            toxicity_label = toxicity_label.get("level", "none")
+        if toxicity_label is not None:
+            if isinstance(toxicity_label, dict):
+                # Format: {"level": "none", "confidence": 0.9} or {"prediction": "none", "confidence": 0.9}
+                toxicity_label = toxicity_label.get("level") or toxicity_label.get("prediction", "none")
+        else:
+            toxicity_label = "none"
 
         bullying_label = result.get("bullying")
-        if isinstance(bullying_label, dict):
-            bullying_label = bullying_label.get("level", "none")
+        if bullying_label is not None:
+            if isinstance(bullying_label, dict):
+                bullying_label = bullying_label.get("level") or bullying_label.get("prediction", "none")
+        else:
+            bullying_label = "none"
 
         role_label = result.get("role")
-        if isinstance(role_label, dict):
-            role_label = role_label.get("type", "none")
+        if role_label is not None:
+            if isinstance(role_label, dict):
+                role_label = role_label.get("type") or role_label.get("prediction", "none")
+        else:
+            role_label = "none"
 
         emotion_label = result.get("emotion")
-        if isinstance(emotion_label, dict):
-            emotion_label = emotion_label.get("label", "neu")
+        if emotion_label is not None:
+            if isinstance(emotion_label, dict):
+                emotion_label = emotion_label.get("label") or emotion_label.get("prediction", "neu")
+        else:
+            emotion_label = "neu"
+
+        # Get emotion strength
+        emotion_strength = result.get("emotion_strength", 0)
+        if isinstance(emotion_label, dict) and "strength" in emotion_label:
+            emotion_strength = emotion_label["strength"]
 
         # Normalize result format for API response
         normalized_result = {
@@ -420,7 +450,7 @@ async def analyze_text_content(
             "bullying": bullying_label,
             "role": role_label,
             "emotion": emotion_label,
-            "emotion_strength": result.get("emotion_strength", 0),
+            "emotion_strength": emotion_strength,
             "scores": result.get("scores", {}),
             "explanations": result.get("explanations", {})
         }
