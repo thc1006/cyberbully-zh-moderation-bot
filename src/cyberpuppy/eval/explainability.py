@@ -20,9 +20,10 @@ from collections import defaultdict
 try:
     import shap
     SHAP_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError) as e:
     SHAP_AVAILABLE = False
-    logging.warning("SHAP 未安裝，SHAP 功能將不可用")
+    shap = None
+    logging.warning(f"SHAP 未安裝或不相容，SHAP 功能將不可用: {e}")
 
 try:
     from lime.lime_text import LimeTextExplainer
