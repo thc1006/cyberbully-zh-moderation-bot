@@ -865,7 +865,7 @@ class TestCLIOutputFormatting:
 
     def test_table_formatting(self):
         """Test table output formatting."""
-        with patch("src.cyberpuppy.cli.Table") as mock_table_class:
+        with patch("cyberpuppy.cli.Table") as mock_table_class:
             mock_table = Mock()
             mock_table_class.return_value = mock_table
 
