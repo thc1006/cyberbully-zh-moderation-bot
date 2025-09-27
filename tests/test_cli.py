@@ -764,14 +764,27 @@ class TestCLIErrorHandling:
 class TestCLIIntegration:
     """Test CLI integration with core components."""
 
+    @patch("cyberpuppy.cli.ModelExporter")
+    @patch("cyberpuppy.cli.ModelEvaluator")
+    @patch("cyberpuppy.cli.ModelTrainer")
     @patch("cyberpuppy.cli.CyberPuppyDetector")
     @patch("cyberpuppy.cli.Console")
-    def test_main_function_integration(self, mock_console_class, mock_detector_class):
+    def test_main_function_integration(
+        self,
+        mock_console_class,
+        mock_detector_class,
+        mock_trainer_class,
+        mock_evaluator_class,
+        mock_exporter_class,
+    ):
         """Test main function integrates all components correctly."""
         mock_detector = Mock()
         mock_console = Mock()
         mock_detector_class.return_value = mock_detector
         mock_console_class.return_value = mock_console
+        mock_trainer_class.return_value = Mock()
+        mock_evaluator_class.return_value = Mock()
+        mock_exporter_class.return_value = Mock()
 
         # Mock the detector.analyze() to return a proper mock result
         mock_result = Mock()
