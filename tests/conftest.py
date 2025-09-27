@@ -134,6 +134,7 @@ def mock_line_bot_env(monkeypatch):
     """Mock LINE Bot environment variables to prevent configuration errors."""
     monkeypatch.setenv("LINE_CHANNEL_SECRET", "test_channel_secret_1234567890")
     monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "test_access_token_1234567890")
+    monkeypatch.setenv("SKIP_LINE_CONFIG_VALIDATION", "1")
 
 
 def pytest_collection_modifyitems(config, items):

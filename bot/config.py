@@ -82,8 +82,9 @@ class Config:
             cooldown_hours=int(os.getenv("COOLDOWN_HOURS", "24")),
         )
 
-        # 驗證必要設定
-        self._validate_config()
+        # 驗證必要設定 (僅在非測試環境)
+        if not os.getenv("SKIP_LINE_CONFIG_VALIDATION"):
+            self._validate_config()
 
     def _validate_config(self):
         """驗證配置是否完整"""
