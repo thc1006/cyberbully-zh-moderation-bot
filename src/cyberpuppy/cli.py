@@ -36,7 +36,7 @@ except ImportError:
     CyberPuppyDetector = None
 
 from .models.trainer import ModelTrainer
-from .evaluation.evaluator import ModelEvaluator
+from .models.baselines import ModelEvaluator
 from .models.exporter import ModelExporter
 from .config import load_config, get_default_config
 
