@@ -141,6 +141,17 @@ class Settings(BaseSettings):
                 return v
         return v
 
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, v):
+        """Parse CORS origins from environment variables. Converts single string to list."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return [v]
+        return v
+
     @field_validator("CONFIDENCE_THRESHOLD", mode="before")
     @classmethod
     def validate_confidence_threshold(cls, v):
