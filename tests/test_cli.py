@@ -695,7 +695,7 @@ class TestConfigCommand:
         args.set = None
         args.get = None
 
-        with patch("src.cyberpuppy.cli.load_config") as mock_load:
+        with patch("cyberpuppy.cli.load_config") as mock_load:
             mock_load.return_value = {
                 "model": {"name": "hfl/chinese-macbert-base"},
                 "training": {"batch_size": 32, "epochs": 10},
@@ -713,7 +713,7 @@ class TestConfigCommand:
         args.set = None
         args.get = "model.name"
 
-        with patch("src.cyberpuppy.cli.load_config") as mock_load:
+        with patch("cyberpuppy.cli.load_config") as mock_load:
             mock_load.return_value = {"model": {"name": "hfl/chinese-macbert-base"}}
 
             result = self.command.execute(args)
@@ -750,8 +750,10 @@ class TestCLIErrorHandling:
     @patch("sys.stderr")
     def test_keyboard_interrupt_handling(self, mock_stderr):
         """Test graceful handling of keyboard interrupts."""
-        with patch.object(self.cli, "run") as mock_run:
-            mock_run.side_effect = KeyboardInterrupt()
+        with patch("cyberpuppy.cli.CyberPuppyCLI") as mock_cli_class:
+            mock_cli = Mock()
+            mock_cli_class.return_value = mock_cli
+            mock_cli.run.side_effect = KeyboardInterrupt()
 
             result = main(["analyze", "test"])
 
@@ -762,8 +764,8 @@ class TestCLIErrorHandling:
 class TestCLIIntegration:
     """Test CLI integration with core components."""
 
-    @patch("src.cyberpuppy.cli.CyberPuppyDetector")
-    @patch("src.cyberpuppy.cli.Console")
+    @patch("cyberpuppy.cli.CyberPuppyDetector")
+    @patch("cyberpuppy.cli.Console")
     def test_main_function_integration(self, mock_console_class, mock_detector_class):
         """Test main function integrates all components correctly."""
         mock_detector = Mock()
@@ -771,7 +773,17 @@ class TestCLIIntegration:
         mock_detector_class.return_value = mock_detector
         mock_console_class.return_value = mock_console
 
-        mock_detector.analyze.return_value = {"toxicity": "none", "confidence": 0.95}
+        # Mock the detector.analyze() to return a proper mock result
+        mock_result = Mock()
+        mock_result.toxicity.prediction.value = "none"
+        mock_result.toxicity.confidence = 0.95
+        mock_result.bullying.prediction.value = "none"
+        mock_result.emotion.prediction.value = "neu"
+        mock_result.emotion_strength.prediction = 0
+        mock_result.role.prediction.value = "none"
+        mock_result.explanations = {}
+        mock_result.processing_time = 0.1
+        mock_detector.analyze.return_value = mock_result
 
         result = main(["analyze", "Hello world"])
 
@@ -831,7 +843,7 @@ class TestCLIProgressBars:
 
     def test_progress_bar_creation(self):
         """Test progress bar creation and updates."""
-        with patch("src.cyberpuppy.cli.Progress") as mock_progress_class:
+        with patch("cyberpuppy.cli.Progress") as mock_progress_class:
             mock_progress = MagicMock()
             mock_task = Mock()
             mock_progress_class.return_value = mock_progress
