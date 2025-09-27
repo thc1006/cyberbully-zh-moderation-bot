@@ -177,6 +177,10 @@ class Settings(BaseSettings):
             kwargs["MODEL_DIR"] = kwargs.pop("model_dir")
         if "max_text_length" in kwargs:
             kwargs["MAX_TEXT_LENGTH"] = kwargs.pop("max_text_length")
+        if "max_sequence_length" in kwargs:
+            kwargs["MAX_LENGTH"] = kwargs.pop("max_sequence_length")
+        if "batch_size" in kwargs:
+            kwargs["BATCH_SIZE"] = kwargs.pop("batch_size")
 
         super().__init__(**kwargs)
 
@@ -227,6 +231,16 @@ class Settings(BaseSettings):
     def max_text_length(self) -> int:
         """Lowercase alias for MAX_TEXT_LENGTH for test compatibility."""
         return self.MAX_TEXT_LENGTH
+
+    @property
+    def max_sequence_length(self) -> int:
+        """Lowercase alias for MAX_LENGTH for test compatibility."""
+        return self.MAX_LENGTH
+
+    @property
+    def batch_size(self) -> int:
+        """Lowercase alias for BATCH_SIZE for test compatibility."""
+        return self.BATCH_SIZE
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert settings to dictionary, excluding sensitive information."""

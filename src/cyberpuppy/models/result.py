@@ -539,6 +539,26 @@ class DetectionResult:
             "model_version": self.model_version,
         }
 
+        # Add simple test-compatible fields at top level
+        if self.toxicity_label is not None:
+            result["toxicity_label"] = self.toxicity_label
+        if self.toxicity_confidence is not None:
+            result["toxicity_confidence"] = self.toxicity_confidence
+        if self.emotion_label is not None:
+            result["emotion_label"] = self.emotion_label
+        if self.emotion_confidence is not None:
+            result["emotion_confidence"] = self.emotion_confidence
+        if self.bullying_label is not None:
+            result["bullying_label"] = self.bullying_label
+        if self.bullying_confidence is not None:
+            result["bullying_confidence"] = self.bullying_confidence
+        if self.role_label is not None:
+            result["role_label"] = self.role_label
+        if self.role_confidence is not None:
+            result["role_confidence"] = self.role_confidence
+        if self.explanation is not None:
+            result["explanation"] = self.explanation
+
         # Add task results if available
         if self.toxicity is not None:
             result["toxicity"] = self.toxicity.to_dict()
