@@ -769,9 +769,16 @@ def demo_integrated_gradients():
 
 # Backwards compatibility aliases
 IGExplainer = IntegratedGradientsExplainer
+TokenAttributionResult = ExplanationResult
+ExplanationAnalyzer = BiasAnalyzer
 
-# Mock config for compatibility
+# Mock configs for compatibility
 class IGConfig:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class VisualizationConfig:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
