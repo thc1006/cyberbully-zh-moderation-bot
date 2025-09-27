@@ -397,16 +397,44 @@ async def analyze_text_content(
         processing_time = time.time() - start_time
         model_metrics["total_processing_time"] += processing_time
 
+        # Extract labels from dict results (detector returns dicts, API expects strings)
+        toxicity_label = result.get("toxicity")
+        if isinstance(toxicity_label, dict):
+            toxicity_label = toxicity_label.get("level", "none")
+
+        bullying_label = result.get("bullying")
+        if isinstance(bullying_label, dict):
+            bullying_label = bullying_label.get("level", "none")
+
+        role_label = result.get("role")
+        if isinstance(role_label, dict):
+            role_label = role_label.get("type", "none")
+
+        emotion_label = result.get("emotion")
+        if isinstance(emotion_label, dict):
+            emotion_label = emotion_label.get("label", "neu")
+
+        # Normalize result format for API response
+        normalized_result = {
+            "toxicity": toxicity_label,
+            "bullying": bullying_label,
+            "role": role_label,
+            "emotion": emotion_label,
+            "emotion_strength": result.get("emotion_strength", 0),
+            "scores": result.get("scores", {}),
+            "explanations": result.get("explanations", {})
+        }
+
         # Log prediction (privacy compliant - no text content)
         text_hash = generate_text_hash(text)
         logger.info(
             f"Prediction success - Hash: {text_hash}, "
             f"Processing time: {processing_time:.3f}s, "
-            f"Toxicity: {result.get('toxicity', 'unknown')}, "
-            f"Emotion: {result.get('emotion', 'unknown')}"
+            f"Toxicity: {toxicity_label}, "
+            f"Emotion: {emotion_label}"
         )
 
-        return result
+        return normalized_result
 
     except Exception as e:
         model_metrics["failed_predictions"] += 1
