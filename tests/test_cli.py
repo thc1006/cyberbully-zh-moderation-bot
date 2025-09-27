@@ -594,12 +594,18 @@ class TestEvaluateCommand:
 
     def test_evaluate_missing_model_error(self):
         """Test error handling for missing model file."""
+        # Stop the patch for this test to test actual validation
+        self.validate_patcher.stop()
+
         args = Mock()
         args.model = "nonexistent_model.pt"
         args.dataset = "test.csv"
 
         with pytest.raises(CLIError, match="Model file not found"):
             self.command.execute(args)
+
+        # Restart patch for subsequent tests
+        self.validate_patcher.start()
 
 
 @pytest.mark.unit
