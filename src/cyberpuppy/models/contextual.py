@@ -19,6 +19,9 @@ from ..labeling.label_map import BullyingLevel, RoleType, ToxicityLevel, Unified
 
 logger = logging.getLogger(__name__)
 
+# Backwards compatibility alias
+ContextualBullyingDetector = None  # Will be defined after ContextualModel class
+
 
 @dataclass
 class ContextualInput:
@@ -895,6 +898,10 @@ def main():
     # 單個預測
     prediction = model.predict(ctx_inputs[0])
     print(f"預測結果: {prediction}")
+
+
+# Backwards compatibility alias
+ContextualBullyingDetector = ContextualModel
 
 
 if __name__ == "__main__":

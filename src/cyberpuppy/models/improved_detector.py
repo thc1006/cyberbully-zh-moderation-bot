@@ -703,7 +703,7 @@ class ImprovedDetector(nn.Module):
 
 def create_improved_config() -> ImprovedModelConfig:
     """創建針對F1優化的配置"""
-    return ImprovedModelConfig(
+    config = ImprovedModelConfig(
         model_name="hfl/chinese-macbert-base",
         hidden_size=768,
         num_attention_heads=12,
@@ -729,6 +729,11 @@ def create_improved_config() -> ImprovedModelConfig:
         monte_carlo_dropout=True,
         mc_samples=10
     )
+    return config
+
+
+# Backwards compatibility alias
+ImprovedBullyingDetector = ImprovedDetector
 
 
 if __name__ == "__main__":

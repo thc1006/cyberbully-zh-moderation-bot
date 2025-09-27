@@ -767,5 +767,9 @@ def demo_integrated_gradients():
     logger.info("Demo completed. Check output files for results.")
 
 
+# Backwards compatibility alias
+IGExplainer = IntegratedGradientsExplainer
+
+
 if __name__ == "__main__":
     demo_integrated_gradients()

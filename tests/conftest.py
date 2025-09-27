@@ -126,3 +126,20 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "smoke: marks tests as smoke tests")
     config.addinivalue_line("markers", "e2e: marks tests as end-to-end tests")
+    config.addinivalue_line("markers", "shap: marks tests that use SHAP (may conflict with coverage)")
+
+
+@pytest.fixture(autouse=True)
+def mock_line_bot_env(monkeypatch):
+    """Mock LINE Bot environment variables to prevent configuration errors."""
+    monkeypatch.setenv("LINE_CHANNEL_SECRET", "test_channel_secret_1234567890")
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "test_access_token_1234567890")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip SHAP tests when running with coverage due to numba/coverage conflict."""
+    if config.getoption("--cov"):
+        skip_shap = pytest.mark.skip(reason="SHAP tests skipped with coverage due to numba conflict")
+        for item in items:
+            if "shap" in item.nodeid.lower() or "test_explain_shap" in item.nodeid:
+                item.add_marker(skip_shap)
