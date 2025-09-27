@@ -732,8 +732,9 @@ def create_improved_config() -> ImprovedModelConfig:
     return config
 
 
-# Backwards compatibility alias
+# Backwards compatibility aliases
 ImprovedBullyingDetector = ImprovedDetector
+FocalLoss = ClassBalancedFocalLoss
 
 
 if __name__ == "__main__":
