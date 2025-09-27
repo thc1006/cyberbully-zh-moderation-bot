@@ -19,8 +19,9 @@ from .metrics import (
     OnlineMonitor,
     PrometheusExporter,
     SessionContext,
-    ModelEvaluator
 )
+# ModelEvaluator is actually in models.baselines
+from ..models.baselines import ModelEvaluator
 
 # 錯誤分析模組
 from .error_analysis import (
