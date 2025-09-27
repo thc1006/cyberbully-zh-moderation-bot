@@ -20,8 +20,8 @@ tokenizers>=0.15.0
 # Data processing - Windows Compatible
 pandas>=2.1.0
 # Windows: Use pre-compiled wheels to avoid GCC compilation issues
-numpy>=1.24.4,<1.27.0; python_version < "3.12"  # Stable pre-compiled wheels
-numpy>=1.26.4,<1.27.0; python_version >= "3.12"  # Use 1.26.4 to avoid compilation
+numpy>=1.24.4,<2.0.0; python_version < "3.12"  # Stable pre-compiled wheels
+numpy>=1.26.4,<3.0.0; python_version >= "3.12"  # Support Python 3.13 with numpy 2.x+
 # Windows: Use reimplemented version to avoid OpenCC C++ compilation
 opencc-python-reimplemented>=0.1.7  # 繁簡轉換 (Windows compatible)
 jieba>=0.42.1  # 中文分詞（備用）
@@ -48,10 +48,10 @@ line-bot-sdk>=3.5.0  # LINE Bot SDK
 
 # Explainability - Windows Compatible
 # Windows: These packages may require pre-compiled wheels
-shap>=0.44.0,<1.0.0
-captum>=0.7.0,<1.0.0  # PyTorch 可解釋性工具
-numba>=0.58.0  # Required by SHAP
-cloudpickle>=3.0.0  # Required by SHAP
+shap>=0.48.0,<1.0.0  # Updated for Python 3.13 compatibility
+captum>=0.8.0,<1.0.0  # PyTorch 可解釋性工具，支援 Python 3.13
+numba>=0.58.0,<1.0.0  # Required by SHAP
+cloudpickle>=3.0.0,<4.0.0  # Required by SHAP
 
 # Testing (dev-only deps moved to requirements-dev.txt)
 
