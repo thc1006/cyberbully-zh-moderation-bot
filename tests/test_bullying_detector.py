@@ -18,7 +18,7 @@ import sys
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.cyberpuppy.models.baselines import MultiTaskBullyingDetector
+from src.cyberpuppy.models.baselines import BaselineModel as MultiTaskBullyingDetector
 from src.cyberpuppy.models.contextual import ContextualBullyingDetector
 from src.cyberpuppy.config import Config
 from src.cyberpuppy.eval.continuous_eval import ContinuousEvaluator
