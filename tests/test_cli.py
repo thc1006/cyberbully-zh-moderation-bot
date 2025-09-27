@@ -7,6 +7,7 @@ import json
 import csv
 import tempfile
 import os
+from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
 from cyberpuppy.cli import (
@@ -512,6 +513,13 @@ class TestEvaluateCommand:
         self.mock_console.__enter__ = Mock(return_value=self.mock_console)
         self.mock_console.__exit__ = Mock(return_value=None)
         self.command = EvaluateCommand(self.mock_evaluator, self.mock_console)
+        # Patch file validation for all tests
+        self.validate_patcher = patch.object(self.command, '_validate_file_exists', return_value=Path('model.pt'))
+        self.validate_patcher.start()
+
+    def teardown_method(self):
+        """Clean up patches."""
+        self.validate_patcher.stop()
 
     def test_evaluate_with_metrics_report(self):
         """Test evaluation with comprehensive metrics report."""
@@ -606,6 +614,13 @@ class TestExportCommand:
         self.mock_console.__enter__ = Mock(return_value=self.mock_console)
         self.mock_console.__exit__ = Mock(return_value=None)
         self.command = ExportCommand(self.mock_exporter, self.mock_console)
+        # Patch file validation for all tests
+        self.validate_patcher = patch.object(self.command, '_validate_file_exists', return_value=Path('model.pt'))
+        self.validate_patcher.start()
+
+    def teardown_method(self):
+        """Clean up patches."""
+        self.validate_patcher.stop()
 
     def test_export_to_onnx(self):
         """Test exporting model to ONNX format."""
