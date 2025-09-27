@@ -22,6 +22,7 @@ from .metrics import (
 )
 # ModelEvaluator is actually in models.baselines
 from ..models.baselines import ModelEvaluator
+from .continuous_eval import ContinuousEvaluator
 
 # 錯誤分析模組
 from .error_analysis import (
@@ -68,6 +69,7 @@ __all__ = [
     # 核心評估
     "MetricsCalculator",
     "ModelEvaluator",
+    "ContinuousEvaluator",
     "SessionContext",
     "OnlineMonitor",
     "PrometheusExporter",
