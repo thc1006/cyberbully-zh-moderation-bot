@@ -775,11 +775,12 @@ class TestCLIIntegration:
 
         # Mock the detector.analyze() to return a proper mock result
         mock_result = Mock()
+        mock_result.text = "Hello world"
         mock_result.toxicity.prediction.value = "none"
         mock_result.toxicity.confidence = 0.95
         mock_result.bullying.prediction.value = "none"
         mock_result.emotion.prediction.value = "neu"
-        mock_result.emotion_strength.prediction = 0
+        mock_result.emotion.strength = 0
         mock_result.role.prediction.value = "none"
         mock_result.explanations = {}
         mock_result.processing_time = 0.1
