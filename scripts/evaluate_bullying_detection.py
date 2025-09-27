@@ -29,11 +29,14 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.cyberpuppy.config import Config
-from src.cyberpuppy.metrics.evaluation_metrics import DetailedMetrics
+from src.cyberpuppy.eval.metrics import MetricsCalculator as DetailedMetrics
 from src.cyberpuppy.eval.error_analysis import ErrorAnalyzer
-from src.cyberpuppy.eval.robustness_tests import RobustnessEvaluator
-from src.cyberpuppy.fairness.bias_detection import BiasEvaluator
-from src.cyberpuppy.eval.report_generator import ReportGenerator
+from src.cyberpuppy.eval.robustness import RobustnessTestSuite as RobustnessEvaluator
+try:
+    from src.cyberpuppy.fairness.bias_detection import BiasEvaluator
+except ImportError:
+    BiasEvaluator = None
+from src.cyberpuppy.eval.reports import ReportGenerator
 
 logger = logging.getLogger(__name__)
 
