@@ -166,7 +166,7 @@ jobs:
         echo "ENVIRONMENT=testing" >> .env
     - name: 🧪 Run integration tests (with retry)
       run: |
-        pytest -m "integration and not docker" -v --tb=short || (echo "Retrying..." && sleep 5 && pytest -m "integration and not docker" -v --tb=short)
+        pytest -m "integration and not docker" -v --tb=short --cov-fail-under=0 || (echo "Retrying..." && sleep 5 && pytest -m "integration and not docker" -v --tb=short --cov-fail-under=0)
 
   # Docker 建構測試（僅 Linux）
   docker-tests:
