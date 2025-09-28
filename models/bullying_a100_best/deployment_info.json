@@ -1,11 +1,11 @@
 {
   "model_name": "macbert_a100_optimized",
-  "f1_score": 0.8207013878965201,
+  "f1_score": 0.8191669650316267,
   "metrics": {
-    "test_bullying_f1": 0.8207013878965201,
-    "test_toxicity_f1": 0.820588916370167,
-    "best_val_f1": 0.9242515119472333
+    "test_bullying_f1": 0.8191669650316267,
+    "test_toxicity_f1": 0.8182035119619464,
+    "best_val_f1": 0.9267425786806784
   },
   "trained_on": "Google Colab A100",
-  "timestamp": "2025-09-26T22:40:34.733856"
+  "timestamp": "2025-09-28T19:08:45.964933"
 }
