@@ -29,9 +29,10 @@ class MockDetector:
             "emotion": {"label": "neu", "confidence": 0.82},
             "emotion_strength": 0,
             "scores": {
-                "toxicity_score": 0.1,
-                "bullying_score": 0.05,
-                "emotion_score": 0.5
+                "toxicity": {"none": 0.9, "toxic": 0.08, "severe": 0.02},
+                "bullying": {"none": 0.85, "harassment": 0.1, "threat": 0.05},
+                "role": {"none": 0.88, "perpetrator": 0.05, "victim": 0.04, "bystander": 0.03},
+                "emotion": {"pos": 0.2, "neu": 0.6, "neg": 0.2}
             },
             "explanations": {
                 "important_words": [
