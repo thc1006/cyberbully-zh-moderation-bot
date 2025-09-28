@@ -5,15 +5,16 @@
 """
 
 import asyncio
-import time
-from typing import List, Optional, Dict, Any
 import logging
+import time
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 try:
     from googletrans import Translator as GoogleTranslator
+
     GOOGLE_AVAILABLE = True
 except ImportError:
     GOOGLE_AVAILABLE = False
@@ -21,6 +22,7 @@ except ImportError:
 
 try:
     import requests
+
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
@@ -74,23 +76,23 @@ class BaiduTranslator(BaseTranslator):
 
         salt = str(random.randint(32768, 65536))
         sign_str = self.app_id + text + salt + self.secret_key
-        sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
+        sign = hashlib.sha256(sign_str.encode("utf-8")).hexdigest()
 
         params = {
-            'q': text,
-            'from': self._convert_lang_code(src_lang),
-            'to': self._convert_lang_code(dest_lang),
-            'appid': self.app_id,
-            'salt': salt,
-            'sign': sign
+            "q": text,
+            "from": self._convert_lang_code(src_lang),
+            "to": self._convert_lang_code(dest_lang),
+            "appid": self.app_id,
+            "salt": salt,
+            "sign": sign,
         }
 
         try:
             response = requests.get(self.base_url, params=params)
             result = response.json()
 
-            if 'trans_result' in result:
-                return result['trans_result'][0]['dst']
+            if "trans_result" in result:
+                return result["trans_result"][0]["dst"]
             else:
                 logger.warning(f"百度翻譯錯誤: {result}")
                 return text
@@ -100,13 +102,7 @@ class BaiduTranslator(BaseTranslator):
 
     def _convert_lang_code(self, lang: str) -> str:
         """轉換語言代碼為百度格式"""
-        mapping = {
-            'zh': 'zh',
-            'zh-cn': 'zh',
-            'en': 'en',
-            'ja': 'jp',
-            'ko': 'kor'
-        }
+        mapping = {"zh": "zh", "zh-cn": "zh", "en": "en", "ja": "jp", "ko": "kor"}
         return mapping.get(lang.lower(), lang)
 
 
@@ -125,20 +121,20 @@ class MockTranslator(BaseTranslator):
             "。": ".",
             "的": "of",
             "是": "is",
-            "不": "not"
+            "不": "not",
         }
 
         self.en_to_zh_rules = {v: k for k, v in self.zh_to_en_rules.items() if v}
 
     def translate(self, text: str, src_lang: str, dest_lang: str) -> str:
         """模擬翻譯過程"""
-        if src_lang == 'zh' and dest_lang == 'en':
+        if src_lang == "zh" and dest_lang == "en":
             # 簡單的中文到英文轉換
             result = text
             for zh, en in self.zh_to_en_rules.items():
                 result = result.replace(zh, en)
             return result
-        elif src_lang == 'en' and dest_lang == 'zh':
+        elif src_lang == "en" and dest_lang == "zh":
             # 簡單的英文到中文轉換
             result = text
             for en, zh in self.en_to_zh_rules.items():
@@ -150,13 +146,14 @@ class MockTranslator(BaseTranslator):
                 "很": ["非常", "特別", "相當"],
                 "說": ["講", "表示", "提到"],
                 "好": ["棒", "不錯", "優秀"],
-                "壞": ["差", "糟糕", "不好"]
+                "壞": ["差", "糟糕", "不好"],
             }
 
             result = text
             for original, alternatives in variations.items():
                 if original in result:
                     import random
+
                     replacement = random.choice(alternatives)
                     result = result.replace(original, replacement, 1)
 
@@ -171,7 +168,7 @@ class BackTranslator:
         translator: Optional[BaseTranslator] = None,
         intermediate_langs: List[str] = None,
         preserve_length_ratio: float = 0.8,
-        max_retries: int = 3
+        max_retries: int = 3,
     ):
         """
         初始化回譯器
@@ -183,7 +180,7 @@ class BackTranslator:
             max_retries: 最大重試次數
         """
         self.translator = translator or self._create_default_translator()
-        self.intermediate_langs = intermediate_langs or ['en', 'ja', 'ko']
+        self.intermediate_langs = intermediate_langs or ["en", "ja", "ko"]
         self.preserve_length_ratio = preserve_length_ratio
         self.max_retries = max_retries
 
@@ -204,7 +201,7 @@ class BackTranslator:
         self,
         text: str,
         num_augmented: int = 1,
-        custom_intermediate_langs: Optional[List[str]] = None
+        custom_intermediate_langs: Optional[List[str]] = None,
     ) -> List[str]:
         """
         對文本進行回譯增強
@@ -250,16 +247,18 @@ class BackTranslator:
         while retries < self.max_retries:
             try:
                 # 第一步: 中文 → 中間語言
-                intermediate_text = self.translator.translate(text, 'zh', intermediate_lang)
+                intermediate_text = self.translator.translate(text, "zh", intermediate_lang)
 
                 if not intermediate_text or intermediate_text == text:
-                    raise ValueError(f"第一步翻譯失敗或無變化")
+                    raise ValueError("第一步翻譯失敗或無變化")
 
                 # 第二步: 中間語言 → 中文
-                back_translated = self.translator.translate(intermediate_text, intermediate_lang, 'zh')
+                back_translated = self.translator.translate(
+                    intermediate_text, intermediate_lang, "zh"
+                )
 
                 if not back_translated:
-                    raise ValueError(f"第二步翻譯失敗")
+                    raise ValueError("第二步翻譯失敗")
 
                 logger.debug(f"回譯路徑: {text} → {intermediate_text} → {back_translated}")
                 return back_translated
@@ -277,7 +276,9 @@ class BackTranslator:
         """檢查回譯質量"""
         # 長度檢查
         if len(back_translated) < len(original) * self.preserve_length_ratio:
-            logger.debug(f"回譯文本過短: {len(back_translated)} < {len(original) * self.preserve_length_ratio}")
+            logger.debug(
+                f"回譯文本過短: {len(back_translated)} < {len(original) * self.preserve_length_ratio}"
+            )
             return False
 
         # 相似度檢查 (簡單版本)
@@ -319,16 +320,15 @@ class BackTranslator:
             "translator_type": type(self.translator).__name__,
             "intermediate_languages": self.intermediate_langs,
             "preserve_length_ratio": self.preserve_length_ratio,
-            "max_retries": self.max_retries
+            "max_retries": self.max_retries,
         }
 
 
 async def async_back_translate_batch(
-    back_translator: BackTranslator,
-    texts: List[str],
-    num_augmented: int = 1
+    back_translator: BackTranslator, texts: List[str], num_augmented: int = 1
 ) -> List[List[str]]:
     """異步批量回譯"""
+
     async def translate_one(text: str) -> List[str]:
         return back_translator.augment(text, num_augmented)
 
@@ -351,12 +351,7 @@ if __name__ == "__main__":
     # 測試範例
     back_translator = BackTranslator()
 
-    test_texts = [
-        "你真的很笨！",
-        "別再說這種話了",
-        "我覺得你做得很好",
-        "這個想法不錯"
-    ]
+    test_texts = ["你真的很笨！", "別再說這種話了", "我覺得你做得很好", "這個想法不錯"]
 
     print("=== 回譯增強測試 ===")
     for text in test_texts:
