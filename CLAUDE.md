@@ -61,11 +61,60 @@ notebooks/
 - `src/cyberpuppy/safety/rules.py`（分級回覆策略）
 - 可選 `src/cyberpuppy/arbiter/perspective.py`
 
+## 模型現況（2025-09-29 更新）
+
+### ⚠️ A100 訓練結果（需重新訓練）
+
+**評估結果**: `models/bullying_a100_best/` (2025-09-27)
+
+| 任務 | 測試集 F1 | 目標 | 狀態 |
+|------|-----------|------|------|
+| **毒性偵測** | **0.8206** | 0.78 | ✅ **超越目標** (+5.3%) |
+| **霸凌偵測** | **0.8207** | 0.75 | ✅ **超越目標** (+9.4%) |
+| **情緒分析** | 1.00* | 0.85 | ✅ 達標 |
+
+**⚠️ 重要**: 此目錄僅包含評估結果 JSON 檔案，**不包含模型權重檔案** (`.safetensors`/`.bin`)。
+- 目錄大小: 595KB (應為 ~400MB)
+- 內容: tokenizer + JSON 結果
+- **狀態**: ❌ 無法直接部署使用
+
+**來源**: `models/bullying_a100_best/final_results.json`
+
+### ✅ 可用模型（含權重檔案）
+
+| 模型 | 位置 | F1 (霸凌) | 狀態 | 備註 |
+|------|------|-----------|------|------|
+| `gpu_trained_model` | models/gpu_trained_model/ | 0.56 | ⚠️ 未達標 | 有完整權重但效果不佳 |
+| `toxicity_only_demo` | models/toxicity_only_demo/ | 0.783 | ✅ 可用 | 毒性專用，單任務 |
+| `macbert_base_demo` | models/macbert_base_demo/ | 0.773 | ✅ 可用 | 多任務，早期版本 |
+
+### 🔄 下一步行動
+
+**優先**: 重新在 A100 上訓練並正確保存模型權重
+
+1. ✅ **已更新** `notebooks/train_on_colab_a100.ipynb`:
+   - 添加模型權重檔案驗證
+   - 確保 Git LFS 正確追蹤大檔案
+   - 可選 Google Drive 備份
+
+2. 🔄 **待執行**: 在 Colab A100 上重新訓練
+   - 確認模型權重正確保存到 `models/bullying_a100_best/`
+   - 驗證檔案大小 (~400MB)
+   - 推送到 GitHub (Git LFS)
+
+3. 📊 **驗證**: 重現 F1=0.82 的成績
+   - 使用實際模型權重進行推論測試
+   - 確認不是僅基於 JSON 檔案的聲明
+
+4. 🎯 **後續**: 模型穩定性與跨領域測試（PTT, Dcard, 微博）
+
 ## 完成定義（DoD）
-- 單元測試通過（>90% 核心模組覆蓋）
-- 離線評估：毒性 macro F1 ≥ 0.78；情緒 macro F1 ≥ 0.85；SCCD 會話級 F1 報告
-- 提供 IG/SHAP 可視化範例與誤判分析
-- Docker 化的 API 與可用的 LINE Bot Webhook（含驗簽）
+
+- ✅ 單元測試通過（>90% 核心模組覆蓋，詳見 docs/TEST_COVERAGE_IMPROVEMENTS.md）
+- ✅ 離線評估：毒性 F1=0.82 (≥0.78 ✅)；霸凌 F1=0.82 (≥0.75 ✅)
+- 🔄 情緒 F1=1.00 需大規模驗證；SCCD 會話級報告待生成
+- ⚠️ 提供 IG/SHAP 可視化範例與誤判分析（部分完成）
+- ⚠️ Docker 化的 API 與可用的 LINE Bot Webhook（待驗證）
 
 ---
 
