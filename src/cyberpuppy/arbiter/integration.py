@@ -31,9 +31,7 @@ class ArbiterService:
         self._perspective_api: Optional[PerspectiveAPI] = None
         self._is_perspective_available = arbiter_config.is_perspective_enabled()
 
-        logger.info(
-            f"仲裁服務已初始化 - Perspective API 可用: {self._is_perspective_available}"
-        )
+        logger.info(f"仲裁服務已初始化 - Perspective API 可用: {self._is_perspective_available}")
 
     async def __aenter__(self):
         """異步上下文管理器進入"""
@@ -87,11 +85,7 @@ class ArbiterService:
 
             enhanced_prediction = local_prediction.copy()
 
-            if (
-                should_validate
-                and self._is_perspective_available
-                and self._perspective_api
-            ):
+            if should_validate and self._is_perspective_available and self._perspective_api:
                 logger.info("執行 Perspective API 外部驗證")
 
                 try:
@@ -103,14 +97,11 @@ class ArbiterService:
                     validation_metadata["used_external_validation"] = True
                     validation_metadata["perspective_result"] = {
                         "toxicity_score": perspective_result.toxicity_score,
-                        "severe_tox"
-                        "icity_score": perspective_result.severe_toxicity_score,
+                        "severe_tox" "icity_score": perspective_result.severe_toxicity_score,
                         "threat_score": perspective_result.threat_score,
                         "processin" "g_time_ms": perspective_result.processing_time_ms,
                         "confidence"
-                        "_assessment": self._assess_perspective_confidence(
-                            perspective_result
-                        ),
+                        "_assessment": self._assess_perspective_confidence(perspective_result),
                     }
 
                     # 整合外部驗證結果
@@ -118,9 +109,7 @@ class ArbiterService:
                         local_prediction, perspective_result, uncertainty_analysis
                     )
 
-                    validation_metadata["recommendation"] = (
-                        "External validation successful"
-                    )
+                    validation_metadata["recommendation"] = "External validation successful"
 
                 except Exception as e:
                     logger.error(f"Perspective API 驗證失敗: {e}")
@@ -145,9 +134,7 @@ class ArbiterService:
             )
             return local_prediction, validation_metadata
 
-    def _assess_perspective_confidence(
-        self, result: PerspectiveResult
-    ) -> Dict[str, Any]:
+    def _assess_perspective_confidence(self, result: PerspectiveResult) -> Dict[str, Any]:
         """評估 Perspective API 結果的信心度"""
         # 基於多個屬性評估整體信心度
         scores = [
@@ -158,9 +145,7 @@ class ArbiterService:
         ]
 
         max_score = max(scores)
-        score_variance = sum(
-            (s - sum(scores) / len(scores)) ** 2 for s in scores
-        ) / len(scores)
+        score_variance = sum((s - sum(scores) / len(scores)) ** 2 for s in scores) / len(scores)
 
         # 信心度評估
         if max_score > 0.8 or max_score < 0.2:
@@ -203,9 +188,7 @@ class ArbiterService:
         score_difference = abs(local_max_score - perspective_score)
         if score_difference > 0.3:
             enhanced["confidence_adjustment"] = "low_agreement"
-            enhanced["validation_note"] = (
-                "External validation shows significant disagreement"
-            )
+            enhanced["validation_note"] = "External validation shows significant disagreement"
         elif score_difference < 0.1:
             enhanced["confidence_adjustment"] = "high_agreement"
             enhanced["validation_note"] = (
@@ -286,9 +269,7 @@ async def example_integration():
             perspective_result = metadata["perspective_result"]
             perspective_score = perspective_result.toxicity_score
             logger.info(f"Perspective 毒性分數: {perspective_score:.3f}")
-            logger.info(
-                f"信心度調整: {enhanced_prediction.get('confidence_adjustment')}"
-            )
+            logger.info(f"信心度調整: {enhanced_prediction.get('confidence_adjustment')}")
 
         logger.info(f"建議: {metadata['recommendation']}")
 

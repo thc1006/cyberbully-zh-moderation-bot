@@ -9,12 +9,13 @@ Tests the integrated API with real Chinese toxicity examples to verify:
 """
 
 import asyncio
-import aiohttp
 import json
-import time
 import logging
-from typing import Dict, List, Any
+import time
 from datetime import datetime
+from typing import Any, Dict, List
+
+import aiohttp
 
 # 設定日誌
 logging.basicConfig(level=logging.INFO)
@@ -226,9 +227,7 @@ class APITester:
                         "status": "success",
                         "response_code": response.status,
                         "response_time_s": round(response_time, 3),
-                        "api_processing_time_ms": result_data.get(
-                            "processing_time_ms", 0
-                        ),
+                        "api_processing_time_ms": result_data.get("processing_time_ms", 0),
                         "predictions": {
                             "toxicity": result_data.get("toxicity"),
                             "bullying": result_data.get("bullying"),
@@ -244,12 +243,10 @@ class APITester:
                         },
                         "expectations": {
                             "toxicity_match": (
-                                result_data.get("toxicity")
-                                == text_data.get("expected_toxicity")
+                                result_data.get("toxicity") == text_data.get("expected_toxicity")
                             ),
                             "emotion_match": (
-                                result_data.get("emotion")
-                                == text_data.get("expected_emotion")
+                                result_data.get("emotion") == text_data.get("expected_emotion")
                             ),
                             "bullying_match": (
                                 result_data.get("bullying")
@@ -377,9 +374,7 @@ class APITester:
         total_tests = len(TEST_TEXTS)
         success_rate = successful_predictions / total_tests if total_tests > 0 else 0
         avg_response_time = (
-            total_response_time / successful_predictions
-            if successful_predictions > 0
-            else 0
+            total_response_time / successful_predictions if successful_predictions > 0 else 0
         )
 
         # Validate predictions accuracy
@@ -415,15 +410,9 @@ class APITester:
         if not successful_results:
             return {"status": "no_successful_predictions"}
 
-        toxicity_correct = sum(
-            1 for r in successful_results if r["expectations"]["toxicity_match"]
-        )
-        emotion_correct = sum(
-            1 for r in successful_results if r["expectations"]["emotion_match"]
-        )
-        bullying_correct = sum(
-            1 for r in successful_results if r["expectations"]["bullying_match"]
-        )
+        toxicity_correct = sum(1 for r in successful_results if r["expectations"]["toxicity_match"])
+        emotion_correct = sum(1 for r in successful_results if r["expectations"]["emotion_match"])
+        bullying_correct = sum(1 for r in successful_results if r["expectations"]["bullying_match"])
 
         total = len(successful_results)
 

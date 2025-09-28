@@ -3,17 +3,17 @@ Base classes for active learning framework
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from sklearn.metrics import f1_score
+from torch.utils.data import DataLoader, Dataset
 
 
 class ActiveLearner(ABC):
     """Base class for active learning strategies"""
 
-    def __init__(self, model, device: str = 'cpu'):
+    def __init__(self, model, device: str = "cpu"):
         """
         Initialize active learner
 
@@ -25,10 +25,9 @@ class ActiveLearner(ABC):
         self.device = device
 
     @abstractmethod
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select most informative samples for annotation
 
@@ -60,8 +59,8 @@ class ActiveLearner(ABC):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
 
                 outputs = self.model(input_ids=inputs, attention_mask=attention_mask)
                 probs = torch.softmax(outputs.logits, dim=-1)
@@ -79,11 +78,13 @@ class QueryStrategy(ABC):
     """Base class for query strategies"""
 
     @abstractmethod
-    def query(self,
-             unlabeled_data: Dataset,
-             n_samples: int,
-             model: Any,
-             labeled_data: Optional[Dataset] = None) -> List[int]:
+    def query(
+        self,
+        unlabeled_data: Dataset,
+        n_samples: int,
+        model: Any,
+        labeled_data: Optional[Dataset] = None,
+    ) -> List[int]:
         """
         Query samples for annotation
 
@@ -103,9 +104,7 @@ class AnnotationInterface(ABC):
     """Base class for annotation interfaces"""
 
     @abstractmethod
-    def annotate_samples(self,
-                        samples: List[Any],
-                        indices: List[int]) -> List[Dict]:
+    def annotate_samples(self, samples: List[Any], indices: List[int]) -> List[Dict]:
         """
         Annotate selected samples
 
@@ -122,10 +121,7 @@ class AnnotationInterface(ABC):
 class StoppingCriterion:
     """Stopping criterion for active learning"""
 
-    def __init__(self,
-                 target_f1: float = 0.75,
-                 patience: int = 3,
-                 min_improvement: float = 0.01):
+    def __init__(self, target_f1: float = 0.75, patience: int = 3, min_improvement: float = 0.01):
         """
         Initialize stopping criterion
 
@@ -179,12 +175,14 @@ class LearningCurveTracker:
         self.uncertainties = []
         self.diversities = []
 
-    def update(self,
-               iteration: int,
-               labeled_size: int,
-               f1_score: float,
-               avg_uncertainty: float = None,
-               avg_diversity: float = None):
+    def update(
+        self,
+        iteration: int,
+        labeled_size: int,
+        f1_score: float,
+        avg_uncertainty: float = None,
+        avg_diversity: float = None,
+    ):
         """
         Update tracking metrics
 
@@ -206,10 +204,13 @@ class LearningCurveTracker:
     def get_summary(self) -> Dict:
         """Get summary of learning progress"""
         return {
-            'iterations': len(self.iterations),
-            'final_f1': self.f1_scores[-1] if self.f1_scores else 0.0,
-            'best_f1': max(self.f1_scores) if self.f1_scores else 0.0,
-            'total_labeled': self.labeled_sizes[-1] if self.labeled_sizes else 0,
-            'improvement_rate': (self.f1_scores[-1] - self.f1_scores[0]) / len(self.f1_scores)
-                               if len(self.f1_scores) > 1 else 0.0
+            "iterations": len(self.iterations),
+            "final_f1": self.f1_scores[-1] if self.f1_scores else 0.0,
+            "best_f1": max(self.f1_scores) if self.f1_scores else 0.0,
+            "total_labeled": self.labeled_sizes[-1] if self.labeled_sizes else 0,
+            "improvement_rate": (
+                (self.f1_scores[-1] - self.f1_scores[0]) / len(self.f1_scores)
+                if len(self.f1_scores) > 1
+                else 0.0
+            ),
         }

@@ -10,14 +10,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+
 import pytest
 
 # 添加專案路徑到系統路徑
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scripts.clean_normalize import (
-    DatasetCleaner, TextNormalizer  # noqa: E402
-)
+from scripts.clean_normalize import DatasetCleaner  # noqa: E402
+from scripts.clean_normalize import TextNormalizer
 
 
 @pytest.mark.unit
@@ -77,7 +77,7 @@ class TestTextNormalizer(unittest.TestCase):
             ("Check http://example.com and https://test.org", "Check [URL] and [URL]"),
             ("IP: 192.168.1.1:8080", "IP: [URL]"),
             ("No URL here", "No URL here"),
-            ("複雜URL: https://example.com/path?query=123#anchor", "複雜URL: [URL]"), 
+            ("複雜URL: https://example.com/path?query=123#anchor", "複雜URL: [URL]"),
         ]
 
         for text, expected in test_cases:
@@ -91,7 +91,10 @@ class TestTextNormalizer(unittest.TestCase):
             ("Hello @user123", "Hello [MENTION]"),
             ("@測試用戶 你好", "[MENTION] 你好"),
             ("Multiple @user1 @user2", "Multiple [MENTION] [MENTION]"),
-            ("Email: test@example.com", "Email: test@example.com"),  # Emails should NOT be replaced by mention
+            (
+                "Email: test@example.com",
+                "Email: test@example.com",
+            ),  # Emails should NOT be replaced by mention
         ]
 
         for text, expected in test_cases:
@@ -116,7 +119,7 @@ class TestTextNormalizer(unittest.TestCase):
         """測試Email去識別化"""
         test_cases = [
             ("Contact: john@example.com", "Contact: [EMAIL]"),
-            ("Emails: a@b.com and test@gmail.com", "Emails: [EMAIL] and [EMAIL]"), 
+            ("Emails: a@b.com and test@gmail.com", "Emails: [EMAIL] and [EMAIL]"),
             ("No email here", "No email here"),
         ]
 
@@ -171,7 +174,7 @@ class TestTextNormalizer(unittest.TestCase):
         """測試完整的正規化流程"""
         text = (
             "請訪問　　https://example.com　　聯絡 @user"
-                "　郵箱：test@email.com　電話：0912345678 😀"
+            "　郵箱：test@email.com　電話：0912345678 😀"
         )
         result = self.normalizer.normalize(text)
 

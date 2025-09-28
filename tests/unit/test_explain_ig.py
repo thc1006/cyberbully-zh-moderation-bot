@@ -4,23 +4,17 @@ Integrated Gradients 解釋性 AI 單元測試
 Tests for Integrated Gradients explainability functionality
 """
 
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import numpy as np
 import pytest
 import torch
-import torch.nn as nn
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-import matplotlib.pyplot as plt
-import tempfile
 
 # Test target modules
-from cyberpuppy.explain.ig import (
-    IGExplainer,
-    IGConfig,
-    TokenAttributionResult,
-    VisualizationConfig,
-    ExplanationAnalyzer,
-)
+from cyberpuppy.explain.ig import (ExplanationAnalyzer, IGConfig, IGExplainer,
+                                   TokenAttributionResult, VisualizationConfig)
 
 
 class TestIGConfig:
@@ -41,7 +35,7 @@ class TestIGConfig:
             n_steps=100,
             method="riemann_left",
             internal_batch_size=16,
-            baseline_strategy="unk_token"
+            baseline_strategy="unk_token",
         )
 
         assert config.n_steps == 100
@@ -69,10 +63,7 @@ class TestTokenAttributionResult:
         attributions = np.array([0.1, 0.5, 0.4])
 
         result = TokenAttributionResult(
-            tokens=tokens,
-            attributions=attributions,
-            baseline_text="[UNK]",
-            target_text="我愛你"
+            tokens=tokens, attributions=attributions, baseline_text="[UNK]", target_text="我愛你"
         )
 
         assert result.tokens == tokens
@@ -85,10 +76,7 @@ class TestTokenAttributionResult:
         tokens = ["這", "個", "笨", "蛋", "很", "討", "厭"]
         attributions = np.array([0.1, 0.05, 0.6, 0.5, 0.2, 0.4, 0.3])
 
-        result = TokenAttributionResult(
-            tokens=tokens,
-            attributions=attributions
-        )
+        result = TokenAttributionResult(tokens=tokens, attributions=attributions)
 
         top_3 = result.get_top_tokens(n=3)
 
@@ -100,10 +88,7 @@ class TestTokenAttributionResult:
     def test_attribution_result_statistics(self):
         """測試歸因統計"""
         attributions = np.array([0.1, 0.5, 0.4, 0.2, 0.3])
-        result = TokenAttributionResult(
-            tokens=["a", "b", "c", "d", "e"],
-            attributions=attributions
-        )
+        result = TokenAttributionResult(tokens=["a", "b", "c", "d", "e"], attributions=attributions)
 
         stats = result.get_statistics()
 
@@ -146,9 +131,9 @@ def mock_tokenizer():
         token_ids = list(range(101, 101 + len(tokens)))  # Start from 101 (after special tokens)
 
         return {
-            'input_ids': torch.tensor([token_ids]),
-            'attention_mask': torch.tensor([[1] * len(tokens)]),
-            'token_type_ids': torch.tensor([[0] * len(tokens)])
+            "input_ids": torch.tensor([token_ids]),
+            "attention_mask": torch.tensor([[1] * len(tokens)]),
+            "token_type_ids": torch.tensor([[0] * len(tokens)]),
         }
 
     def convert_ids_to_tokens(token_ids):
@@ -169,16 +154,12 @@ class TestIGExplainer:
     def test_ig_explainer_initialization(self, mock_model, mock_tokenizer):
         """測試 IG 解釋器初始化"""
         config = IGConfig()
-        explainer = IGExplainer(
-            model=mock_model,
-            tokenizer=mock_tokenizer,
-            config=config
-        )
+        explainer = IGExplainer(model=mock_model, tokenizer=mock_tokenizer, config=config)
 
         assert explainer.model == mock_model
         assert explainer.tokenizer == mock_tokenizer
         assert explainer.config == config
-        assert hasattr(explainer, 'ig')
+        assert hasattr(explainer, "ig")
 
     def test_ig_explainer_forward_func(self, mock_model, mock_tokenizer):
         """測試 IG 解釋器前向函數"""
@@ -216,7 +197,7 @@ class TestIGExplainer:
         # For UNK baseline, should be all UNK token IDs
         assert torch.all(baseline == mock_tokenizer.unk_token_id)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_ig_explainer_explain_text(self, mock_ig_class, mock_model, mock_tokenizer):
         """測試文本解釋功能"""
         # Mock IntegratedGradients
@@ -235,14 +216,11 @@ class TestIGExplainer:
         assert len(result.tokens) > 0
         assert len(result.attributions) == len(result.tokens)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_ig_explainer_batch_explain(self, mock_ig_class, mock_model, mock_tokenizer):
         """測試批次解釋"""
         mock_ig = Mock()
-        mock_ig.attribute.return_value = torch.tensor([
-            [0.1, 0.5, 0.3],
-            [0.2, 0.4, 0.6]
-        ])
+        mock_ig.attribute.return_value = torch.tensor([[0.1, 0.5, 0.3], [0.2, 0.4, 0.6]])
         mock_ig_class.return_value = mock_ig
 
         config = IGConfig()
@@ -284,12 +262,7 @@ class TestVisualizationConfig:
 
     def test_visualization_config_custom(self):
         """測試自定義可視化配置"""
-        config = VisualizationConfig(
-            figsize=(10, 6),
-            cmap="viridis",
-            save_format="pdf",
-            dpi=150
-        )
+        config = VisualizationConfig(figsize=(10, 6), cmap="viridis", save_format="pdf", dpi=150)
 
         assert config.figsize == (10, 6)
         assert config.cmap == "viridis"
@@ -315,19 +288,12 @@ class TestExplanationAnalyzer:
         tokens = ["我", "不", "喜", "歡", "你"]
         attributions = np.array([0.1, 0.2, 0.8, 0.6, 0.3])
 
-        result = TokenAttributionResult(
-            tokens=tokens,
-            attributions=attributions
-        )
+        result = TokenAttributionResult(tokens=tokens, attributions=attributions)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "test_heatmap.png"
 
-            analyzer.create_heatmap(
-                result,
-                title="測試熱圖",
-                output_path=output_path
-            )
+            analyzer.create_heatmap(result, title="測試熱圖", output_path=output_path)
 
             assert output_path.exists()
 
@@ -339,20 +305,12 @@ class TestExplanationAnalyzer:
         tokens = ["很", "討", "厭", "的", "人"]
         attributions = np.array([0.2, 0.7, 0.9, 0.1, 0.4])
 
-        result = TokenAttributionResult(
-            tokens=tokens,
-            attributions=attributions
-        )
+        result = TokenAttributionResult(tokens=tokens, attributions=attributions)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "test_barchart.png"
 
-            analyzer.create_bar_chart(
-                result,
-                title="測試條形圖",
-                top_k=3,
-                output_path=output_path
-            )
+            analyzer.create_bar_chart(result, title="測試條形圖", top_k=3, output_path=output_path)
 
             assert output_path.exists()
 
@@ -365,9 +323,7 @@ class TestExplanationAnalyzer:
         attributions = np.array([0.1, 0.2, 0.8, 0.6])
 
         result = TokenAttributionResult(
-            tokens=tokens,
-            attributions=attributions,
-            target_text="這個笨蛋"
+            tokens=tokens, attributions=attributions, target_text="這個笨蛋"
         )
 
         html_output = analyzer.create_text_highlighting(result)
@@ -381,7 +337,7 @@ class TestExplanationAnalyzer:
 class TestIntegrationScenarios:
     """測試整合場景"""
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_full_explanation_pipeline(self, mock_ig_class, mock_model, mock_tokenizer):
         """測試完整解釋流程"""
         # Mock IG
@@ -421,7 +377,7 @@ class TestIntegrationScenarios:
             "這個笨蛋很討人厭",
             "我愛你，但是你不愛我",
             "今天天氣真好！😊",
-            "12345 混合 English 文字"
+            "12345 混合 English 文字",
         ]
 
         for text in chinese_texts:
@@ -437,7 +393,7 @@ class TestIntegrationScenarios:
 
         text = "測試一致性"
 
-        with patch('cyberpuppy.explain.ig.IntegratedGradients') as mock_ig_class:
+        with patch("cyberpuppy.explain.ig.IntegratedGradients") as mock_ig_class:
             # Mock consistent output
             mock_ig = Mock()
             mock_ig.attribute.return_value = torch.tensor([[0.3, 0.5, 0.2, 0.4]])
@@ -451,15 +407,13 @@ class TestIntegrationScenarios:
 
             # Results should be consistent (within numerical precision)
             for i in range(1, len(results)):
-                np.testing.assert_allclose(
-                    results[0], results[i], rtol=1e-5
-                )
+                np.testing.assert_allclose(results[0], results[i], rtol=1e-5)
 
 
 class TestPerformanceAndScaling:
     """測試效能和擴展性"""
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_explanation_performance(self, mock_ig_class, mock_model, mock_tokenizer):
         """測試解釋效能"""
         import time
@@ -481,13 +435,11 @@ class TestPerformanceAndScaling:
         assert explanation_time < 2.0  # 2 seconds should be enough for mock
         assert isinstance(result, TokenAttributionResult)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_batch_processing_efficiency(self, mock_ig_class, mock_model, mock_tokenizer):
         """測試批次處理效率"""
         mock_ig = Mock()
-        mock_ig.attribute.return_value = torch.tensor([
-            [0.1, 0.5], [0.3, 0.4], [0.2, 0.6]
-        ])
+        mock_ig.attribute.return_value = torch.tensor([[0.1, 0.5], [0.3, 0.4], [0.2, 0.6]])
         mock_ig_class.return_value = mock_ig
 
         config = IGConfig()
@@ -496,6 +448,7 @@ class TestPerformanceAndScaling:
         texts = [f"文本{i}" for i in range(3)]
 
         import time
+
         start_time = time.time()
         results = explainer.explain_batch(texts, target_class=1)
         batch_time = time.time() - start_time

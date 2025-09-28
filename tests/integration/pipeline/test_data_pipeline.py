@@ -35,7 +35,7 @@ class TestDataPipeline:
             {"text": "這個笨蛋真討厭", "label": "負面"},
             {"text": "我很生氣，想打人", "label": "負面"},
             {"text": "謝謝你的幫助", "label": "正面"},
-            {"text": "   空白測試   ", "label": "中性"}
+            {"text": "   空白測試   ", "label": "中性"},
         ]
 
         raw_file = raw_dir / "test_data.jsonl"
@@ -46,12 +46,21 @@ class TestDataPipeline:
         # 執行清理腳本
         clean_script = PROJECT_ROOT / "scripts" / "clean_normalize.py"
         if clean_script.exists():
-            result = subprocess.run([
-                "python", str(clean_script),
-                "--input", str(raw_file),
-                "--output", str(processed_dir / "cleaned.jsonl"),
-                "--normalize", "--remove-duplicates"
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(clean_script),
+                    "--input",
+                    str(raw_file),
+                    "--output",
+                    str(processed_dir / "cleaned.jsonl"),
+                    "--normalize",
+                    "--remove-duplicates",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
             if result.returncode == 0:
                 # 驗證清理結果
@@ -75,11 +84,9 @@ class TestDataPipeline:
             # COLD 格式
             {"text": "你很笨", "toxicity": 1, "source": "cold"},
             {"text": "今天天氣好", "toxicity": 0, "source": "cold"},
-
             # ChnSentiCorp 格式
             {"text": "很好的產品", "sentiment": "positive", "source": "chnsenti"},
             {"text": "糟糕的服務", "sentiment": "negative", "source": "chnsenti"},
-
             # 自定義格式
             {"text": "我要揍你", "label": "threat", "source": "custom"},
         ]
@@ -90,15 +97,23 @@ class TestDataPipeline:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
         # 執行標籤統一腳本
-        mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py" 
+        mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py"
         output_file = temp_dir / "unified_labels.jsonl"
 
         if mapping_script.exists():
-            result = subprocess.run([
-                "python", str(mapping_script),
-                "--input", str(input_file),
-                "--output", str(output_file)
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(mapping_script),
+                    "--input",
+                    str(input_file),
+                    "--output",
+                    str(output_file),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
             if result.returncode == 0:
                 # 驗證標籤統一結果
@@ -124,12 +139,14 @@ class TestDataPipeline:
         # 建立測試資料
         train_data = []
         for i in range(100):
-            train_data.append({
-                "text": f"測試文本 {i}",
-                "toxicity": "toxic" if i % 3 == 0 else "none",
-                "emotion": "neg" if i % 3 == 0 else "pos",
-                "bullying": "harassment" if i % 5 == 0 else "none"
-            })
+            train_data.append(
+                {
+                    "text": f"測試文本 {i}",
+                    "toxicity": "toxic" if i % 3 == 0 else "none",
+                    "emotion": "neg" if i % 3 == 0 else "pos",
+                    "bullying": "harassment" if i % 5 == 0 else "none",
+                }
+            )
 
         full_data_file = temp_dir / "full_dataset.jsonl"
         with open(full_data_file, "w", encoding="utf-8") as f:
@@ -139,13 +156,22 @@ class TestDataPipeline:
         # 執行分割腳本（如果存在）
         split_script = PROJECT_ROOT / "scripts" / "split_train_test.py"
         if split_script.exists():
-            result = subprocess.run([
-                "python", str(split_script),
-                "--input", str(full_data_file),
-                "--output-dir", str(temp_dir),
-                "--train-ratio", "0.8",
-                "--stratify"
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(split_script),
+                    "--input",
+                    str(full_data_file),
+                    "--output-dir",
+                    str(temp_dir),
+                    "--train-ratio",
+                    "0.8",
+                    "--stratify",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
             if result.returncode == 0:
                 # 驗證分割結果
@@ -193,24 +219,38 @@ class TestModelTrainingPipeline:
         model_output_dir = temp_dir / "models"
 
         if train_script.exists():
-            result = subprocess.run([
-                "python", str(train_script),
-                "--train-data", str(train_file),
-                "--test-data", str(test_file),
-                "--output-dir", str(model_output_dir),
-                "--epochs", "1",  # 快速測試
-                "--model-name", "test_model",
-                "--device", "cpu"  # 強制使用 CPU
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS * 10)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(train_script),
+                    "--train-data",
+                    str(train_file),
+                    "--test-data",
+                    str(test_file),
+                    "--output-dir",
+                    str(model_output_dir),
+                    "--epochs",
+                    "1",  # 快速測試
+                    "--model-name",
+                    "test_model",
+                    "--device",
+                    "cpu",  # 強制使用 CPU
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS * 10,
+            )
 
             if result.returncode == 0:
                 # 驗證模型檔案生成
                 assert model_output_dir.exists()
 
                 # 檢查是否有模型檔案
-                model_files = list(model_output_dir.glob("**/*.pth")) + \
-                             list(model_output_dir.glob("**/*.bin")) + \
-                             list(model_output_dir.glob("**/*.safetensors"))
+                model_files = (
+                    list(model_output_dir.glob("**/*.pth"))
+                    + list(model_output_dir.glob("**/*.bin"))
+                    + list(model_output_dir.glob("**/*.safetensors"))
+                )
 
                 assert len(model_files) > 0, "No model files found"
 
@@ -233,12 +273,21 @@ class TestModelTrainingPipeline:
         results_file = temp_dir / "eval_results.json"
 
         if eval_script.exists():
-            result = subprocess.run([
-                "python", str(eval_script),
-                "--data", str(eval_file),
-                "--model", "dummy",  # 使用虛擬模型
-                "--output", str(results_file)
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS * 2)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(eval_script),
+                    "--data",
+                    str(eval_file),
+                    "--model",
+                    "dummy",  # 使用虛擬模型
+                    "--output",
+                    str(results_file),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS * 2,
+            )
 
             if result.returncode == 0:
                 # 驗證評估結果
@@ -266,12 +315,14 @@ class TestModelTrainingPipeline:
 
         for i in range(count):
             pattern = patterns[i % len(patterns)]
-            data.append({
-                "text": f"{pattern['text']} {i}",
-                "toxicity": pattern["toxicity"],
-                "emotion": pattern["emotion"],
-                "bullying": pattern["bullying"]
-            })
+            data.append(
+                {
+                    "text": f"{pattern['text']} {i}",
+                    "toxicity": pattern["toxicity"],
+                    "emotion": pattern["emotion"],
+                    "bullying": pattern["bullying"],
+                }
+            )
 
         return data
 
@@ -294,21 +345,37 @@ class TestPipelineIntegrity:
         clean_script = PROJECT_ROOT / "scripts" / "clean_normalize.py"
         if clean_script.exists():
             # 測試空檔案
-            result = subprocess.run([
-                "python", str(clean_script),
-                "--input", str(empty_file),
-                "--output", str(temp_dir / "empty_output.jsonl")
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(clean_script),
+                    "--input",
+                    str(empty_file),
+                    "--output",
+                    str(temp_dir / "empty_output.jsonl"),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
             # 應該有適當的錯誤處理，不會崩潰
             assert result.returncode == 0 or "empty" in result.stderr.lower()
 
             # 測試無效檔案
-            result = subprocess.run([
-                "python", str(clean_script),
-                "--input", str(invalid_file),
-                "--output", str(temp_dir / "invalid_output.jsonl")
-            ], capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+            result = subprocess.run(
+                [
+                    "python",
+                    str(clean_script),
+                    "--input",
+                    str(invalid_file),
+                    "--output",
+                    str(temp_dir / "invalid_output.jsonl"),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
             # 應該有適當的錯誤處理
             assert result.returncode == 0 or "json" in result.stderr.lower()
@@ -319,7 +386,7 @@ class TestPipelineIntegrity:
         original_data = [
             {"text": "原始文本1", "label": "positive"},
             {"text": "原始文本2", "label": "negative"},
-            {"text": "原始文本3", "label": "neutral"}
+            {"text": "原始文本3", "label": "neutral"},
         ]
 
         input_file = temp_dir / "consistency_input.jsonl"
@@ -334,21 +401,35 @@ class TestPipelineIntegrity:
         # 階段1：清理
         clean_script = PROJECT_ROOT / "scripts" / "clean_normalize.py"
         if clean_script.exists():
-            subprocess.run([
-                "python", str(clean_script),
-                "--input", str(input_file),
-                "--output", str(stage1_output)
-            ], capture_output=True, timeout=TIMEOUT_SECONDS)
+            subprocess.run(
+                [
+                    "python",
+                    str(clean_script),
+                    "--input",
+                    str(input_file),
+                    "--output",
+                    str(stage1_output),
+                ],
+                capture_output=True,
+                timeout=TIMEOUT_SECONDS,
+            )
 
         # 階段2：標籤統一
         if stage1_output.exists():
-            mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py" 
+            mapping_script = PROJECT_ROOT / "scripts" / "label_mapping.py"
             if mapping_script.exists():
-                subprocess.run([
-                    "python", str(mapping_script),
-                    "--input", str(stage1_output),
-                    "--output", str(stage2_output)
-                ], capture_output=True, timeout=TIMEOUT_SECONDS)
+                subprocess.run(
+                    [
+                        "python",
+                        str(mapping_script),
+                        "--input",
+                        str(stage1_output),
+                        "--output",
+                        str(stage2_output),
+                    ],
+                    capture_output=True,
+                    timeout=TIMEOUT_SECONDS,
+                )
 
         # 驗證資料一致性
         if stage2_output.exists():
@@ -368,16 +449,18 @@ class TestPipelineIntegrity:
 
     def test_pipeline_memory_efficiency(self, temp_dir):
         """測試管道記憶體效率"""
+
         import psutil
-        import os
 
         # 建立較大的測試資料集
         large_data = []
         for i in range(1000):  # 1000 筆資料
-            large_data.append({
-                "text": f"大量測試資料內容 {'x' * 100} {i}",  # 較長的文本
-                "label": "positive" if i % 2 == 0 else "negative"
-            })
+            large_data.append(
+                {
+                    "text": f"大量測試資料內容 {'x' * 100} {i}",  # 較長的文本
+                    "label": "positive" if i % 2 == 0 else "negative",
+                }
+            )
 
         large_file = temp_dir / "large_dataset.jsonl"
         with open(large_file, "w", encoding="utf-8") as f:
@@ -385,8 +468,11 @@ class TestPipelineIntegrity:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
         # 監控記憶體使用
-        process = subprocess.Popen([
-            "python", "-c", f"""
+        process = subprocess.Popen(
+            [
+                "python",
+                "-c",
+                f"""
 import json
 import time
 input_file = '{large_file}'
@@ -401,8 +487,11 @@ with open(input_file, 'r', encoding='utf-8') as f_in:
             data['processed'] = True
             f_out.write(json.dumps(data, ensure_ascii=False) + '\\n')
             time.sleep(0.001)  # 模擬處理時間
-"""
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+""",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
         # 監控記憶體使用
         max_memory = 0
@@ -470,17 +559,14 @@ class TestFullSystemPipeline:
             {"text": "今天天氣真好，心情很棒！", "expected_toxicity": "none"},
             {"text": "謝謝大家的支持和鼓勵", "expected_toxicity": "none"},
             {"text": "這個想法很有創意", "expected_toxicity": "none"},
-
             # 輕微毒性案例
             {"text": "你怎麼這麼笨啊", "expected_toxicity": "toxic"},
             {"text": "真是個廢物", "expected_toxicity": "toxic"},
             {"text": "滾開，別煩我", "expected_toxicity": "toxic"},
-
             # 嚴重毒性案例
             {"text": "我要殺了你", "expected_toxicity": "severe"},
             {"text": "去死吧，沒人會想念你", "expected_toxicity": "severe"},
             {"text": "我知道你住哪裡，小心點", "expected_toxicity": "severe"},
-
             # 邊界案例
             {"text": "這個決定真的讓人生氣", "expected_toxicity": "none"},
             {"text": "我對此感到失望", "expected_toxicity": "none"},
@@ -498,7 +584,7 @@ class TestFullSystemPipeline:
                         "text": data["text"].strip(),
                         "toxicity": data.get("expected_toxicity", "none"),
                         "emotion": data.get("expected_emotion", "neg"),
-                        "processed": True
+                        "processed": True,
                     }
                     f_out.write(json.dumps(processed_data, ensure_ascii=False) + "\n")
 
@@ -511,21 +597,15 @@ class TestFullSystemPipeline:
             "model_type": "cyberpuppy",
             "num_labels": {"toxicity": 3, "emotion": 3, "bullying": 3},
             "trained_on": str(data_file),
-            "training_completed": True
+            "training_completed": True,
         }
 
-        (model_dir / "config.json").write_text(
-            json.dumps(config, indent=2, ensure_ascii=False)
-        )
+        (model_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False))
 
         # 模擬模型權重檔案
         (model_dir / "model.pth").write_bytes(b"fake model weights")
 
-    async def _test_api_integration(
-        self,
-        api_server: str,
-        test_data: List[Dict]
-    ):
+    async def _test_api_integration(self, api_server: str, test_data: List[Dict]):
         """測試 API 整合"""
         import httpx
 
@@ -535,9 +615,7 @@ class TestFullSystemPipeline:
 
                 try:
                     response = await client.post(
-                        f"{api_server}/analyze",
-                        json=payload,
-                        timeout=30.0
+                        f"{api_server}/analyze", json=payload, timeout=30.0
                     )
 
                     if response.status_code == 200:

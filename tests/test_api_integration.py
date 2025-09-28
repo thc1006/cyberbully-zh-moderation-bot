@@ -10,8 +10,8 @@ api_dir = Path(__file__).parent.parent / "api"
 sys.path.insert(0, str(api_dir))
 
 import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
 from app import app  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 from model_loader_simple import get_model_loader  # noqa: E402
 
 
@@ -20,6 +20,7 @@ def test_api_analyze_endpoint():
     """Test the /analyze endpoint returns valid response structure."""
     # Initialize model loader manually for testing
     import app as app_module
+
     loader = get_model_loader()
     loader.load_models()
     app_module.model_loader = loader
@@ -30,7 +31,7 @@ def test_api_analyze_endpoint():
     test_request = {
         "text": "这是一个测试文本，包含一些笨蛋词汇",
         "context": "测试上下文",
-        "thread_id": "test_thread_123"
+        "thread_id": "test_thread_123",
     }
 
     # Make request
@@ -43,7 +44,11 @@ def test_api_analyze_endpoint():
 
     # Check required fields
     required_fields = [
-        "toxicity", "bullying", "role", "emotion", "emotion_strength",
+        "toxicity",
+        "bullying",
+        "role",
+        "emotion",
+        "emotion_strength",
         "scores",
     ]
 
@@ -64,9 +69,15 @@ def test_api_analyze_endpoint():
         for word_data in important_words:
             assert "word" in word_data, f"Missing 'word' field in {word_data}"
             assert "importance" in word_data, f"Missing 'importance' field in {word_data}"
-            assert isinstance(word_data["word"], str), f"'word' should be str, got {type(word_data['word'])}"
-            assert isinstance(word_data["importance"], (int, float)), f"'importance' should be numeric, got {type(word_data['importance'])}"
-            assert 0 <= word_data["importance"] <= 1, f"'importance' should be between 0-1, got {word_data['importance']}" 
+            assert isinstance(
+                word_data["word"], str
+            ), f"'word' should be str, got {type(word_data['word'])}"
+            assert isinstance(
+                word_data["importance"], (int, float)
+            ), f"'importance' should be numeric, got {type(word_data['importance'])}"
+            assert (
+                0 <= word_data["importance"] <= 1
+            ), f"'importance' should be between 0-1, got {word_data['importance']}"
 
     # Check scores structure
     scores = data["scores"]
@@ -110,10 +121,12 @@ if __name__ == "__main__":
         print(f"- emotion: {result['emotion']}")
         print(f"- important_words count: {len(result['explanations']['important_words'])}")
 
-        if result['explanations']['important_words']:
-            first_word = result['explanations']['important_words'][0]
+        if result["explanations"]["important_words"]:
+            first_word = result["explanations"]["important_words"][0]
             try:
-                print(f"- first important word: '{first_word['word']}' (importance: {first_word['importance']})")
+                print(
+                    f"- first important word: '{first_word['word']}' (importance: {first_word['importance']})"
+                )
             except UnicodeEncodeError:
                 print(f"- first important word: [UNICODE] (importance: {first_word['importance']})")
 
@@ -122,5 +135,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"ERROR: API test failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -23,12 +23,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
 # 設定日誌
 logger = logging.getLogger(__name__)
@@ -101,9 +97,7 @@ class PerspectiveAPI:
         "requests_per_minute": 60,
     }
 
-    def __init__(
-        self, api_key: Optional[str] = None, rate_limit: Optional[Dict[str, int]] = None
-    ):
+    def __init__(self, api_key: Optional[str] = None, rate_limit: Optional[Dict[str, int]] = None):
         """
         初始化 Perspective API 客戶端
 
@@ -124,9 +118,7 @@ class PerspectiveAPI:
         # 速率限制狀態
         self._request_times: List[float] = []
         self._daily_request_count = 0
-        self._daily_reset_time = datetime.now().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        self._daily_reset_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # HTTP 客戶端
         self.client = httpx.AsyncClient(
@@ -151,9 +143,7 @@ class PerspectiveAPI:
         now = datetime.now()
         if now.date() != self._daily_reset_time.date():
             self._daily_request_count = 0
-            self._daily_reset_time = now.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+            self._daily_reset_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         if self._daily_request_count >= self.rate_limit["requests_per_day"]:
             raise httpx.HTTPStatusError(
@@ -222,9 +212,7 @@ class PerspectiveAPI:
 
         # 準備請求屬性
         attributes = requested_attributes or self.ATTRIBUTES
-        requested_attributes_dict = {
-            attr: {} for attr in attributes if attr in self.ATTRIBUTES
-        }
+        requested_attributes_dict = {attr: {} for attr in attributes if attr in self.ATTRIBUTES}
 
         # 構建請求
         request_data = {
@@ -282,9 +270,7 @@ class PerspectiveAPI:
             return result
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"Perspective API HTTP 錯誤: {e.response.status_code} - {e.response.text}"
-            )
+            logger.error(f"Perspective API HTTP 錯誤: {e.response.status_code} - {e.response.text}")
             raise
         except httpx.RequestError as e:
             logger.error(f"Perspective API 請求錯誤: {e}")
@@ -341,9 +327,7 @@ class UncertaintyDetector:
             f"不確定性檢測器已初始化 - 閾值: {uncertainty_threshold}-{confidence_threshold}"
         )
 
-    def analyze_uncertainty(
-        self, prediction_scores: Dict[str, Any]
-    ) -> UncertaintyAnalysis:
+    def analyze_uncertainty(self, prediction_scores: Dict[str, Any]) -> UncertaintyAnalysis:
         """
         分析預測結果的不確定性
 

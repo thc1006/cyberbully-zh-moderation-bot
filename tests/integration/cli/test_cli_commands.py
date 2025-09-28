@@ -25,7 +25,7 @@ def cli_script():
     possible_paths = [
         PROJECT_ROOT / "cyberpuppy" / "cli.py",
         PROJECT_ROOT / "src" / "cyberpuppy" / "cli.py",
-        PROJECT_ROOT / "cli.py"
+        PROJECT_ROOT / "cli.py",
     ]
 
     for path in possible_paths:
@@ -43,7 +43,7 @@ def sample_text_file(temp_dir):
         "這個笨蛋什麼都不懂，真是廢物。",
         "我要讓你後悔，小心點。",
         "謝謝你的幫助，真的很感激。",
-        "去死啦，我討厭你。"
+        "去死啦，我討厭你。",
     ]
 
     text_file = temp_dir / "test_texts.txt"
@@ -57,7 +57,7 @@ def sample_batch_file(temp_dir):
     batch_data = [
         {"id": "1", "text": "正面測試訊息", "label": "none"},
         {"id": "2", "text": "你很笨耶", "label": "toxic"},
-        {"id": "3", "text": "威脅訊息內容", "label": "severe"}
+        {"id": "3", "text": "威脅訊息內容", "label": "severe"},
     ]
 
     batch_file = temp_dir / "test_batch.jsonl"
@@ -79,7 +79,7 @@ class TestCLIBasicCommands:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=TIMEOUT_SECONDS
+            timeout=TIMEOUT_SECONDS,
         )
 
         assert result.returncode == 0
@@ -93,13 +93,14 @@ class TestCLIBasicCommands:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=TIMEOUT_SECONDS
+            timeout=TIMEOUT_SECONDS,
         )
 
         assert result.returncode == 0
         # 驗證版本格式
-        version_pattern = r'\d+\.\d+\.\d+'
+        version_pattern = r"\d+\.\d+\.\d+"
         import re
+
         assert re.search(version_pattern, result.stdout)
 
     def test_cli_single_text_analysis(self, cli_script):
@@ -111,7 +112,7 @@ class TestCLIBasicCommands:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=TIMEOUT_SECONDS
+            timeout=TIMEOUT_SECONDS,
         )
 
         assert result.returncode == 0
@@ -132,22 +133,27 @@ class TestCLIBasicCommands:
 class TestCLIBatchProcessing:
     """批次處理測試"""
 
-    def test_cli_batch_file_processing(
-        self,
-        cli_script,
-        sample_text_file,
-        temp_dir
-    ):
+    def test_cli_batch_file_processing(self, cli_script, sample_text_file, temp_dir):
         """測試批次檔案處理"""
         output_file = temp_dir / "output.jsonl"
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(sample_text_file),
-            "--output", str(output_file),
-            "--format", "jsonl"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 2)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(sample_text_file),
+                "--output",
+                str(output_file),
+                "--format",
+                "jsonl",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 2,
+        )
 
         assert result.returncode == 0
         assert output_file.exists()
@@ -163,22 +169,27 @@ class TestCLIBatchProcessing:
                 assert "toxicity" in data
                 assert "timestamp" in data
 
-    def test_cli_jsonl_batch_processing(
-        self,
-        cli_script,
-        sample_batch_file,
-        temp_dir
-    ):
+    def test_cli_jsonl_batch_processing(self, cli_script, sample_batch_file, temp_dir):
         """測試 JSONL 批次處理"""
         output_file = temp_dir / "batch_output.jsonl"
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(sample_batch_file),
-            "--output", str(output_file),
-            "--input-format", "jsonl"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 2)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(sample_batch_file),
+                "--output",
+                str(output_file),
+                "--input-format",
+                "jsonl",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 2,
+        )
 
         assert result.returncode == 0
         assert output_file.exists()
@@ -193,28 +204,34 @@ class TestCLIBatchProcessing:
                 assert "text" in result_data
                 assert "predictions" in result_data
 
-    def test_cli_csv_output_format(
-        self,
-        cli_script,
-        sample_text_file,
-        temp_dir
-    ):
+    def test_cli_csv_output_format(self, cli_script, sample_text_file, temp_dir):
         """測試 CSV 輸出格式"""
         output_file = temp_dir / "output.csv"
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(sample_text_file),
-            "--output", str(output_file),
-            "--format", "csv"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 2)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(sample_text_file),
+                "--output",
+                str(output_file),
+                "--format",
+                "csv",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 2,
+        )
 
         assert result.returncode == 0
         assert output_file.exists()
 
         # 驗證 CSV 格式
         import csv
+
         with open(output_file, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
@@ -233,10 +250,13 @@ class TestCLITrainingCommands:
 
     def test_cli_training_help(self, cli_script):
         """測試訓練命令說明"""
-        result = subprocess.run([
-            "python", cli_script, "train", "--help"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            ["python", cli_script, "train", "--help"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         assert result.returncode == 0
         assert "train" in result.stdout.lower() or "訓練" in result.stdout
@@ -250,23 +270,32 @@ class TestCLITrainingCommands:
                 data = {
                     "text": f"測試文本 {i}",
                     "toxicity": "none" if i % 2 == 0 else "toxic",
-                    "emotion": "neu"
+                    "emotion": "neu",
                 }
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
         # 執行評估（假設有可用的模型）
-        result = subprocess.run([
-            "python", cli_script, "evaluate",
-            "--data", str(test_data),
-            "--model", "dummy"  # 使用虛擬模型進行測試
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 3)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "evaluate",
+                "--data",
+                str(test_data),
+                "--model",
+                "dummy",  # 使用虛擬模型進行測試
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 3,
+        )
 
         # 即使失敗也要檢查是否有適當的錯誤訊息
         if result.returncode != 0:
             assert "model" in result.stderr.lower() or "模型" in result.stderr
         else:
-            assert "evaluation" in result.stdout.lower() 
+            assert "evaluation" in result.stdout.lower()
 
 
 @pytest.mark.cli
@@ -275,12 +304,13 @@ class TestCLIDataProcessing:
 
     def test_cli_data_download(self, cli_script, temp_dir):
         """測試資料下載命令"""
-        result = subprocess.run([
-            "python", cli_script, "download",
-            "--dataset", "test",
-            "--output-dir", str(temp_dir)
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 5)
+        result = subprocess.run(
+            ["python", cli_script, "download", "--dataset", "test", "--output-dir", str(temp_dir)],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 5,
+        )
 
         # 由於可能沒有實際的下載功能，檢查是否有適當回應
         if result.returncode != 0:
@@ -288,28 +318,33 @@ class TestCLIDataProcessing:
         else:
             assert temp_dir.exists()
 
-    def test_cli_data_preprocessing(
-        self,
-        cli_script,
-        sample_batch_file,
-        temp_dir
-    ):
+    def test_cli_data_preprocessing(self, cli_script, sample_batch_file, temp_dir):
         """測試資料前處理命令"""
         output_file = temp_dir / "preprocessed.jsonl"
 
-        result = subprocess.run([
-            "python", cli_script, "preprocess",
-            "--input", str(sample_batch_file),
-            "--output", str(output_file),
-            "--clean", "--normalize"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 2)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "preprocess",
+                "--input",
+                str(sample_batch_file),
+                "--output",
+                str(output_file),
+                "--clean",
+                "--normalize",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 2,
+        )
 
         if result.returncode == 0:
             assert output_file.exists()
         else:
             # 檢查錯誤訊息是否合理
-            assert "preprocess" in result.stderr.lower() 
+            assert "preprocess" in result.stderr.lower()
 
 
 @pytest.mark.cli
@@ -318,10 +353,13 @@ class TestCLIConfigurationManagement:
 
     def test_cli_config_show(self, cli_script):
         """測試配置顯示"""
-        result = subprocess.run([
-            "python", cli_script, "config", "show"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            ["python", cli_script, "config", "show"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         if result.returncode == 0:
             # 檢查配置內容
@@ -331,10 +369,13 @@ class TestCLIConfigurationManagement:
 
     def test_cli_config_validation(self, cli_script):
         """測試配置驗證"""
-        result = subprocess.run([
-            "python", cli_script, "config", "validate"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            ["python", cli_script, "config", "validate"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         # 無論成功失敗，都應該有適當的輸出
         assert result.stdout or result.stderr
@@ -350,50 +391,86 @@ class TestCLIErrorHandling:
 
     def test_cli_invalid_command(self, cli_script):
         """測試無效命令"""
-        result = subprocess.run([
-            "python", cli_script, "invalid_command"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            ["python", cli_script, "invalid_command"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         assert result.returncode != 0
-        assert "invalid" in result.stderr.lower() or "無效" in result.stderr or \
-               "unknown" in result.stderr.lower() or "未知" in result.stderr
+        assert (
+            "invalid" in result.stderr.lower()
+            or "無效" in result.stderr
+            or "unknown" in result.stderr.lower()
+            or "未知" in result.stderr
+        )
 
     def test_cli_missing_arguments(self, cli_script):
         """測試缺少參數"""
-        result = subprocess.run([
-            "python", cli_script, "detect"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            ["python", cli_script, "detect"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         assert result.returncode != 0
-        assert "required" in result.stderr.lower() or \
-               "missing" in result.stderr.lower() or "缺少" in result.stderr
+        assert (
+            "required" in result.stderr.lower()
+            or "missing" in result.stderr.lower()
+            or "缺少" in result.stderr
+        )
 
     def test_cli_invalid_file_path(self, cli_script):
         """測試無效檔案路徑"""
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", "/nonexistent/file.txt",
-            "--output", "/tmp/output.jsonl"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                "/nonexistent/file.txt",
+                "--output",
+                "/tmp/output.jsonl",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         assert result.returncode != 0
-        assert "file" in result.stderr.lower() or "檔案" in result.stderr or \
-               "not found" in result.stderr.lower() or "找不到" in result.stderr
+        assert (
+            "file" in result.stderr.lower()
+            or "檔案" in result.stderr
+            or "not found" in result.stderr.lower()
+            or "找不到" in result.stderr
+        )
 
     def test_cli_invalid_format(self, cli_script, sample_text_file, temp_dir):
         """測試無效輸出格式"""
         output_file = temp_dir / "output.xyz"
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(sample_text_file),
-            "--output", str(output_file),
-            "--format", "invalid_format"
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(sample_text_file),
+                "--output",
+                str(output_file),
+                "--format",
+                "invalid_format",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS,
+        )
 
         assert result.returncode != 0
         assert "format" in result.stderr.lower() or "格式" in result.stderr
@@ -414,14 +491,24 @@ class TestCLIPerformance:
         output_file = temp_dir / "large_output.jsonl"
 
         import time
+
         start_time = time.time()
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(large_file),
-            "--output", str(output_file)
-        ], cwd=PROJECT_ROOT, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 5)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(large_file),
+                "--output",
+                str(output_file),
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 5,
+        )
 
         end_time = time.time()
         processing_time = end_time - start_time
@@ -438,8 +525,8 @@ class TestCLIPerformance:
 
     def test_cli_memory_usage(self, cli_script, temp_dir):
         """測試記憶體使用情況"""
+
         import psutil
-        import os
 
         # 建立測試檔案
         test_file = temp_dir / "memory_test.txt"
@@ -450,11 +537,20 @@ class TestCLIPerformance:
         output_file = temp_dir / "memory_output.jsonl"
 
         # 監控記憶體使用
-        process = subprocess.Popen([
-            "python", cli_script, "batch",
-            "--input", str(test_file),
-            "--output", str(output_file)
-        ], cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(test_file),
+                "--output",
+                str(output_file),
+            ],
+            cwd=PROJECT_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
         # 監控子進程記憶體使用
         max_memory = 0
@@ -482,28 +578,33 @@ class TestCLIPerformance:
 class TestCLIIntegrationWithAPI:
     """CLI 與 API 整合測試"""
 
-    async def test_cli_with_running_api(
-        self,
-        cli_script,
-        api_server,
-        sample_text_file,
-        temp_dir
-    ):
+    async def test_cli_with_running_api(self, cli_script, api_server, sample_text_file, temp_dir):
         """測試 CLI 與執行中 API 的整合"""
         output_file = temp_dir / "api_integration_output.jsonl"
 
         # 設定 API URL 環境變數
         import os
+
         env = os.environ.copy()
         env["CYBERPUPPY_API_URL"] = api_server
 
-        result = subprocess.run([
-            "python", cli_script, "batch",
-            "--input", str(sample_text_file),
-            "--output", str(output_file),
-            "--use-api"  # 假設有此選項使用 API 而非本地模型
-        ], cwd=PROJECT_ROOT, env=env, capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS * 3)
+        result = subprocess.run(
+            [
+                "python",
+                cli_script,
+                "batch",
+                "--input",
+                str(sample_text_file),
+                "--output",
+                str(output_file),
+                "--use-api",  # 假設有此選項使用 API 而非本地模型
+            ],
+            cwd=PROJECT_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SECONDS * 3,
+        )
 
         if result.returncode == 0:
             assert output_file.exists()

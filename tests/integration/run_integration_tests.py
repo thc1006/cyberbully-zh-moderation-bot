@@ -32,9 +32,9 @@ class IntegrationTestRunner:
     def check_dependencies(self) -> bool:
         """檢查測試依賴"""
         try:
-            import pytest  # noqa: F401
             import httpx  # noqa: F401
             import psutil  # noqa: F401
+            import pytest  # noqa: F401
 
             print("✅ 測試依賴檢查通過")
             return True
@@ -109,9 +109,7 @@ class IntegrationTestRunner:
 
             # 設定環境變數
             env = os.environ.copy()
-            env.update(
-                {"TESTING": "1", "LOG_LEVEL": "INFO", "CUDA_VISIBLE_DEVICES": ""}
-            )
+            env.update({"TESTING": "1", "LOG_LEVEL": "INFO", "CUDA_VISIBLE_DEVICES": ""})
 
             # 啟動服務
             _process = subprocess.Popen(  # noqa: F841
@@ -203,9 +201,7 @@ class IntegrationTestRunner:
 
             if result.returncode != 0:
                 # 可能容器已存在，嘗試啟動
-                subprocess.run(
-                    ["docker", "start", "cyberpuppy-redis-test"], capture_output=True
-                )
+                subprocess.run(["docker", "start", "cyberpuppy-redis-test"], capture_output=True)
 
             # 等待服務啟動
             max_wait = 10
@@ -398,12 +394,8 @@ class IntegrationTestRunner:
 
         # 清理 Docker 容器
         try:
-            subprocess.run(
-                ["docker", "stop", "cyberpuppy-redis-test"], capture_output=True
-            )
-            subprocess.run(
-                ["docker", "rm", "cyberpuppy-redis-test"], capture_output=True
-            )
+            subprocess.run(["docker", "stop", "cyberpuppy-redis-test"], capture_output=True)
+            subprocess.run(["docker", "rm", "cyberpuppy-redis-test"], capture_output=True)
         except Exception:
             pass
 
@@ -426,19 +418,13 @@ def main():
         """,
     )
 
-    parser.add_argument(
-        "--quick", action="store_true", help="執行快速整合測試（不含慢速測試）"
-    )
-    parser.add_argument(
-        "--full", action="store_true", help="執行完整整合測試（排除 Docker）"
-    )
+    parser.add_argument("--quick", action="store_true", help="執行快速整合測試（不含慢速測試）")
+    parser.add_argument("--full", action="store_true", help="執行完整整合測試（排除 Docker）")
     parser.add_argument("--performance", action="store_true", help="執行效能整合測試")
     parser.add_argument("--docker", action="store_true", help="執行 Docker 整合測試")
     parser.add_argument("--regression", action="store_true", help="執行回歸測試")
     parser.add_argument("--all", action="store_true", help="執行所有整合測試")
-    parser.add_argument(
-        "--check-deps", action="store_true", help="僅檢查依賴與服務狀態"
-    )
+    parser.add_argument("--check-deps", action="store_true", help="僅檢查依賴與服務狀態")
     parser.add_argument("--cleanup", action="store_true", help="清理測試服務")
 
     args = parser.parse_args()

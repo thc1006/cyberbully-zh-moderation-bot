@@ -9,19 +9,18 @@ This module provides comprehensive checkpoint management including:
 - Deployment model export
 """
 
+import hashlib
 import json
 import logging
 import shutil
-import hashlib
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainingMetrics:
     """Training metrics for a single epoch."""
+
     epoch: int
     train_loss: float
     val_loss: float
@@ -42,6 +42,7 @@ class TrainingMetrics:
 @dataclass
 class CheckpointInfo:
     """Information about a checkpoint."""
+
     epoch: int
     path: Path
     metrics: TrainingMetrics
@@ -70,7 +71,7 @@ class CheckpointManager:
         model_name: str = "model",
         keep_last_n: int = 3,
         monitor_metric: str = "val_loss",
-        mode: str = "min"
+        mode: str = "min",
     ):
         """
         Initialize checkpoint manager.
@@ -105,25 +106,24 @@ class CheckpointManager:
         self._load_training_history()
 
         logger.info(f"CheckpointManager initialized at {self.checkpoint_dir}")
-        logger.info(f"Monitoring {self.monitor_metric} ({self.mode}), keeping last {self.keep_last_n} checkpoints")
+        logger.info(
+            f"Monitoring {self.monitor_metric} ({self.mode}), keeping last {self.keep_last_n} checkpoints"
+        )
 
     def _load_training_history(self) -> None:
         """Load training history from disk."""
         if self.history_file.exists():
             try:
-                with open(self.history_file, 'r', encoding='utf-8') as f:
+                with open(self.history_file, "r", encoding="utf-8") as f:
                     history_data = json.load(f)
 
-                self.training_history = [
-                    TrainingMetrics(**metrics) for metrics in history_data
-                ]
+                self.training_history = [TrainingMetrics(**metrics) for metrics in history_data]
 
                 if self.training_history:
                     self.current_epoch = self.training_history[-1].epoch
                     # Find best metric value
                     metric_values = [
-                        getattr(m, self.monitor_metric, float('inf'))
-                        for m in self.training_history
+                        getattr(m, self.monitor_metric, float("inf")) for m in self.training_history
                     ]
                     if self.mode == "min":
                         self.best_metric_value = min(metric_values)
@@ -140,7 +140,7 @@ class CheckpointManager:
         """Save training history to disk."""
         try:
             history_data = [asdict(metrics) for metrics in self.training_history]
-            with open(self.history_file, 'w', encoding='utf-8') as f:
+            with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(history_data, f, indent=2, ensure_ascii=False)
             logger.debug(f"Saved training history to {self.history_file}")
         except Exception as e:
@@ -166,10 +166,10 @@ class CheckpointManager:
                 return False
 
             # Try to load the checkpoint (with weights_only=False for backwards compatibility)
-            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
             # Check required keys
-            required_keys = ['epoch', 'model_state_dict', 'metrics']
+            required_keys = ["epoch", "model_state_dict", "metrics"]
             if not all(key in checkpoint for key in required_keys):
                 logger.warning(f"Checkpoint {checkpoint_path} missing required keys")
                 return False
@@ -185,7 +185,7 @@ class CheckpointManager:
         model: nn.Module,
         optimizer: Optimizer,
         metrics: TrainingMetrics,
-        is_best: bool = False
+        is_best: bool = False,
     ) -> Path:
         """
         Save a training checkpoint.
@@ -206,13 +206,13 @@ class CheckpointManager:
 
             # Create checkpoint data
             checkpoint = {
-                'epoch': metrics.epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'metrics': asdict(metrics),
-                'model_name': self.model_name,
-                'timestamp': datetime.now().isoformat(),
-                'pytorch_version': torch.__version__
+                "epoch": metrics.epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "metrics": asdict(metrics),
+                "model_name": self.model_name,
+                "timestamp": datetime.now().isoformat(),
+                "pytorch_version": torch.__version__,
             }
 
             # Save regular checkpoint
@@ -220,7 +220,7 @@ class CheckpointManager:
             torch.save(checkpoint, checkpoint_path)
 
             # Calculate checksum
-            checksum = self._calculate_checksum(checkpoint_path)
+            self._calculate_checksum(checkpoint_path)
 
             # Save optimizer state separately
             torch.save(optimizer.state_dict(), self.optimizer_state_path)
@@ -248,7 +248,7 @@ class CheckpointManager:
         self,
         model: nn.Module,
         optimizer: Optional[Optimizer] = None,
-        checkpoint_path: Optional[Path] = None
+        checkpoint_path: Optional[Path] = None,
     ) -> Tuple[int, TrainingMetrics]:
         """
         Load a checkpoint and restore model/optimizer state.
@@ -271,22 +271,24 @@ class CheckpointManager:
 
         try:
             logger.info(f"Loading checkpoint from {checkpoint_path}")
-            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
             # Load model state
-            model.load_state_dict(checkpoint['model_state_dict'])
+            model.load_state_dict(checkpoint["model_state_dict"])
 
             # Load optimizer state if provided
             if optimizer is not None:
-                if 'optimizer_state_dict' in checkpoint:
-                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                if "optimizer_state_dict" in checkpoint:
+                    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 elif self.optimizer_state_path.exists():
-                    optimizer_state = torch.load(self.optimizer_state_path, map_location='cpu', weights_only=False)
+                    optimizer_state = torch.load(
+                        self.optimizer_state_path, map_location="cpu", weights_only=False
+                    )
                     optimizer.load_state_dict(optimizer_state)
 
             # Extract metrics
-            metrics = TrainingMetrics(**checkpoint['metrics'])
-            epoch = checkpoint['epoch']
+            metrics = TrainingMetrics(**checkpoint["metrics"])
+            epoch = checkpoint["epoch"]
 
             logger.info(f"Loaded checkpoint from epoch {epoch}")
             return epoch, metrics
@@ -304,7 +306,7 @@ class CheckpointManager:
         # Sort by epoch number
         def extract_epoch(path: Path) -> int:
             try:
-                return int(path.stem.split('_')[-1])
+                return int(path.stem.split("_")[-1])
             except:
                 return 0
 
@@ -321,14 +323,14 @@ class CheckpointManager:
             # Sort by epoch number
             def extract_epoch(path: Path) -> int:
                 try:
-                    return int(path.stem.split('_')[-1])
+                    return int(path.stem.split("_")[-1])
                 except:
                     return 0
 
             checkpoint_files.sort(key=extract_epoch, reverse=True)
 
             # Keep the last N checkpoints
-            to_keep = set(checkpoint_files[:self.keep_last_n])
+            to_keep = set(checkpoint_files[: self.keep_last_n])
 
             # Always keep the best model checkpoint if it exists
             if self.best_model_path.exists():
@@ -372,7 +374,9 @@ class CheckpointManager:
             if best_value is None:
                 best_value = value
                 best_epoch = metrics.epoch
-            elif (self.mode == "min" and value < best_value) or (self.mode == "max" and value > best_value):
+            elif (self.mode == "min" and value < best_value) or (
+                self.mode == "max" and value > best_value
+            ):
                 best_value = value
                 best_epoch = metrics.epoch
 
@@ -394,9 +398,9 @@ class CheckpointManager:
             return None
 
         try:
-            checkpoint = torch.load(latest_checkpoint, map_location='cpu', weights_only=False)
-            epoch = checkpoint['epoch']
-            metrics = TrainingMetrics(**checkpoint['metrics'])
+            checkpoint = torch.load(latest_checkpoint, map_location="cpu", weights_only=False)
+            epoch = checkpoint["epoch"]
+            metrics = TrainingMetrics(**checkpoint["metrics"])
             return latest_checkpoint, epoch, metrics
         except Exception as e:
             logger.error(f"Failed to read checkpoint info: {e}")
@@ -416,7 +420,7 @@ class CheckpointManager:
         checkpoint_path, epoch, metrics = resume_info
 
         print(f"\n{'='*60}")
-        print(f"CHECKPOINT FOUND")
+        print("CHECKPOINT FOUND")
         print(f"{'='*60}")
         print(f"Found checkpoint at epoch {epoch}")
         print(f"Path: {checkpoint_path}")
@@ -433,18 +437,15 @@ class CheckpointManager:
 
         while True:
             response = input("Resume training from this checkpoint? [Y/n]: ").strip().lower()
-            if response in ['', 'y', 'yes']:
+            if response in ["", "y", "yes"]:
                 return True
-            elif response in ['n', 'no']:
+            elif response in ["n", "no"]:
                 return False
             else:
                 print("Please enter 'y' for yes or 'n' for no.")
 
     def export_for_deployment(
-        self,
-        model: nn.Module,
-        export_path: Optional[Path] = None,
-        use_best_model: bool = True
+        self, model: nn.Module, export_path: Optional[Path] = None, use_best_model: bool = True
     ) -> Path:
         """
         Export model for deployment (without training-specific components).
@@ -463,10 +464,12 @@ class CheckpointManager:
         try:
             if use_best_model and self.best_model_path.exists():
                 logger.info("Exporting best model for deployment")
-                checkpoint = torch.load(self.best_model_path, map_location='cpu', weights_only=False)
-                model.load_state_dict(checkpoint['model_state_dict'])
-                epoch = checkpoint['epoch']
-                metrics = TrainingMetrics(**checkpoint['metrics'])
+                checkpoint = torch.load(
+                    self.best_model_path, map_location="cpu", weights_only=False
+                )
+                model.load_state_dict(checkpoint["model_state_dict"])
+                epoch = checkpoint["epoch"]
+                metrics = TrainingMetrics(**checkpoint["metrics"])
             else:
                 logger.info("Exporting current model for deployment")
                 epoch = self.current_epoch
@@ -474,15 +477,15 @@ class CheckpointManager:
 
             # Create deployment package
             deployment_data = {
-                'model_state_dict': model.state_dict(),
-                'model_name': self.model_name,
-                'epoch': epoch,
-                'export_timestamp': datetime.now().isoformat(),
-                'pytorch_version': torch.__version__
+                "model_state_dict": model.state_dict(),
+                "model_name": self.model_name,
+                "epoch": epoch,
+                "export_timestamp": datetime.now().isoformat(),
+                "pytorch_version": torch.__version__,
             }
 
             if metrics:
-                deployment_data['final_metrics'] = asdict(metrics)
+                deployment_data["final_metrics"] = asdict(metrics)
 
             # Save deployment model
             torch.save(deployment_data, export_path)
@@ -513,7 +516,7 @@ class CheckpointManager:
             "monitor_metric": self.monitor_metric,
             "mode": self.mode,
             "checkpoint_dir": str(self.checkpoint_dir),
-            "has_best_model": self.best_model_path.exists()
+            "has_best_model": self.best_model_path.exists(),
         }
 
         if best_epoch is not None:
@@ -531,9 +534,9 @@ class CheckpointManager:
                 if not self._validate_checkpoint(checkpoint_file):
                     continue
 
-                checkpoint = torch.load(checkpoint_file, map_location='cpu', weights_only=False)
-                epoch = checkpoint['epoch']
-                metrics = TrainingMetrics(**checkpoint['metrics'])
+                checkpoint = torch.load(checkpoint_file, map_location="cpu", weights_only=False)
+                epoch = checkpoint["epoch"]
+                metrics = TrainingMetrics(**checkpoint["metrics"])
 
                 file_size = checkpoint_file.stat().st_size
                 checksum = self._calculate_checksum(checkpoint_file)
@@ -541,7 +544,7 @@ class CheckpointManager:
 
                 # Check if this is the best model
                 best_epoch = self._find_best_epoch()
-                is_best = (best_epoch == epoch)
+                is_best = best_epoch == epoch
 
                 checkpoint_info = CheckpointInfo(
                     epoch=epoch,
@@ -550,7 +553,7 @@ class CheckpointManager:
                     is_best=is_best,
                     file_size=file_size,
                     checksum=checksum,
-                    created_at=created_at
+                    created_at=created_at,
                 )
 
                 checkpoints.append(checkpoint_info)

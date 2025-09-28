@@ -2,8 +2,9 @@
 """
 Quick test for API on port 8001.
 """
-import requests
 import json
+
+import requests
 
 
 def test_single_request():

@@ -6,7 +6,7 @@ Placeholder implementation for CLI integration.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,6 @@ class ModelEvaluator:
         }
 
         logger.info(
-            f"Evaluation completed: accuracy={results['accuracy']:.3f}, "
-            f"f1={results['f1']:.3f}"
+            f"Evaluation completed: accuracy={results['accuracy']:.3f}, " f"f1={results['f1']:.3f}"
         )
         return results

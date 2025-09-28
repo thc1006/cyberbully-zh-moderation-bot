@@ -14,7 +14,7 @@
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # 基礎正面內容
 POSITIVE_EXAMPLES = [
@@ -25,9 +25,9 @@ POSITIVE_EXAMPLES = [
             "bullying": "none",
             "emotion": "pos",
             "emotion_strength": 3,
-            "role": "none"
+            "role": "none",
         },
-        "category": "positive_weather"
+        "category": "positive_weather",
     },
     {
         "text": "謝謝大家的支持和鼓勵，我會繼續努力的",
@@ -36,9 +36,9 @@ POSITIVE_EXAMPLES = [
             "bullying": "none",
             "emotion": "pos",
             "emotion_strength": 3,
-            "role": "none"
+            "role": "none",
         },
-        "category": "positive_gratitude"
+        "category": "positive_gratitude",
     },
     {
         "text": "這個想法很有創意，我很喜歡",
@@ -47,9 +47,9 @@ POSITIVE_EXAMPLES = [
             "bullying": "none",
             "emotion": "pos",
             "emotion_strength": 2,
-            "role": "none"
+            "role": "none",
         },
-        "category": "positive_praise"
+        "category": "positive_praise",
     },
     {
         "text": "祝你生日快樂，願你天天開心",
@@ -58,9 +58,9 @@ POSITIVE_EXAMPLES = [
             "bullying": "none",
             "emotion": "pos",
             "emotion_strength": 3,
-            "role": "none"
+            "role": "none",
         },
-        "category": "positive_blessing"
+        "category": "positive_blessing",
     },
     {
         "text": "加油！你一定可以做到的",
@@ -69,10 +69,10 @@ POSITIVE_EXAMPLES = [
             "bullying": "none",
             "emotion": "pos",
             "emotion_strength": 3,
-            "role": "none"
+            "role": "none",
         },
-        "category": "positive_encouragement"
-    }
+        "category": "positive_encouragement",
+    },
 ]
 
 # 中性內容
@@ -84,9 +84,9 @@ NEUTRAL_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "neutral_question"
+        "category": "neutral_question",
     },
     {
         "text": "請問這個問題怎麼解決？",
@@ -95,9 +95,9 @@ NEUTRAL_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "neutral_inquiry"
+        "category": "neutral_inquiry",
     },
     {
         "text": "會議安排在下午三點",
@@ -106,9 +106,9 @@ NEUTRAL_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "neutral_information"
+        "category": "neutral_information",
     },
     {
         "text": "資料已經準備好了",
@@ -117,10 +117,10 @@ NEUTRAL_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "neutral_status"
-    }
+        "category": "neutral_status",
+    },
 ]
 
 # 輕微毒性內容
@@ -132,9 +132,9 @@ MILD_TOXIC_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "mild_insult"
+        "category": "mild_insult",
     },
     {
         "text": "廢物一個，滾開",
@@ -143,9 +143,9 @@ MILD_TOXIC_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "mild_dismissal"
+        "category": "mild_dismissal",
     },
     {
         "text": "你的想法很蠢，完全沒有邏輯",
@@ -154,9 +154,9 @@ MILD_TOXIC_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "mild_criticism"
+        "category": "mild_criticism",
     },
     {
         "text": "真是個討厭的傢伙",
@@ -165,9 +165,9 @@ MILD_TOXIC_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "mild_dislike"
+        "category": "mild_dislike",
     },
     {
         "text": "你怎麼這麼煩人？閉嘴吧",
@@ -176,10 +176,10 @@ MILD_TOXIC_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "mild_annoyance"
-    }
+        "category": "mild_annoyance",
+    },
 ]
 
 # 嚴重毒性內容
@@ -191,9 +191,9 @@ SEVERE_TOXIC_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "death_threat"
+        "category": "death_threat",
     },
     {
         "text": "你最好去死一死，沒人會想念你的",
@@ -202,9 +202,9 @@ SEVERE_TOXIC_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "suicide_encouragement"
+        "category": "suicide_encouragement",
     },
     {
         "text": "我知道你住在哪裡，小心點",
@@ -213,9 +213,9 @@ SEVERE_TOXIC_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "stalking_threat"
+        "category": "stalking_threat",
     },
     {
         "text": "你全家都該死，我要報復你們",
@@ -224,9 +224,9 @@ SEVERE_TOXIC_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "family_threat"
+        "category": "family_threat",
     },
     {
         "text": "我會讓你後悔來到這個世界",
@@ -235,10 +235,10 @@ SEVERE_TOXIC_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "severe_intimidation"
-    }
+        "category": "severe_intimidation",
+    },
 ]
 
 # 受害者角色內容
@@ -250,9 +250,9 @@ VICTIM_EXAMPLES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "victim"
+            "role": "victim",
         },
-        "category": "help_seeking"
+        "category": "help_seeking",
     },
     {
         "text": "我被他們欺負了，不知道該怎麼辦",
@@ -261,9 +261,9 @@ VICTIM_EXAMPLES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "victim"
+            "role": "victim",
         },
-        "category": "bullying_report"
+        "category": "bullying_report",
     },
     {
         "text": "他們一直說我的壞話，我很受傷",
@@ -272,9 +272,9 @@ VICTIM_EXAMPLES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "victim"
+            "role": "victim",
         },
-        "category": "emotional_damage"
+        "category": "emotional_damage",
     },
     {
         "text": "為什麼大家都不理我？我做錯了什麼？",
@@ -283,10 +283,10 @@ VICTIM_EXAMPLES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 2,
-            "role": "victim"
+            "role": "victim",
         },
-        "category": "isolation_confusion"
-    }
+        "category": "isolation_confusion",
+    },
 ]
 
 # 旁觀者角色內容
@@ -298,9 +298,9 @@ BYSTANDER_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 1,
-            "role": "bystander"
+            "role": "bystander",
         },
-        "category": "witness_hesitation"
+        "category": "witness_hesitation",
     },
     {
         "text": "這樣做不對，你們應該停止",
@@ -309,9 +309,9 @@ BYSTANDER_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 1,
-            "role": "bystander"
+            "role": "bystander",
         },
-        "category": "intervention_attempt"
+        "category": "intervention_attempt",
     },
     {
         "text": "大家都在看這場衝突，但沒人說話",
@@ -320,10 +320,10 @@ BYSTANDER_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "bystander"
+            "role": "bystander",
         },
-        "category": "passive_observation"
-    }
+        "category": "passive_observation",
+    },
 ]
 
 # 網路霸凌特殊案例
@@ -335,9 +335,9 @@ CYBERBULLYING_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "social_exclusion"
+        "category": "social_exclusion",
     },
     {
         "text": "我要把你的醜照發到網上讓大家看",
@@ -346,9 +346,9 @@ CYBERBULLYING_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "image_threat"
+        "category": "image_threat",
     },
     {
         "text": "如果你不照我說的做，我就把你的秘密告訴大家",
@@ -357,9 +357,9 @@ CYBERBULLYING_EXAMPLES = [
             "bullying": "threat",
             "emotion": "neg",
             "emotion_strength": 4,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "blackmail"
+        "category": "blackmail",
     },
     {
         "text": "我會在所有群組裡說你的壞話",
@@ -368,10 +368,10 @@ CYBERBULLYING_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "reputation_attack"
-    }
+        "category": "reputation_attack",
+    },
 ]
 
 # 邊界案例（模糊的毒性判斷）
@@ -383,9 +383,9 @@ EDGE_CASES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 2,
-            "role": "none"
+            "role": "none",
         },
-        "category": "legitimate_anger"
+        "category": "legitimate_anger",
     },
     {
         "text": "我對此感到非常失望",
@@ -394,9 +394,9 @@ EDGE_CASES = [
             "bullying": "none",
             "emotion": "neg",
             "emotion_strength": 2,
-            "role": "none"
+            "role": "none",
         },
-        "category": "disappointment"
+        "category": "disappointment",
     },
     {
         "text": "你能不能認真一點？",
@@ -405,9 +405,9 @@ EDGE_CASES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 1,
-            "role": "none"
+            "role": "none",
         },
-        "category": "mild_criticism"
+        "category": "mild_criticism",
     },
     {
         "text": "這樣的行為真的不可取",
@@ -416,10 +416,10 @@ EDGE_CASES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 1,
-            "role": "none"
+            "role": "none",
         },
-        "category": "constructive_criticism"
-    }
+        "category": "constructive_criticism",
+    },
 ]
 
 # 特殊字元與表情符號案例
@@ -431,9 +431,9 @@ SPECIAL_CHAR_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 1,
-            "role": "none"
+            "role": "none",
         },
-        "category": "emoji_mixed"
+        "category": "emoji_mixed",
     },
     {
         "text": "@#$%^&*() 特殊符號測試",
@@ -442,9 +442,9 @@ SPECIAL_CHAR_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "special_symbols"
+        "category": "special_symbols",
     },
     {
         "text": "ａｂｃｄｅ 全形英文測試",
@@ -453,9 +453,9 @@ SPECIAL_CHAR_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "fullwidth_chars"
+        "category": "fullwidth_chars",
     },
     {
         "text": "🚨⚠️💀 你這個混蛋",
@@ -464,10 +464,10 @@ SPECIAL_CHAR_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "emoji_with_toxicity"
-    }
+        "category": "emoji_with_toxicity",
+    },
 ]
 
 # 繁簡體混合案例
@@ -479,9 +479,9 @@ TRADITIONAL_SIMPLIFIED_EXAMPLES = [
             "bullying": "none",
             "emotion": "neu",
             "emotion_strength": 0,
-            "role": "none"
+            "role": "none",
         },
-        "category": "mixed_scripts"
+        "category": "mixed_scripts",
     },
     {
         "text": "你這個笨蛋（繁體）",
@@ -490,9 +490,9 @@ TRADITIONAL_SIMPLIFIED_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "traditional_toxicity"
+        "category": "traditional_toxicity",
     },
     {
         "text": "你这个笨蛋（简体）",
@@ -501,24 +501,24 @@ TRADITIONAL_SIMPLIFIED_EXAMPLES = [
             "bullying": "harassment",
             "emotion": "neg",
             "emotion_strength": 3,
-            "role": "perpetrator"
+            "role": "perpetrator",
         },
-        "category": "simplified_toxicity"
-    }
+        "category": "simplified_toxicity",
+    },
 ]
 
 # 整合所有測試資料
 ALL_EXAMPLES = (
-    POSITIVE_EXAMPLES +
-    NEUTRAL_EXAMPLES +
-    MILD_TOXIC_EXAMPLES +
-    SEVERE_TOXIC_EXAMPLES +
-    VICTIM_EXAMPLES +
-    BYSTANDER_EXAMPLES +
-    CYBERBULLYING_EXAMPLES +
-    EDGE_CASES +
-    SPECIAL_CHAR_EXAMPLES +
-    TRADITIONAL_SIMPLIFIED_EXAMPLES
+    POSITIVE_EXAMPLES
+    + NEUTRAL_EXAMPLES
+    + MILD_TOXIC_EXAMPLES
+    + SEVERE_TOXIC_EXAMPLES
+    + VICTIM_EXAMPLES
+    + BYSTANDER_EXAMPLES
+    + CYBERBULLYING_EXAMPLES
+    + EDGE_CASES
+    + SPECIAL_CHAR_EXAMPLES
+    + TRADITIONAL_SIMPLIFIED_EXAMPLES
 )
 
 
@@ -529,27 +529,20 @@ def get_examples_by_category(category: str) -> List[Dict[str, Any]]:
 
 def get_examples_by_toxicity(toxicity_level: str) -> List[Dict[str, Any]]:
     """根據毒性等級取得測試案例"""
-    return [ex for ex in ALL_EXAMPLES
-            if ex["expected"]["toxicity"] == toxicity_level]
+    return [ex for ex in ALL_EXAMPLES if ex["expected"]["toxicity"] == toxicity_level]
 
 
 def get_examples_by_emotion(emotion: str) -> List[Dict[str, Any]]:
     """根據情緒分類取得測試案例"""
-    return [ex for ex in ALL_EXAMPLES
-            if ex["expected"]["emotion"] == emotion]
+    return [ex for ex in ALL_EXAMPLES if ex["expected"]["emotion"] == emotion]
 
 
 def get_examples_by_role(role: str) -> List[Dict[str, Any]]:
     """根據角色取得測試案例"""
-    return [ex for ex in ALL_EXAMPLES
-            if ex["expected"]["role"] == role]
+    return [ex for ex in ALL_EXAMPLES if ex["expected"]["role"] == role]
 
 
-def save_examples_to_file(
-    file_path: Path,
-    examples: List[Dict[str,
-    Any]] = None
-):
+def save_examples_to_file(file_path: Path, examples: List[Dict[str, Any]] = None):
     """儲存測試案例到檔案"""
     if examples is None:
         examples = ALL_EXAMPLES
@@ -579,13 +572,13 @@ def get_balanced_test_set(size: int = 50) -> List[Dict[str, Any]]:
     categories = {
         "none": get_examples_by_toxicity("none"),
         "toxic": get_examples_by_toxicity("toxic"),
-        "severe": get_examples_by_toxicity("severe")
+        "severe": get_examples_by_toxicity("severe"),
     }
 
     # 每種類別取相等數量
     per_category = size // 3
 
-    for category, examples in categories.items():
+    for _category, examples in categories.items():
         if len(examples) >= per_category:
             balanced_set.extend(examples[:per_category])
         else:
@@ -608,7 +601,7 @@ def get_dataset_statistics():
         "by_emotion": {},
         "by_role": {},
         "by_bullying": {},
-        "categories": {}
+        "categories": {},
     }
 
     # 統計各項目

@@ -3,12 +3,10 @@ Test script to verify the API server starts and responds correctly.
 This is a manual test that starts the server and makes actual HTTP requests.
 """
 
-import time
-import subprocess
-import requests
 import sys
-from pathlib import Path
+
 import pytest
+import requests
 
 
 @pytest.mark.integration
@@ -38,10 +36,7 @@ def test_api_server():
 
     # Test analyze endpoint
     try:
-        test_data = {
-            "text": "这是一个测试文本",
-            "context": "测试上下文"
-        }
+        test_data = {"text": "这是一个测试文本", "context": "测试上下文"}
 
         response = requests.post(f"{base_url}/analyze", json=test_data, timeout=10)
         print(f"Analyze endpoint: {response.status_code}")

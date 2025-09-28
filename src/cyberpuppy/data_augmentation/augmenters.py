@@ -10,22 +10,19 @@ This module implements four core augmentation strategies:
 All augmenters maintain label consistency and support configurable intensity.
 """
 
+import logging
 import random
 import re
-import logging
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple, Optional, Union
 from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 import jieba
 import opencc
-import numpy as np
-from transformers import (
-    AutoTokenizer, AutoModelForMaskedLM,
-    MarianMTModel, MarianTokenizer
-)
 import torch
 from torch.nn.functional import softmax
+from transformers import (AutoModelForMaskedLM, AutoTokenizer, MarianMTModel,
+                          MarianTokenizer)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +30,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AugmentationConfig:
     """Configuration for augmentation intensity and behavior."""
+
     synonym_prob: float = 0.1  # Probability of replacing each word with synonym
     backtrans_prob: float = 0.3  # Probability of applying back-translation
     contextual_prob: float = 0.15  # Probability of masking each token
@@ -47,7 +45,7 @@ class BaseAugmenter(ABC):
 
     def __init__(self, config: AugmentationConfig = None):
         self.config = config or AugmentationConfig()
-        self.converter = opencc.OpenCC('s2t')  # Simplified to Traditional Chinese
+        self.converter = opencc.OpenCC("s2t")  # Simplified to Traditional Chinese
 
     @abstractmethod
     def augment(self, text: str, **kwargs) -> List[str]:
@@ -61,10 +59,10 @@ class BaseAugmenter(ABC):
     def _preserve_special_tokens(self, text: str) -> Tuple[str, Dict[str, str]]:
         """Extract and preserve special tokens (URLs, mentions, etc.)."""
         special_patterns = {
-            'url': r'https?://[^\s]+',
-            'mention': r'@[a-zA-Z0-9_]+',
-            'hashtag': r'#[^\s]+',
-            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+            "url": r"https?://[^\s]+",
+            "mention": r"@[a-zA-Z0-9_]+",
+            "hashtag": r"#[^\s]+",
+            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
         }
 
         preserved = {}
@@ -103,20 +101,18 @@ class SynonymAugmenter(BaseAugmenter):
         # For now, we'll use a sample structure
         sample_synonyms = {
             # Positive synonyms
-            '好': ['棒', '讚', '優秀', '良好', '不錯'],
-            '喜歡': ['愛', '喜愛', '鍾愛', '偏愛'],
-            '開心': ['快樂', '高興', '愉快', '歡喜'],
-
+            "好": ["棒", "讚", "優秀", "良好", "不錯"],
+            "喜歡": ["愛", "喜愛", "鍾愛", "偏愛"],
+            "開心": ["快樂", "高興", "愉快", "歡喜"],
             # Negative synonyms (important for cyberbullying detection)
-            '討厭': ['厭惡', '憎恨', '痛恨', '反感'],
-            '笨': ['蠢', '愚笨', '愚蠢', '無腦'],
-            '醜': ['難看', '不好看', '醜陋'],
-            '垃圾': ['廢物', '渣滓', '廢料'],
-
+            "討厭": ["厭惡", "憎恨", "痛恨", "反感"],
+            "笨": ["蠢", "愚笨", "愚蠢", "無腦"],
+            "醜": ["難看", "不好看", "醜陋"],
+            "垃圾": ["廢物", "渣滓", "廢料"],
             # Neutral synonyms
-            '說': ['講', '表示', '提到', '談到'],
-            '看': ['瞧', '觀看', '注視', '察看'],
-            '想': ['認為', '覺得', '思考', '考慮']
+            "說": ["講", "表示", "提到", "談到"],
+            "看": ["瞧", "觀看", "注視", "察看"],
+            "想": ["認為", "覺得", "思考", "考慮"],
         }
 
         logger.info(f"Loaded {len(sample_synonyms)} synonym groups")
@@ -137,8 +133,7 @@ class SynonymAugmenter(BaseAugmenter):
             augmented_words = []
 
             for word in words:
-                if (word in self.synonym_dict and
-                    random.random() < self.config.synonym_prob):
+                if word in self.synonym_dict and random.random() < self.config.synonym_prob:
                     # Replace with random synonym
                     synonyms = self.synonym_dict[word]
                     replacement = random.choice(synonyms)
@@ -147,7 +142,7 @@ class SynonymAugmenter(BaseAugmenter):
                 else:
                     augmented_words.append(word)
 
-            augmented_text = ''.join(augmented_words)
+            augmented_text = "".join(augmented_words)
             # Restore special tokens
             augmented_text = self._restore_special_tokens(augmented_text, preserved)
             augmented_texts.append(augmented_text)
@@ -260,8 +255,9 @@ class ContextualAugmenter(BaseAugmenter):
             self._model.eval()
         return self._model, self._tokenizer
 
-    def _get_masked_predictions(self, text: str, mask_positions: List[int],
-                              top_k: int = 5) -> List[List[str]]:
+    def _get_masked_predictions(
+        self, text: str, mask_positions: List[int], top_k: int = 5
+    ) -> List[List[str]]:
         """Get top-k predictions for masked positions."""
         model, tokenizer = self.model
 
@@ -282,8 +278,11 @@ class ContextualAugmenter(BaseAugmenter):
                     # Decode tokens
                     top_k_tokens = [tokenizer.decode([idx]) for idx in top_k_indices]
                     # Filter out special tokens
-                    valid_tokens = [token for token in top_k_tokens
-                                  if not token.startswith('[') and token.strip()]
+                    valid_tokens = [
+                        token
+                        for token in top_k_tokens
+                        if not token.startswith("[") and token.strip()
+                    ]
                     predictions.append(valid_tokens[:3])  # Keep top 3 valid
                 else:
                     predictions.append([])
@@ -312,9 +311,11 @@ class ContextualAugmenter(BaseAugmenter):
             # Determine positions to mask
             mask_positions = []
             for i, token in enumerate(tokens):
-                if (random.random() < self.config.contextual_prob and
-                    not token.startswith('[') and
-                    len(token.strip()) > 0):
+                if (
+                    random.random() < self.config.contextual_prob
+                    and not token.startswith("[")
+                    and len(token.strip()) > 0
+                ):
                     mask_positions.append(i)
 
             if not mask_positions:
@@ -324,7 +325,7 @@ class ContextualAugmenter(BaseAugmenter):
             # Create masked text
             masked_tokens = tokens.copy()
             for pos in mask_positions:
-                masked_tokens[pos] = '[MASK]'
+                masked_tokens[pos] = "[MASK]"
 
             masked_text = tokenizer.convert_tokens_to_string(masked_tokens)
 
@@ -362,9 +363,36 @@ class EDAugmenter(BaseAugmenter):
 
         # Common Chinese function words for insertion
         self.function_words = [
-            '的', '了', '在', '是', '我', '有', '和', '就', '不', '人',
-            '都', '一', '個', '上', '也', '很', '到', '說', '要', '去',
-            '你', '會', '著', '沒', '看', '好', '自己', '這樣', '能夠', '而且'
+            "的",
+            "了",
+            "在",
+            "是",
+            "我",
+            "有",
+            "和",
+            "就",
+            "不",
+            "人",
+            "都",
+            "一",
+            "個",
+            "上",
+            "也",
+            "很",
+            "到",
+            "說",
+            "要",
+            "去",
+            "你",
+            "會",
+            "著",
+            "沒",
+            "看",
+            "好",
+            "自己",
+            "這樣",
+            "能夠",
+            "而且",
         ]
 
     def _random_insertion(self, words: List[str], n: int) -> List[str]:
@@ -408,7 +436,8 @@ class EDAugmenter(BaseAugmenter):
 
             # Swap
             augmented_words[idx1], augmented_words[idx2] = (
-                augmented_words[idx2], augmented_words[idx1]
+                augmented_words[idx2],
+                augmented_words[idx1],
             )
 
         return augmented_words
@@ -436,17 +465,17 @@ class EDAugmenter(BaseAugmenter):
             n_ops = max(1, int(self.config.eda_prob * len(words)))
 
             # Apply random operations
-            operations = ['insert', 'delete', 'swap']
+            operations = ["insert", "delete", "swap"]
             chosen_op = random.choice(operations)
 
-            if chosen_op == 'insert':
+            if chosen_op == "insert":
                 augmented_words = self._random_insertion(augmented_words, n_ops)
-            elif chosen_op == 'delete':
+            elif chosen_op == "delete":
                 augmented_words = self._random_deletion(augmented_words, self.config.eda_prob)
-            elif chosen_op == 'swap':
+            elif chosen_op == "swap":
                 augmented_words = self._random_swap(augmented_words, n_ops)
 
-            augmented_text = ''.join(augmented_words)
+            augmented_text = "".join(augmented_words)
 
             # Restore special tokens
             augmented_text = self._restore_special_tokens(augmented_text, preserved)
@@ -474,8 +503,7 @@ def calculate_text_similarity(text1: str, text2: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def validate_augmentation_quality(original: str, augmented: str,
-                                threshold: float = 0.3) -> bool:
+def validate_augmentation_quality(original: str, augmented: str, threshold: float = 0.3) -> bool:
     """Validate that augmented text maintains minimum quality."""
     # Check similarity
     similarity = calculate_text_similarity(original, augmented)

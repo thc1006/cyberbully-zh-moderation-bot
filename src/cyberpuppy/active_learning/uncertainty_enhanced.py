@@ -2,12 +2,13 @@
 Enhanced uncertainty sampling strategies for active learning
 """
 
+import logging
+from typing import List, Optional, Tuple
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
-from torch.utils.data import Dataset, DataLoader
-import logging
+from torch.utils.data import DataLoader, Dataset
 
 from .base import ActiveLearner
 
@@ -17,10 +18,9 @@ logger = logging.getLogger(__name__)
 class EntropySampling(ActiveLearner):
     """Entropy-based uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with highest prediction entropy
 
@@ -50,10 +50,9 @@ class EntropySampling(ActiveLearner):
 class LeastConfidenceSampling(ActiveLearner):
     """Least confidence uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with lowest confidence (lowest max probability)
 
@@ -82,10 +81,9 @@ class LeastConfidenceSampling(ActiveLearner):
 class MarginSampling(ActiveLearner):
     """Margin-based uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with smallest margin between top two predictions
 
@@ -117,7 +115,7 @@ class MarginSampling(ActiveLearner):
 class BayesianUncertaintySampling(ActiveLearner):
     """MC Dropout-based Bayesian uncertainty sampling"""
 
-    def __init__(self, model, device: str = 'cpu', n_dropout_samples: int = 10):
+    def __init__(self, model, device: str = "cpu", n_dropout_samples: int = 10):
         """
         Initialize Bayesian uncertainty sampler
 
@@ -132,7 +130,7 @@ class BayesianUncertaintySampling(ActiveLearner):
     def _enable_dropout(self, model):
         """Enable dropout during inference for MC Dropout"""
         for module in model.modules():
-            if module.__class__.__name__.startswith('Dropout'):
+            if module.__class__.__name__.startswith("Dropout"):
                 module.train()
 
     def get_mc_predictions(self, data: Dataset) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -160,13 +158,13 @@ class BayesianUncertaintySampling(ActiveLearner):
 
             with torch.no_grad():
                 for batch in dataloader:
-                    inputs = batch['input_ids'].to(self.device)
-                    attention_mask = batch.get('attention_mask', None)
+                    inputs = batch["input_ids"].to(self.device)
+                    attention_mask = batch.get("attention_mask", None)
                     if attention_mask is not None:
                         attention_mask = attention_mask.to(self.device)
 
                     outputs = self.model(inputs, attention_mask=attention_mask)
-                    logits = outputs.logits if hasattr(outputs, 'logits') else outputs
+                    logits = outputs.logits if hasattr(outputs, "logits") else outputs
 
                     probabilities = F.softmax(logits, dim=-1)
                     predictions = torch.argmax(probabilities, dim=-1)
@@ -199,10 +197,9 @@ class BayesianUncertaintySampling(ActiveLearner):
 
         return final_predictions, mean_probabilities, total_uncertainty
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with highest Bayesian uncertainty
 
@@ -236,10 +233,9 @@ class BayesianUncertaintySampling(ActiveLearner):
 class BALD(BayesianUncertaintySampling):
     """Bayesian Active Learning by Disagreement (BALD)"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples using BALD: maximizing mutual information
 
@@ -264,13 +260,13 @@ class BALD(BayesianUncertaintySampling):
 
             with torch.no_grad():
                 for batch in dataloader:
-                    inputs = batch['input_ids'].to(self.device)
-                    attention_mask = batch.get('attention_mask', None)
+                    inputs = batch["input_ids"].to(self.device)
+                    attention_mask = batch.get("attention_mask", None)
                     if attention_mask is not None:
                         attention_mask = attention_mask.to(self.device)
 
                     outputs = self.model(inputs, attention_mask=attention_mask)
-                    logits = outputs.logits if hasattr(outputs, 'logits') else outputs
+                    logits = outputs.logits if hasattr(outputs, "logits") else outputs
                     probabilities = F.softmax(logits, dim=-1)
                     batch_probabilities.extend(probabilities.cpu().numpy())
 

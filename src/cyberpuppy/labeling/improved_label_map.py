@@ -4,14 +4,13 @@
 解決霸凌與毒性標籤完美相關的問題
 """
 
-import re
 import logging
-from typing import Dict, List, Set, Optional, Any, Union
+import re
 from dataclasses import dataclass
+from typing import Any, Dict, List, Set
 
-from .label_map import (
-    ToxicityLevel, BullyingLevel, RoleType, EmotionType, UnifiedLabel
-)
+from .label_map import (BullyingLevel, EmotionType, RoleType, ToxicityLevel,
+                        UnifiedLabel)
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TextFeatures:
     """文本特徵分析結果"""
+
     has_profanity: bool = False
     has_personal_attack: bool = False
     has_threat: bool = False
@@ -30,14 +30,14 @@ class TextFeatures:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'has_profanity': self.has_profanity,
-            'has_personal_attack': self.has_personal_attack,
-            'has_threat': self.has_threat,
-            'has_discrimination': self.has_discrimination,
-            'has_exclusion': self.has_exclusion,
-            'has_repetitive_pattern': self.has_repetitive_pattern,
-            'target_specific': self.target_specific,
-            'emotional_intensity': self.emotional_intensity
+            "has_profanity": self.has_profanity,
+            "has_personal_attack": self.has_personal_attack,
+            "has_threat": self.has_threat,
+            "has_discrimination": self.has_discrimination,
+            "has_exclusion": self.has_exclusion,
+            "has_repetitive_pattern": self.has_repetitive_pattern,
+            "target_specific": self.target_specific,
+            "emotional_intensity": self.emotional_intensity,
         }
 
 
@@ -55,12 +55,35 @@ class ImprovedLabelMapper:
         """載入粗俗語言關鍵詞"""
         return {
             # 基本粗俗語言
-            '幹', '靠', '媽的', '操', '屎', '屁', '笨蛋', '白痴', '智障',
-            '垃圾', '廢物', '低能', '腦殘', '神經病', '有病', '瘋子',
+            "幹",
+            "靠",
+            "媽的",
+            "操",
+            "屎",
+            "屁",
+            "笨蛋",
+            "白痴",
+            "智障",
+            "垃圾",
+            "廢物",
+            "低能",
+            "腦殘",
+            "神經病",
+            "有病",
+            "瘋子",
             # 性相關
-            '色情', '淫穢', '猥褻', 'H', '18禁',
+            "色情",
+            "淫穢",
+            "猥褻",
+            "H",
+            "18禁",
             # 英文粗話
-            'fuck', 'shit', 'damn', 'stupid', 'idiot', 'moron'
+            "fuck",
+            "shit",
+            "damn",
+            "stupid",
+            "idiot",
+            "moron",
         }
 
     def _load_bullying_patterns(self) -> List[Dict[str, Any]]:
@@ -68,71 +91,111 @@ class ImprovedLabelMapper:
         return [
             # 人身攻擊模式
             {
-                'pattern': r'你\s*(就是|真的是|根本是|明明是)\s*(笨蛋|白痴|智障|廢物|垃圾)',
-                'type': 'personal_attack',
-                'weight': 0.8
+                "pattern": r"你\s*(就是|真的是|根本是|明明是)\s*(笨蛋|白痴|智障|廢物|垃圾)",
+                "type": "personal_attack",
+                "weight": 0.8,
             },
             {
-                'pattern': r'(你|妳)\s*(長得|樣子|外表)\s*(很|真|好)\s*(醜|噁心|討厭|可怕)',
-                'type': 'appearance_attack',
-                'weight': 0.9
+                "pattern": r"(你|妳)\s*(長得|樣子|外表)\s*(很|真|好)\s*(醜|噁心|討厭|可怕)",
+                "type": "appearance_attack",
+                "weight": 0.9,
             },
             # 排擠模式
             {
-                'pattern': r'(不要|別|沒人)\s*(跟|和|理|鳥)\s*(你|妳|他|她)',
-                'type': 'exclusion',
-                'weight': 0.7
+                "pattern": r"(不要|別|沒人)\s*(跟|和|理|鳥)\s*(你|妳|他|她)",
+                "type": "exclusion",
+                "weight": 0.7,
             },
             {
-                'pattern': r'(大家|我們)\s*(都|全部)\s*(討厭|不喜歡|害怕)\s*(你|妳|他|她)',
-                'type': 'group_exclusion',
-                'weight': 0.8
+                "pattern": r"(大家|我們)\s*(都|全部)\s*(討厭|不喜歡|害怕)\s*(你|妳|他|她)",
+                "type": "group_exclusion",
+                "weight": 0.8,
             },
             # 威脅模式
             {
-                'pattern': r'(要|會|讓你|讓妳)\s*(死|完蛋|好看|後悔|倒霉)',
-                'type': 'threat',
-                'weight': 1.0
+                "pattern": r"(要|會|讓你|讓妳)\s*(死|完蛋|好看|後悔|倒霉)",
+                "type": "threat",
+                "weight": 1.0,
             },
             {
-                'pattern': r'(小心|等著|準備)\s*(點|吧|著|受死)',
-                'type': 'warning_threat',
-                'weight': 0.9
-            }
+                "pattern": r"(小心|等著|準備)\s*(點|吧|著|受死)",
+                "type": "warning_threat",
+                "weight": 0.9,
+            },
         ]
 
     def _load_threat_keywords(self) -> Set[str]:
         """載入威脅關鍵詞"""
         return {
-            '殺', '死', '打', '揍', '扁', '修理', '整', '教訓',
-            '報復', '復仇', '後果', '完蛋', '倒霉', '好看',
-            '小心', '等著', '準備', '受死', '活該', '該死'
+            "殺",
+            "死",
+            "打",
+            "揍",
+            "扁",
+            "修理",
+            "整",
+            "教訓",
+            "報復",
+            "復仇",
+            "後果",
+            "完蛋",
+            "倒霉",
+            "好看",
+            "小心",
+            "等著",
+            "準備",
+            "受死",
+            "活該",
+            "該死",
         }
 
     def _load_discrimination_keywords(self) -> Set[str]:
         """載入歧視關鍵詞"""
         return {
             # 外表歧視
-            '醜', '胖', '瘦', '矮', '高', '黑', '白', '噁心',
+            "醜",
+            "胖",
+            "瘦",
+            "矮",
+            "高",
+            "黑",
+            "白",
+            "噁心",
             # 能力歧視
-            '笨', '蠢', '智障', '低能', '腦殘', '弱智', '殘廢',
+            "笨",
+            "蠢",
+            "智障",
+            "低能",
+            "腦殘",
+            "弱智",
+            "殘廢",
             # 身份歧視
-            '窮', '富', '窮鬼', '暴發戶', '土', '俗', '沒水準',
+            "窮",
+            "富",
+            "窮鬼",
+            "暴發戶",
+            "土",
+            "俗",
+            "沒水準",
             # 性別歧視
-            '娘', '娘砲', '男人婆', '公主病', '媽寶'
+            "娘",
+            "娘砲",
+            "男人婆",
+            "公主病",
+            "媽寶",
         }
 
     def _load_exclusion_patterns(self) -> List[str]:
         """載入排擠模式"""
         return [
-            r'不要.*理.*',
-            r'沒人.*喜歡.*',
-            r'大家.*討厭.*',
-            r'離.*遠一點',
-            r'不准.*參加',
-            r'你.*不配',
-            r'滾.*',
-            r'消失.*'
+            r"不要.*理.*",
+            r"沒人.*喜歡.*",
+            r"大家.*討厭.*",
+            r"離.*遠一點",
+            r"不准.*參加",
+            r"你.*不配",
+            r"滾.*",
+            r"消失.*",
         ]
 
     def analyze_text_features(self, text: str) -> TextFeatures:
@@ -140,7 +203,7 @@ class ImprovedLabelMapper:
         if not text:
             return TextFeatures()
 
-        text_lower = text.lower()
+        text.lower()
         features = TextFeatures()
 
         # 檢查粗俗語言
@@ -154,19 +217,19 @@ class ImprovedLabelMapper:
 
         # 檢查人身攻擊和排擠模式
         for pattern_info in self.bullying_patterns:
-            if re.search(pattern_info['pattern'], text):
-                if pattern_info['type'] in ['personal_attack', 'appearance_attack']:
+            if re.search(pattern_info["pattern"], text):
+                if pattern_info["type"] in ["personal_attack", "appearance_attack"]:
                     features.has_personal_attack = True
-                elif pattern_info['type'] in ['exclusion', 'group_exclusion']:
+                elif pattern_info["type"] in ["exclusion", "group_exclusion"]:
                     features.has_exclusion = True
-                elif pattern_info['type'] in ['threat', 'warning_threat']:
+                elif pattern_info["type"] in ["threat", "warning_threat"]:
                     features.has_threat = True
 
         # 額外的人身攻擊檢查（針對直接侮辱）
         personal_attack_patterns = [
-            r'你\s*(就是|真的是|根本是|明明是)\s*(白痴|笨蛋|智障|廢物|垃圾)',
-            r'你\s*(這個|真是個)\s*(白痴|笨蛋|智障|廢物|垃圾)',
-            r'(白痴|笨蛋|智障|廢物|垃圾)\s*(你|妳)'
+            r"你\s*(就是|真的是|根本是|明明是)\s*(白痴|笨蛋|智障|廢物|垃圾)",
+            r"你\s*(這個|真是個)\s*(白痴|笨蛋|智障|廢物|垃圾)",
+            r"(白痴|笨蛋|智障|廢物|垃圾)\s*(你|妳)",
         ]
 
         for pattern in personal_attack_patterns:
@@ -181,7 +244,7 @@ class ImprovedLabelMapper:
                 break
 
         # 檢查是否針對特定目標
-        personal_pronouns = ['你', '妳', '他', '她', '你們', '妳們', '他們', '她們']
+        personal_pronouns = ["你", "妳", "他", "她", "你們", "妳們", "他們", "她們"]
         features.target_specific = any(pronoun in text for pronoun in personal_pronouns)
 
         # 檢查重複模式（霸凌常見特徵）
@@ -194,13 +257,13 @@ class ImprovedLabelMapper:
             features.has_repetitive_pattern = max_count >= 3
 
         # 計算情緒強度（基於標點符號和大寫）
-        exclamation_count = text.count('！') + text.count('!')
-        question_count = text.count('？') + text.count('?')
+        exclamation_count = text.count("！") + text.count("!")
+        question_count = text.count("？") + text.count("?")
         caps_ratio = sum(1 for c in text if c.isupper()) / len(text) if text else 0
 
-        features.emotional_intensity = min(1.0, (exclamation_count * 0.3 +
-                                                question_count * 0.2 +
-                                                caps_ratio * 0.5))
+        features.emotional_intensity = min(
+            1.0, (exclamation_count * 0.3 + question_count * 0.2 + caps_ratio * 0.5)
+        )
 
         return features
 
@@ -228,7 +291,7 @@ class ImprovedLabelMapper:
                 emotion=EmotionType.NEUTRAL,
                 emotion_intensity=2,
                 confidence=0.95,
-                source_dataset="cold_improved"
+                source_dataset="cold_improved",
             )
 
         elif cold_label == 1:
@@ -312,7 +375,7 @@ class ImprovedLabelMapper:
                 emotion=emotion,
                 emotion_intensity=emotion_intensity,
                 confidence=0.85,
-                source_dataset="cold_improved"
+                source_dataset="cold_improved",
             )
 
         else:
@@ -334,10 +397,7 @@ class ImprovedLabelMapper:
         if len(labels) != len(texts):
             raise ValueError("Labels and texts must have the same length")
 
-        return [
-            self.improved_cold_mapping(label, text)
-            for label, text in zip(labels, texts)
-        ]
+        return [self.improved_cold_mapping(label, text) for label, text in zip(labels, texts)]
 
     def analyze_label_distribution(self, labels: List[UnifiedLabel]) -> Dict[str, Any]:
         """
@@ -364,37 +424,43 @@ class ImprovedLabelMapper:
             role_counts[label.role.value] += 1
 
         # 計算相關性（檢查是否仍然完美相關）
-        toxic_and_bullying = sum(1 for label in labels
-                               if label.toxicity != ToxicityLevel.NONE
-                               and label.bullying != BullyingLevel.NONE)
+        toxic_and_bullying = sum(
+            1
+            for label in labels
+            if label.toxicity != ToxicityLevel.NONE and label.bullying != BullyingLevel.NONE
+        )
 
-        toxic_not_bullying = sum(1 for label in labels
-                               if label.toxicity != ToxicityLevel.NONE
-                               and label.bullying == BullyingLevel.NONE)
+        toxic_not_bullying = sum(
+            1
+            for label in labels
+            if label.toxicity != ToxicityLevel.NONE and label.bullying == BullyingLevel.NONE
+        )
 
-        bullying_not_toxic = sum(1 for label in labels
-                               if label.bullying != BullyingLevel.NONE
-                               and label.toxicity == ToxicityLevel.NONE)
+        bullying_not_toxic = sum(
+            1
+            for label in labels
+            if label.bullying != BullyingLevel.NONE and label.toxicity == ToxicityLevel.NONE
+        )
 
         # 計算分離度（越高表示分離得越好）
         separation_score = (toxic_not_bullying + bullying_not_toxic) / total if total > 0 else 0
 
         return {
-            'total_samples': total,
-            'toxicity_distribution': {k: v/total for k, v in toxicity_counts.items()},
-            'bullying_distribution': {k: v/total for k, v in bullying_counts.items()},
-            'role_distribution': {k: v/total for k, v in role_counts.items()},
-            'correlation_analysis': {
-                'toxic_and_bullying': toxic_and_bullying,
-                'toxic_not_bullying': toxic_not_bullying,
-                'bullying_not_toxic': bullying_not_toxic,
-                'separation_score': separation_score
+            "total_samples": total,
+            "toxicity_distribution": {k: v / total for k, v in toxicity_counts.items()},
+            "bullying_distribution": {k: v / total for k, v in bullying_counts.items()},
+            "role_distribution": {k: v / total for k, v in role_counts.items()},
+            "correlation_analysis": {
+                "toxic_and_bullying": toxic_and_bullying,
+                "toxic_not_bullying": toxic_not_bullying,
+                "bullying_not_toxic": bullying_not_toxic,
+                "separation_score": separation_score,
             },
-            'improvement_metrics': {
-                'label_separation_achieved': separation_score > 0.1,
-                'bullying_precision_improved': toxic_not_bullying > 0,
-                'toxicity_recall_maintained': toxic_and_bullying > 0
-            }
+            "improvement_metrics": {
+                "label_separation_achieved": separation_score > 0.1,
+                "bullying_precision_improved": toxic_not_bullying > 0,
+                "toxicity_recall_maintained": toxic_and_bullying > 0,
+            },
         }
 
     def compare_with_original(self, original_labels: List[int], texts: List[str]) -> Dict[str, Any]:
@@ -412,7 +478,9 @@ class ImprovedLabelMapper:
 
         # 原始映射
         original_mapper = LabelMapper()
-        original_unified = [original_mapper.from_cold_to_unified(label) for label in original_labels]
+        original_unified = [
+            original_mapper.from_cold_to_unified(label) for label in original_labels
+        ]
 
         # 改進映射
         improved_unified = self.batch_improve_cold_labels(original_labels, texts)
@@ -422,22 +490,26 @@ class ImprovedLabelMapper:
         improved_dist = self.analyze_label_distribution(improved_unified)
 
         # 計算改進指標
-        original_separation = original_dist.get('correlation_analysis', {}).get('separation_score', 0)
-        improved_separation = improved_dist.get('correlation_analysis', {}).get('separation_score', 0)
+        original_separation = original_dist.get("correlation_analysis", {}).get(
+            "separation_score", 0
+        )
+        improved_separation = improved_dist.get("correlation_analysis", {}).get(
+            "separation_score", 0
+        )
 
         return {
-            'original_distribution': original_dist,
-            'improved_distribution': improved_dist,
-            'improvement_summary': {
-                'separation_improvement': improved_separation - original_separation,
-                'toxicity_diversity_increased': (
-                    len([x for x in improved_unified if x.toxicity != ToxicityLevel.NONE]) !=
-                    len([x for x in improved_unified if x.bullying != BullyingLevel.NONE])
+            "original_distribution": original_dist,
+            "improved_distribution": improved_dist,
+            "improvement_summary": {
+                "separation_improvement": improved_separation - original_separation,
+                "toxicity_diversity_increased": (
+                    len([x for x in improved_unified if x.toxicity != ToxicityLevel.NONE])
+                    != len([x for x in improved_unified if x.bullying != BullyingLevel.NONE])
                 ),
-                'expected_f1_improvement': self._estimate_f1_improvement(
+                "expected_f1_improvement": self._estimate_f1_improvement(
                     original_separation, improved_separation
-                )
-            }
+                ),
+            },
         }
 
     def _estimate_f1_improvement(self, original_sep: float, improved_sep: float) -> float:

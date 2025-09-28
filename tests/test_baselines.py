@@ -2,31 +2,19 @@
 """
 測試基線模型
 """
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-import torch.nn as nn
 
-from cyberpuppy.labeling.label_map import (
-    BullyingLevel,
-    EmotionType,
-    RoleType,
-    ToxicityLevel,
-    UnifiedLabel,
-)
-from cyberpuppy.models.baselines import (
-    BaselineModel,
-    FocalLoss,
-    ModelConfig,
-    ModelEvaluator,
-    MultiTaskDataset,
-    MultiTaskHead,
-    create_model_variants,
-)
+from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
+                                           RoleType, ToxicityLevel,
+                                           UnifiedLabel)
+from cyberpuppy.models.baselines import (BaselineModel, FocalLoss, ModelConfig,
+                                         ModelEvaluator, MultiTaskDataset,
+                                         MultiTaskHead, create_model_variants)
 
 
 @pytest.mark.unit
@@ -387,7 +375,7 @@ class TestBaselineModel:
         assert "total" in losses
 
         # 檢查損失值
-        for loss_name, loss_value in losses.items():
+        for _loss_name, loss_value in losses.items():
             assert loss_value.requires_grad
             assert loss_value.item() >= 0
 

@@ -15,9 +15,8 @@
 import logging
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -95,15 +94,19 @@ class ClassBalancedFocalLoss(nn.Module):
         self.gamma = gamma
         self.beta = beta
 
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor,
-                class_counts: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self,
+        inputs: torch.Tensor,
+        targets: torch.Tensor,
+        class_counts: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         """
         Args:
             inputs: [batch_size, num_classes] 預測邏輯值
             targets: [batch_size] 真實標籤
             class_counts: [num_classes] 每個類別的樣本數
         """
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        ce_loss = F.cross_entropy(inputs, targets, reduction="none")
         pt = torch.exp(-ce_loss)
 
         # Focal loss權重
@@ -170,8 +173,13 @@ class MultiHeadCrossAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(hidden_size)
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         """
         Args:
             query: [batch_size, query_len, hidden_size]
@@ -184,7 +192,7 @@ class MultiHeadCrossAttention(nn.Module):
 
         # 線性變換
         Q = self.query_proj(query)  # [batch_size, query_len, hidden_size]
-        K = self.key_proj(key)      # [batch_size, key_len, hidden_size]
+        K = self.key_proj(key)  # [batch_size, key_len, hidden_size]
         V = self.value_proj(value)  # [batch_size, value_len, hidden_size]
 
         # 重塑為多頭
@@ -208,8 +216,8 @@ class MultiHeadCrossAttention(nn.Module):
         attn_output = torch.matmul(attn_weights, V)  # [batch_size, num_heads, query_len, head_dim]
 
         # 合併多頭
-        attn_output = attn_output.transpose(1, 2).contiguous().view(
-            batch_size, query_len, self.hidden_size
+        attn_output = (
+            attn_output.transpose(1, 2).contiguous().view(batch_size, query_len, self.hidden_size)
         )
 
         # 輸出投影和殘差連接
@@ -248,7 +256,7 @@ class EnhancedFeatureExtractor(nn.Module):
             nn.ReLU(),
             nn.Dropout(config.dropout_rate),
             nn.Linear(hidden_size * 2, hidden_size),
-            nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
+            nn.LayerNorm(hidden_size, eps=config.layer_norm_eps),
         )
 
         # 位置感知池化
@@ -256,11 +264,15 @@ class EnhancedFeatureExtractor(nn.Module):
             embed_dim=hidden_size,
             num_heads=config.num_attention_heads,
             dropout=config.attention_dropout,
-            batch_first=True
+            batch_first=True,
         )
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
-                context_embeddings: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        context_embeddings: Optional[torch.Tensor] = None,
+    ) -> Dict[str, torch.Tensor]:
         """
         Args:
             input_ids: [batch_size, seq_len]
@@ -272,17 +284,15 @@ class EnhancedFeatureExtractor(nn.Module):
         hidden_states = backbone_outputs.last_hidden_state  # [batch_size, seq_len, hidden_size]
 
         # 自注意力增強
-        if hasattr(self, 'self_attention'):
+        if hasattr(self, "self_attention"):
             enhanced_states = self.self_attention(hidden_states, hidden_states, hidden_states)
         else:
             enhanced_states = hidden_states
 
         # 交叉注意力融合上下文
-        if hasattr(self, 'cross_attention') and context_embeddings is not None:
+        if hasattr(self, "cross_attention") and context_embeddings is not None:
             context_enhanced = self.cross_attention(
-                query=enhanced_states,
-                key=context_embeddings,
-                value=context_embeddings
+                query=enhanced_states, key=context_embeddings, value=context_embeddings
             )
         else:
             context_enhanced = enhanced_states
@@ -290,8 +300,7 @@ class EnhancedFeatureExtractor(nn.Module):
         # 位置感知池化
         query = context_enhanced.mean(dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
         pooled_output, attention_weights = self.position_aware_pooling(
-            query, context_enhanced, context_enhanced,
-            key_padding_mask=~attention_mask.bool()
+            query, context_enhanced, context_enhanced, key_padding_mask=~attention_mask.bool()
         )
         pooled_output = pooled_output.squeeze(1)  # [batch_size, hidden_size]
 
@@ -302,7 +311,7 @@ class EnhancedFeatureExtractor(nn.Module):
             "features": final_features,
             "hidden_states": context_enhanced,
             "attention_weights": attention_weights,
-            "pooled_output": pooled_output
+            "pooled_output": pooled_output,
         }
 
 
@@ -319,7 +328,7 @@ class UncertaintyEstimator(nn.Module):
             nn.Linear(hidden_size, hidden_size // 2),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
-            nn.Linear(hidden_size // 2, num_classes)
+            nn.Linear(hidden_size // 2, num_classes),
         )
 
         # 不確定性頭
@@ -328,11 +337,12 @@ class UncertaintyEstimator(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout_rate),
             nn.Linear(hidden_size // 4, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
-    def forward(self, features: torch.Tensor,
-                mc_samples: int = 10, training: bool = True) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, features: torch.Tensor, mc_samples: int = 10, training: bool = True
+    ) -> Dict[str, torch.Tensor]:
         """
         使用Monte Carlo Dropout估計不確定性
         """
@@ -364,7 +374,7 @@ class UncertaintyEstimator(nn.Module):
                 "predictions": pred_mean,
                 "epistemic_uncertainty": epistemic_uncertainty,
                 "aleatoric_uncertainty": aleatoric_uncertainty,
-                "total_uncertainty": total_uncertainty
+                "total_uncertainty": total_uncertainty,
             }
         else:
             # 訓練時正常前向傳播
@@ -374,7 +384,7 @@ class UncertaintyEstimator(nn.Module):
             return {
                 "logits": logits,
                 "predictions": F.softmax(logits, dim=-1),
-                "aleatoric_uncertainty": uncertainty
+                "aleatoric_uncertainty": uncertainty,
             }
 
 
@@ -389,9 +399,7 @@ class AdversarialTraining(nn.Module):
     def fgsm_attack(self, embeddings: torch.Tensor, loss: torch.Tensor) -> torch.Tensor:
         """Fast Gradient Sign Method攻擊"""
         # 計算梯度
-        grad = torch.autograd.grad(
-            loss, embeddings, retain_graph=True, create_graph=True
-        )[0]
+        grad = torch.autograd.grad(loss, embeddings, retain_graph=True, create_graph=True)[0]
 
         # 生成對抗樣本
         perturbation = self.epsilon * grad.sign()
@@ -399,8 +407,9 @@ class AdversarialTraining(nn.Module):
 
         return adversarial_embeddings
 
-    def pgd_attack(self, embeddings: torch.Tensor, loss: torch.Tensor,
-                   num_steps: int = 3) -> torch.Tensor:
+    def pgd_attack(
+        self, embeddings: torch.Tensor, loss: torch.Tensor, num_steps: int = 3
+    ) -> torch.Tensor:
         """Projected Gradient Descent攻擊"""
         adv_embeddings = embeddings.clone().detach()
 
@@ -408,9 +417,9 @@ class AdversarialTraining(nn.Module):
             adv_embeddings.requires_grad_(True)
 
             # 計算梯度
-            grad = torch.autograd.grad(
-                loss, adv_embeddings, retain_graph=True, create_graph=True
-            )[0]
+            grad = torch.autograd.grad(loss, adv_embeddings, retain_graph=True, create_graph=True)[
+                0
+            ]
 
             # 更新對抗樣本
             adv_embeddings = adv_embeddings + self.alpha * grad.sign()
@@ -473,12 +482,8 @@ class ImprovedDetector(nn.Module):
 
         # 類別平衡焦點損失
         if config.use_class_balanced_loss and config.use_focal_loss:
-            self.toxicity_loss_fn = ClassBalancedFocalLoss(
-                config.focal_alpha, config.focal_gamma
-            )
-            self.bullying_loss_fn = ClassBalancedFocalLoss(
-                config.focal_alpha, config.focal_gamma
-            )
+            self.toxicity_loss_fn = ClassBalancedFocalLoss(config.focal_alpha, config.focal_gamma)
+            self.bullying_loss_fn = ClassBalancedFocalLoss(config.focal_alpha, config.focal_gamma)
             self.role_loss_fn = ClassBalancedFocalLoss(
                 [0.4, 0.2, 0.2, 0.2], config.focal_gamma  # 角色類別權重
             )
@@ -486,18 +491,10 @@ class ImprovedDetector(nn.Module):
                 [0.3, 0.4, 0.3], config.focal_gamma  # 情緒類別權重
             )
         elif config.use_focal_loss:
-            self.toxicity_loss_fn = ClassBalancedFocalLoss(
-                config.focal_alpha, config.focal_gamma
-            )
-            self.bullying_loss_fn = ClassBalancedFocalLoss(
-                config.focal_alpha, config.focal_gamma
-            )
-            self.role_loss_fn = ClassBalancedFocalLoss(
-                [0.4, 0.2, 0.2, 0.2], config.focal_gamma
-            )
-            self.emotion_loss_fn = ClassBalancedFocalLoss(
-                [0.3, 0.4, 0.3], config.focal_gamma
-            )
+            self.toxicity_loss_fn = ClassBalancedFocalLoss(config.focal_alpha, config.focal_gamma)
+            self.bullying_loss_fn = ClassBalancedFocalLoss(config.focal_alpha, config.focal_gamma)
+            self.role_loss_fn = ClassBalancedFocalLoss([0.4, 0.2, 0.2, 0.2], config.focal_gamma)
+            self.emotion_loss_fn = ClassBalancedFocalLoss([0.3, 0.4, 0.3], config.focal_gamma)
         else:
             # 標準損失函數
             self.toxicity_loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
@@ -505,32 +502,26 @@ class ImprovedDetector(nn.Module):
             self.role_loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
             self.emotion_loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
-                context_embeddings: Optional[torch.Tensor] = None,
-                return_features: bool = False) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        context_embeddings: Optional[torch.Tensor] = None,
+        return_features: bool = False,
+    ) -> Dict[str, torch.Tensor]:
         """前向傳播"""
         # 特徵提取
-        feature_outputs = self.feature_extractor(
-            input_ids, attention_mask, context_embeddings
-        )
+        feature_outputs = self.feature_extractor(input_ids, attention_mask, context_embeddings)
         features = feature_outputs["features"]
 
         # 各任務預測（帶不確定性估計）
-        toxicity_output = self.toxicity_estimator(
-            features, self.config.mc_samples, self.training
-        )
-        bullying_output = self.bullying_estimator(
-            features, self.config.mc_samples, self.training
-        )
-        role_output = self.role_estimator(
-            features, self.config.mc_samples, self.training
-        )
-        emotion_output = self.emotion_estimator(
-            features, self.config.mc_samples, self.training
-        )
+        toxicity_output = self.toxicity_estimator(features, self.config.mc_samples, self.training)
+        bullying_output = self.bullying_estimator(features, self.config.mc_samples, self.training)
+        role_output = self.role_estimator(features, self.config.mc_samples, self.training)
+        emotion_output = self.emotion_estimator(features, self.config.mc_samples, self.training)
 
         # 溫度縮放
-        if hasattr(self, 'temperature') and self.config.temperature_scaling:
+        if hasattr(self, "temperature") and self.config.temperature_scaling:
             toxicity_output["logits"] = toxicity_output["logits"] / self.temperature[0]
             bullying_output["logits"] = bullying_output["logits"] / self.temperature[1]
             role_output["logits"] = role_output["logits"] / self.temperature[2]
@@ -552,9 +543,12 @@ class ImprovedDetector(nn.Module):
 
         return outputs
 
-    def compute_loss(self, outputs: Dict[str, torch.Tensor],
-                     labels: Dict[str, torch.Tensor],
-                     class_counts: Optional[Dict[str, torch.Tensor]] = None) -> Dict[str, torch.Tensor]:
+    def compute_loss(
+        self,
+        outputs: Dict[str, torch.Tensor],
+        labels: Dict[str, torch.Tensor],
+        class_counts: Optional[Dict[str, torch.Tensor]] = None,
+    ) -> Dict[str, torch.Tensor]:
         """計算損失"""
         losses = []
         loss_dict = {}
@@ -562,38 +556,42 @@ class ImprovedDetector(nn.Module):
         # 各任務損失
         if "toxicity" in outputs and "toxicity_label" in labels:
             toxicity_loss = self.toxicity_loss_fn(
-                outputs["toxicity"], labels["toxicity_label"],
-                class_counts.get("toxicity") if class_counts else None
+                outputs["toxicity"],
+                labels["toxicity_label"],
+                class_counts.get("toxicity") if class_counts else None,
             )
             losses.append(toxicity_loss)
             loss_dict["toxicity"] = toxicity_loss
 
         if "bullying" in outputs and "bullying_label" in labels:
             bullying_loss = self.bullying_loss_fn(
-                outputs["bullying"], labels["bullying_label"],
-                class_counts.get("bullying") if class_counts else None
+                outputs["bullying"],
+                labels["bullying_label"],
+                class_counts.get("bullying") if class_counts else None,
             )
             losses.append(bullying_loss)
             loss_dict["bullying"] = bullying_loss
 
         if "role" in outputs and "role_label" in labels:
             role_loss = self.role_loss_fn(
-                outputs["role"], labels["role_label"],
-                class_counts.get("role") if class_counts else None
+                outputs["role"],
+                labels["role_label"],
+                class_counts.get("role") if class_counts else None,
             )
             losses.append(role_loss)
             loss_dict["role"] = role_loss
 
         if "emotion" in outputs and "emotion_label" in labels:
             emotion_loss = self.emotion_loss_fn(
-                outputs["emotion"], labels["emotion_label"],
-                class_counts.get("emotion") if class_counts else None
+                outputs["emotion"],
+                labels["emotion_label"],
+                class_counts.get("emotion") if class_counts else None,
             )
             losses.append(emotion_loss)
             loss_dict["emotion"] = emotion_loss
 
         # 動態權重總損失
-        if hasattr(self, 'task_weighting') and self.config.use_dynamic_task_weighting:
+        if hasattr(self, "task_weighting") and self.config.use_dynamic_task_weighting:
             total_loss = self.task_weighting(losses)
             loss_dict["task_weights"] = self.task_weighting.get_weights()
         else:
@@ -602,10 +600,11 @@ class ImprovedDetector(nn.Module):
         loss_dict["total"] = total_loss
         return loss_dict
 
-    def adversarial_training_step(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
-                                  labels: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def adversarial_training_step(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, labels: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """對抗訓練步驟"""
-        if not (hasattr(self, 'adversarial_trainer') and self.config.use_adversarial_training):
+        if not (hasattr(self, "adversarial_trainer") and self.config.use_adversarial_training):
             return self.compute_loss(self.forward(input_ids, attention_mask), labels)
 
         # 正常前向傳播
@@ -613,17 +612,29 @@ class ImprovedDetector(nn.Module):
         embeddings.requires_grad_(True)
 
         # 使用嵌入計算輸出
-        backbone_outputs = self.feature_extractor.backbone(inputs_embeds=embeddings, attention_mask=attention_mask)
+        backbone_outputs = self.feature_extractor.backbone(
+            inputs_embeds=embeddings, attention_mask=attention_mask
+        )
         feature_outputs = {
-            "features": self.feature_extractor.feature_fusion(backbone_outputs.last_hidden_state.mean(dim=1))
+            "features": self.feature_extractor.feature_fusion(
+                backbone_outputs.last_hidden_state.mean(dim=1)
+            )
         }
 
         # 正常損失
         normal_outputs = {}
-        normal_outputs["toxicity"] = self.toxicity_estimator(feature_outputs["features"], training=True)["logits"]
-        normal_outputs["bullying"] = self.bullying_estimator(feature_outputs["features"], training=True)["logits"]
-        normal_outputs["role"] = self.role_estimator(feature_outputs["features"], training=True)["logits"]
-        normal_outputs["emotion"] = self.emotion_estimator(feature_outputs["features"], training=True)["logits"]
+        normal_outputs["toxicity"] = self.toxicity_estimator(
+            feature_outputs["features"], training=True
+        )["logits"]
+        normal_outputs["bullying"] = self.bullying_estimator(
+            feature_outputs["features"], training=True
+        )["logits"]
+        normal_outputs["role"] = self.role_estimator(feature_outputs["features"], training=True)[
+            "logits"
+        ]
+        normal_outputs["emotion"] = self.emotion_estimator(
+            feature_outputs["features"], training=True
+        )["logits"]
 
         normal_loss_dict = self.compute_loss(normal_outputs, labels)
         normal_loss = normal_loss_dict["total"]
@@ -632,16 +643,28 @@ class ImprovedDetector(nn.Module):
         adv_embeddings = self.adversarial_trainer.fgsm_attack(embeddings, normal_loss)
 
         # 對抗樣本前向傳播
-        adv_backbone_outputs = self.feature_extractor.backbone(inputs_embeds=adv_embeddings, attention_mask=attention_mask)
+        adv_backbone_outputs = self.feature_extractor.backbone(
+            inputs_embeds=adv_embeddings, attention_mask=attention_mask
+        )
         adv_feature_outputs = {
-            "features": self.feature_extractor.feature_fusion(adv_backbone_outputs.last_hidden_state.mean(dim=1))
+            "features": self.feature_extractor.feature_fusion(
+                adv_backbone_outputs.last_hidden_state.mean(dim=1)
+            )
         }
 
         adv_outputs = {}
-        adv_outputs["toxicity"] = self.toxicity_estimator(adv_feature_outputs["features"], training=True)["logits"]
-        adv_outputs["bullying"] = self.bullying_estimator(adv_feature_outputs["features"], training=True)["logits"]
-        adv_outputs["role"] = self.role_estimator(adv_feature_outputs["features"], training=True)["logits"]
-        adv_outputs["emotion"] = self.emotion_estimator(adv_feature_outputs["features"], training=True)["logits"]
+        adv_outputs["toxicity"] = self.toxicity_estimator(
+            adv_feature_outputs["features"], training=True
+        )["logits"]
+        adv_outputs["bullying"] = self.bullying_estimator(
+            adv_feature_outputs["features"], training=True
+        )["logits"]
+        adv_outputs["role"] = self.role_estimator(adv_feature_outputs["features"], training=True)[
+            "logits"
+        ]
+        adv_outputs["emotion"] = self.emotion_estimator(
+            adv_feature_outputs["features"], training=True
+        )["logits"]
 
         adv_loss_dict = self.compute_loss(adv_outputs, labels)
         adv_loss = adv_loss_dict["total"]
@@ -655,21 +678,24 @@ class ImprovedDetector(nn.Module):
 
         return loss_dict
 
-    def predict(self, text: str, context: Optional[List[str]] = None) -> Dict[str, Union[str, float, torch.Tensor]]:
+    def predict(
+        self, text: str, context: Optional[List[str]] = None
+    ) -> Dict[str, Union[str, float, torch.Tensor]]:
         """預測單個文本"""
         self.eval()
 
         # 分詞
         inputs = self.tokenizer(
-            text, max_length=self.config.max_length,
-            truncation=True, padding="max_length", return_tensors="pt"
+            text,
+            max_length=self.config.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt",
         )
 
         with torch.no_grad():
             outputs = self.forward(
-                inputs["input_ids"],
-                inputs["attention_mask"],
-                return_features=False
+                inputs["input_ids"], inputs["attention_mask"], return_features=False
             )
 
             # 轉換預測結果
@@ -680,7 +706,7 @@ class ImprovedDetector(nn.Module):
                 "toxicity": {0: "none", 1: "toxic", 2: "severe"},
                 "bullying": {0: "none", 1: "harassment", 2: "threat"},
                 "role": {0: "none", 1: "perpetrator", 2: "victim", 3: "bystander"},
-                "emotion": {0: "pos", 1: "neu", 2: "neg"}
+                "emotion": {0: "pos", 1: "neu", 2: "neg"},
             }
 
             for task in ["toxicity", "bullying", "role", "emotion"]:
@@ -695,7 +721,10 @@ class ImprovedDetector(nn.Module):
                     predictions[f"{task}_probabilities"] = probs.squeeze().tolist()
 
                     # 不確定性
-                    if f"{task}_uncertainty" in outputs and outputs[f"{task}_uncertainty"] is not None:
+                    if (
+                        f"{task}_uncertainty" in outputs
+                        and outputs[f"{task}_uncertainty"] is not None
+                    ):
                         predictions[f"{task}_uncertainty"] = outputs[f"{task}_uncertainty"].item()
 
         return predictions
@@ -707,7 +736,6 @@ def create_improved_config() -> ImprovedModelConfig:
         model_name="hfl/chinese-macbert-base",
         hidden_size=768,
         num_attention_heads=12,
-
         # 啟用所有改進功能
         use_cross_attention=True,
         use_self_attention=True,
@@ -717,17 +745,15 @@ def create_improved_config() -> ImprovedModelConfig:
         use_dynamic_task_weighting=True,
         use_uncertainty_estimation=True,
         temperature_scaling=True,
-
         # 優化超參數
         focal_gamma=2.0,
         label_smoothing=0.1,
         dropout_rate=0.1,
         adversarial_epsilon=0.01,
         adversarial_alpha=0.3,
-
         # Monte Carlo設定
         monte_carlo_dropout=True,
-        mc_samples=10
+        mc_samples=10,
     )
     return config
 

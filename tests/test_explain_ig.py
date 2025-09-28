@@ -5,9 +5,10 @@ Testing coverage for cyberpuppy.explain.ig module
 """
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
+
 import torch
+
 
 # Stub classes for missing imports
 class VisualizationConfig:
@@ -16,40 +17,34 @@ class VisualizationConfig:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+
 class CyberPuppyExplainer:
     def __init__(self, model, tokenizer, **kwargs):
         self.model = model
         self.tokenizer = tokenizer
 
     def explain(self, text, **kwargs):
-        return {
-            "text": text,
-            "attributions": [0.1] * len(text.split()),
-            "tokens": text.split()
-        }
+        return {"text": text, "attributions": [0.1] * len(text.split()), "tokens": text.split()}
+
 
 def explain_single_text(text, model, tokenizer, config=None):
-    return {
-        "text": text,
-        "attributions": [0.1] * len(text.split()),
-        "tokens": text.split()
-    }
+    return {"text": text, "attributions": [0.1] * len(text.split()), "tokens": text.split()}
+
 
 def explain_batch(texts, model, tokenizer, config=None):
     return [explain_single_text(text, model, tokenizer, config) for text in texts]
 
+
 def create_explanation_report(results, output_path):
     return output_path
-import numpy as np
+
+
 from pathlib import Path
-from dataclasses import dataclass
+
+import numpy as np
 
 # Import the module under test
-from cyberpuppy.explain.ig import (
-    ExplanationResult,
-    IntegratedGradientsExplainer,
-    BiasAnalyzer,
-)
+from cyberpuppy.explain.ig import ExplanationResult
 
 
 class TestExplanationResult(unittest.TestCase):
@@ -72,16 +67,13 @@ class TestExplanationResult(unittest.TestCase):
             bullying_prob=0.15,
             toxicity_attributions=self.sample_attributions,
             emotion_attributions=self.sample_attributions * 0.5,
-            bullying_attributions=self.sample_attributions * 0.3
+            bullying_attributions=self.sample_attributions * 0.3,
         )
 
         self.assertEqual(result.text, "這是測試文本")
         self.assertEqual(result.toxicity_pred, 1)
         self.assertEqual(result.toxicity_prob, 0.85)
-        np.testing.assert_array_equal(
-            result.toxicity_attributions,
-            self.sample_attributions
-        )
+        np.testing.assert_array_equal(result.toxicity_attributions, self.sample_attributions)
 
     def test_explanation_result_validation(self):
         """Test input validation for ExplanationResult"""
@@ -97,7 +89,7 @@ class TestExplanationResult(unittest.TestCase):
                 bullying_prob=0.2,
                 toxicity_attributions=np.array([0.1]),
                 emotion_attributions=np.array([0.1]),
-                bullying_attributions=np.array([0.1])
+                bullying_attributions=np.array([0.1]),
             )
 
     def test_explanation_result_empty_tokens(self):
@@ -113,7 +105,7 @@ class TestExplanationResult(unittest.TestCase):
             bullying_prob=0.05,
             toxicity_attributions=np.array([]),
             emotion_attributions=np.array([]),
-            bullying_attributions=np.array([])
+            bullying_attributions=np.array([]),
         )
 
         self.assertEqual(len(result.tokens), 0)
@@ -134,10 +126,7 @@ class TestVisualizationConfig(unittest.TestCase):
     def test_custom_config(self):
         """Test custom configuration values"""
         config = VisualizationConfig(
-            save_html=False,
-            show_attributions=False,
-            top_k=5,
-            color_scheme="viridis"
+            save_html=False, show_attributions=False, top_k=5, color_scheme="viridis"
         )
         self.assertFalse(config.save_html)
         self.assertFalse(config.show_attributions)
@@ -171,9 +160,7 @@ class TestCyberPuppyExplainer(unittest.TestCase):
     def test_explainer_initialization(self):
         """Test CyberPuppyExplainer initialization"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         self.assertEqual(explainer.model, self.mock_model)
@@ -183,21 +170,17 @@ class TestCyberPuppyExplainer(unittest.TestCase):
     def test_explainer_initialization_with_none_device(self):
         """Test explainer initialization with None device (auto-detection)"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=None
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=None
         )
 
         # Should default to CPU or GPU based on availability
         self.assertIsNotNone(explainer.device)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_tokenize_text(self, mock_ig):
         """Test text tokenization"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         tokens, input_ids, attention_mask = explainer._tokenize_text("這是測試")
@@ -206,24 +189,16 @@ class TestCyberPuppyExplainer(unittest.TestCase):
         self.assertIsInstance(input_ids, torch.Tensor)
         self.assertIsInstance(attention_mask, torch.Tensor)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_explain_single_prediction(self, mock_ig):
         """Test single text explanation"""
         # Mock IntegratedGradients
         mock_ig_instance = Mock()
         mock_ig.return_value = mock_ig_instance
-        mock_ig_instance.attribute.return_value = torch.tensor(
-            [[0.1,
-            0.2,
-            0.8,
-            0.3,
-            0.1]]
-        )
+        mock_ig_instance.attribute.return_value = torch.tensor([[0.1, 0.2, 0.8, 0.3, 0.1]])
 
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         result = explainer.explain("這是測試文本")
@@ -232,35 +207,25 @@ class TestCyberPuppyExplainer(unittest.TestCase):
         self.assertEqual(result.text, "這是測試文本")
         self.assertIsInstance(result.toxicity_attributions, np.ndarray)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_explain_empty_text(self, mock_ig):
         """Test explanation with empty text"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         with self.assertRaises(ValueError):
             explainer.explain("")
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_explain_with_baseline(self, mock_ig):
         """Test explanation with custom baseline"""
         mock_ig_instance = Mock()
         mock_ig.return_value = mock_ig_instance
-        mock_ig_instance.attribute.return_value = torch.tensor(
-            [[0.1,
-            0.2,
-            0.8,
-            0.3,
-            0.1]]
-        )
+        mock_ig_instance.attribute.return_value = torch.tensor([[0.1, 0.2, 0.8, 0.3, 0.1]])
 
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         custom_baseline = torch.zeros(5)
@@ -268,13 +233,11 @@ class TestCyberPuppyExplainer(unittest.TestCase):
 
         self.assertIsInstance(result, ExplanationResult)
 
-    @patch('cyberpuppy.explain.ig.plt')
+    @patch("cyberpuppy.explain.ig.plt")
     def test_visualize_explanation(self, mock_plt):
         """Test explanation visualization"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         # Create a mock explanation result
@@ -289,7 +252,7 @@ class TestCyberPuppyExplainer(unittest.TestCase):
             bullying_prob=0.15,
             toxicity_attributions=np.array([0.1, 0.2, 0.8]),
             emotion_attributions=np.array([0.05, 0.1, 0.4]),
-            bullying_attributions=np.array([0.02, 0.05, 0.1])
+            bullying_attributions=np.array([0.02, 0.05, 0.1]),
         )
 
         config = VisualizationConfig()
@@ -301,9 +264,7 @@ class TestCyberPuppyExplainer(unittest.TestCase):
     def test_model_forward_wrapper(self):
         """Test model forward wrapper for IntegratedGradients"""
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=self.mock_device
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=self.mock_device
         )
 
         # Test the forward wrapper used by IntegratedGradients
@@ -323,7 +284,7 @@ class TestCyberPuppyExplainer(unittest.TestCase):
 class TestExplainSingleText(unittest.TestCase):
     """Test standalone explain_single_text function"""
 
-    @patch('cyberpuppy.explain.ig.CyberPuppyExplainer')
+    @patch("cyberpuppy.explain.ig.CyberPuppyExplainer")
     def test_explain_single_text_function(self, mock_explainer_class):
         """Test explain_single_text utility function"""
         mock_explainer = Mock()
@@ -334,16 +295,12 @@ class TestExplainSingleText(unittest.TestCase):
         mock_model = Mock()
         mock_tokenizer = Mock()
 
-        result = explain_single_text(
-            text="測試文本",
-            model=mock_model,
-            tokenizer=mock_tokenizer
-        )
+        result = explain_single_text(text="測試文本", model=mock_model, tokenizer=mock_tokenizer)
 
         self.assertEqual(result, mock_result)
         mock_explainer.explain.assert_called_once_with("測試文本")
 
-    @patch('cyberpuppy.explain.ig.CyberPuppyExplainer')
+    @patch("cyberpuppy.explain.ig.CyberPuppyExplainer")
     def test_explain_single_text_with_config(self, mock_explainer_class):
         """Test explain_single_text with custom config"""
         mock_explainer = Mock()
@@ -356,10 +313,7 @@ class TestExplainSingleText(unittest.TestCase):
         config = VisualizationConfig(top_k=5)
 
         result = explain_single_text(
-            text="測試文本",
-            model=mock_model,
-            tokenizer=mock_tokenizer,
-            config=config
+            text="測試文本", model=mock_model, tokenizer=mock_tokenizer, config=config
         )
 
         self.assertEqual(result, mock_result)
@@ -368,7 +322,7 @@ class TestExplainSingleText(unittest.TestCase):
 class TestExplainBatch(unittest.TestCase):
     """Test batch explanation functionality"""
 
-    @patch('cyberpuppy.explain.ig.CyberPuppyExplainer')
+    @patch("cyberpuppy.explain.ig.CyberPuppyExplainer")
     def test_explain_batch_function(self, mock_explainer_class):
         """Test explain_batch utility function"""
         mock_explainer = Mock()
@@ -382,49 +336,36 @@ class TestExplainBatch(unittest.TestCase):
         mock_tokenizer = Mock()
         texts = ["文本1", "文本2", "文本3"]
 
-        results = explain_batch(
-            texts=texts,
-            model=mock_model,
-            tokenizer=mock_tokenizer
-        )
+        results = explain_batch(texts=texts, model=mock_model, tokenizer=mock_tokenizer)
 
         self.assertEqual(len(results), 3)
         self.assertEqual(mock_explainer.explain.call_count, 3)
 
-    @patch('cyberpuppy.explain.ig.CyberPuppyExplainer')
+    @patch("cyberpuppy.explain.ig.CyberPuppyExplainer")
     def test_explain_batch_empty_list(self, mock_explainer_class):
         """Test explain_batch with empty text list"""
         mock_model = Mock()
         mock_tokenizer = Mock()
 
-        results = explain_batch(
-            texts=[],
-            model=mock_model,
-            tokenizer=mock_tokenizer
-        )
+        results = explain_batch(texts=[], model=mock_model, tokenizer=mock_tokenizer)
 
         self.assertEqual(len(results), 0)
 
-    @patch('cyberpuppy.explain.ig.CyberPuppyExplainer')
-    @patch('cyberpuppy.explain.ig.logger')
+    @patch("cyberpuppy.explain.ig.CyberPuppyExplainer")
+    @patch("cyberpuppy.explain.ig.logger")
     def test_explain_batch_with_error(self, mock_logger, mock_explainer_class):
         """Test explain_batch error handling"""
         mock_explainer = Mock()
         mock_explainer_class.return_value = mock_explainer
 
         # Simulate an error on second text
-        mock_explainer.explain.side_effect = [Mock(), Exception("Test "
-            "error"), Mock()]
+        mock_explainer.explain.side_effect = [Mock(), Exception("Test " "error"), Mock()]
 
         mock_model = Mock()
         mock_tokenizer = Mock()
         texts = ["文本1", "文本2", "文本3"]
 
-        results = explain_batch(
-            texts=texts,
-            model=mock_model,
-            tokenizer=mock_tokenizer
-        )
+        results = explain_batch(texts=texts, model=mock_model, tokenizer=mock_tokenizer)
 
         # Should still return results for successful texts
         self.assertEqual(len(results), 2)
@@ -451,15 +392,14 @@ class TestCreateExplanationReport(unittest.TestCase):
                 bullying_prob=0.1 + i * 0.05,
                 toxicity_attributions=np.array([0.1, 0.2 + i * 0.1]),
                 emotion_attributions=np.array([0.05, 0.1 + i * 0.05]),
-                bullying_attributions=np.array([0.02, 0.03 + i * 0.01])
+                bullying_attributions=np.array([0.02, 0.03 + i * 0.01]),
             )
             results.append(result)
 
-        with patch('builtins.open', unittest.mock.mock_open()) as mock_file:
-            with patch('cyberpuppy.explain.ig.json.dump') as mock_json_dump:
+        with patch("builtins.open", unittest.mock.mock_open()) as mock_file:
+            with patch("cyberpuppy.explain.ig.json.dump") as mock_json_dump:
                 report_path = create_explanation_report(
-                    results=results,
-                    output_path="test_report.json"
+                    results=results, output_path="test_report.json"
                 )
 
                 self.assertEqual(report_path, Path("test_report.json"))
@@ -468,12 +408,9 @@ class TestCreateExplanationReport(unittest.TestCase):
 
     def test_create_explanation_report_empty_results(self):
         """Test report creation with empty results"""
-        with patch('builtins.open', unittest.mock.mock_open()) as mock_file:
-            with patch('cyberpuppy.explain.ig.json.dump') as mock_json_dump:
-                report_path = create_explanation_report(
-                    results=[],
-                    output_path="empty_report.json"
-                )
+        with patch("builtins.open", unittest.mock.mock_open()) as mock_file:
+            with patch("cyberpuppy.explain.ig.json.dump") as mock_json_dump:
+                report_path = create_explanation_report(results=[], output_path="empty_report.json")
 
                 self.assertEqual(report_path, Path("empty_report.json"))
                 self.assertTrue(mock_file.called)
@@ -494,18 +431,12 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.mock_tokenizer.cls_token_id = 101
         self.mock_tokenizer.sep_token_id = 102
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_chinese_text_handling(self, mock_ig):
         """Test handling of Chinese text with various characters"""
         mock_ig_instance = Mock()
         mock_ig.return_value = mock_ig_instance
-        mock_ig_instance.attribute.return_value = torch.tensor(
-            [[0.1,
-            0.2,
-            0.8,
-            0.3,
-            0.1]]
-        )
+        mock_ig_instance.attribute.return_value = torch.tensor([[0.1, 0.2, 0.8, 0.3, 0.1]])
 
         # Mock model output
         mock_output = Mock()
@@ -515,9 +446,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.mock_model.return_value = mock_output
 
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=torch.device("cpu")
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=torch.device("cpu")
         )
 
         # Test with mixed Chinese characters, punctuation, and emojis
@@ -525,7 +454,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             "你好世界！",
             "這個人真的很討厭😠",
             "我覺得這樣做不對，但是沒關係。",
-            "ABCD中文混合123"
+            "ABCD中文混合123",
         ]
 
         for text in test_texts:
@@ -533,13 +462,13 @@ class TestIntegrationScenarios(unittest.TestCase):
             self.assertIsInstance(result, ExplanationResult)
             self.assertEqual(result.text, text)
 
-    @patch('cyberpuppy.explain.ig.IntegratedGradients')
+    @patch("cyberpuppy.explain.ig.IntegratedGradients")
     def test_long_text_handling(self, mock_ig):
         """Test handling of long texts"""
         mock_ig_instance = Mock()
         mock_ig.return_value = mock_ig_instance
         mock_ig_instance.attribute.return_value = torch.tensor([[0.1] * 512])
-            # Max length
+        # Max length
 
         # Mock model output
         mock_output = Mock()
@@ -549,9 +478,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.mock_model.return_value = mock_output
 
         explainer = CyberPuppyExplainer(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            device=torch.device("cpu")
+            model=self.mock_model, tokenizer=self.mock_tokenizer, device=torch.device("cpu")
         )
 
         # Create a long text
@@ -572,11 +499,7 @@ class TestIntegrationScenarios(unittest.TestCase):
 
         # This should not raise memory errors immediately
         try:
-            results = explain_batch(
-                texts=large_texts,
-                model=mock_model,
-                tokenizer=mock_tokenizer
-            )
+            results = explain_batch(texts=large_texts, model=mock_model, tokenizer=mock_tokenizer)
             # If we get here, the interface is working
             self.assertIsInstance(results, list)
         except Exception as e:
@@ -584,5 +507,5 @@ class TestIntegrationScenarios(unittest.TestCase):
             self.assertIsInstance(e, Exception)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

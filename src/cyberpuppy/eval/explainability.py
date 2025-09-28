@@ -3,22 +3,22 @@
 提供霸凌偵測模型的可解釋性分析工具
 """
 
+import json
 import logging
+import os
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Dict, List, Tuple, Any, Optional, Union
-import pandas as pd
-from dataclasses import dataclass
-import json
-import os
-from datetime import datetime
-from collections import defaultdict
 
 # 第三方可解釋性庫
 try:
     import shap
+
     SHAP_AVAILABLE = True
 except (ImportError, AttributeError) as e:
     SHAP_AVAILABLE = False
@@ -27,18 +27,16 @@ except (ImportError, AttributeError) as e:
 
 try:
     from lime.lime_text import LimeTextExplainer
+
     LIME_AVAILABLE = True
 except ImportError:
     LIME_AVAILABLE = False
     logging.warning("LIME 未安裝，LIME 功能將不可用")
 
 try:
-    from captum.attr import (
-        IntegratedGradients,
-        LayerIntegratedGradients,
-        TokenReferenceBase,
-        visualization
-    )
+    from captum.attr import (IntegratedGradients, LayerIntegratedGradients,
+                             TokenReferenceBase, visualization)
+
     CAPTUM_AVAILABLE = True
 except ImportError:
     CAPTUM_AVAILABLE = False
@@ -46,9 +44,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ExplanationResult:
     """解釋結果數據結構"""
+
     text: str
     prediction: str
     confidence: float
@@ -56,6 +56,7 @@ class ExplanationResult:
     token_attributions: List[Tuple[str, float]]  # (token, attribution_score)
     global_explanation: Optional[Dict[str, Any]] = None
     visualization_path: Optional[str] = None
+
 
 class ExplainabilityAnalyzer:
     """可解釋性分析主類"""
@@ -67,7 +68,7 @@ class ExplainabilityAnalyzer:
         os.makedirs(output_dir, exist_ok=True)
 
         # 設定設備
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         self.model.eval()
 
@@ -80,7 +81,9 @@ class ExplainabilityAnalyzer:
         # Integrated Gradients
         if CAPTUM_AVAILABLE:
             self.integrated_gradients = IntegratedGradients(self.model)
-            self.token_reference = TokenReferenceBase(reference_token_idx=self.tokenizer.pad_token_id)
+            self.token_reference = TokenReferenceBase(
+                reference_token_idx=self.tokenizer.pad_token_id
+            )
 
         # SHAP
         if SHAP_AVAILABLE:
@@ -89,14 +92,12 @@ class ExplainabilityAnalyzer:
         # LIME
         if LIME_AVAILABLE:
             self.lime_explainer = LimeTextExplainer(
-                class_names=['none', 'toxic', 'severe'],
-                mode='classification'
+                class_names=["none", "toxic", "severe"], mode="classification"
             )
 
-    def explain_prediction(self,
-                          text: str,
-                          methods: List[str] = ['integrated_gradients', 'attention'],
-                          visualize: bool = True) -> List[ExplanationResult]:
+    def explain_prediction(
+        self, text: str, methods: List[str] = None, visualize: bool = True
+    ) -> List[ExplanationResult]:
         """
         解釋單個預測結果
 
@@ -109,6 +110,8 @@ class ExplainabilityAnalyzer:
             解釋結果列表
         """
 
+        if methods is None:
+            methods = ["integrated_gradients", "attention"]
         logger.info(f"開始解釋預測: {text[:50]}...")
 
         results = []
@@ -118,13 +121,13 @@ class ExplainabilityAnalyzer:
 
         for method in methods:
             try:
-                if method == 'integrated_gradients' and CAPTUM_AVAILABLE:
+                if method == "integrated_gradients" and CAPTUM_AVAILABLE:
                     result = self._explain_with_integrated_gradients(text, prediction, confidence)
-                elif method == 'shap' and SHAP_AVAILABLE:
+                elif method == "shap" and SHAP_AVAILABLE:
                     result = self._explain_with_shap(text, prediction, confidence)
-                elif method == 'lime' and LIME_AVAILABLE:
+                elif method == "lime" and LIME_AVAILABLE:
                     result = self._explain_with_lime(text, prediction, confidence)
-                elif method == 'attention':
+                elif method == "attention":
                     result = self._explain_with_attention(text, prediction, confidence)
                 else:
                     logger.warning(f"不支援的解釋方法: {method}")
@@ -140,10 +143,9 @@ class ExplainabilityAnalyzer:
 
         return results
 
-    def explain_batch(self,
-                     texts: List[str],
-                     methods: List[str] = ['integrated_gradients'],
-                     max_examples: int = 50) -> Dict[str, List[ExplanationResult]]:
+    def explain_batch(
+        self, texts: List[str], methods: List[str] = None, max_examples: int = 50
+    ) -> Dict[str, List[ExplanationResult]]:
         """
         批量解釋預測結果
 
@@ -156,6 +158,8 @@ class ExplainabilityAnalyzer:
             按方法分組的解釋結果
         """
 
+        if methods is None:
+            methods = ["integrated_gradients"]
         logger.info(f"開始批量解釋 {len(texts)} 個樣本...")
 
         results_by_method = {method: [] for method in methods}
@@ -182,11 +186,7 @@ class ExplainabilityAnalyzer:
 
         # 編碼文本
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
         # 移動到設備
@@ -200,15 +200,14 @@ class ExplainabilityAnalyzer:
             confidence = predictions.max().item()
 
         # 轉換為標籤
-        label_mapping = {0: 'none', 1: 'toxic', 2: 'severe'}
-        prediction = label_mapping.get(predicted_class, 'unknown')
+        label_mapping = {0: "none", 1: "toxic", 2: "severe"}
+        prediction = label_mapping.get(predicted_class, "unknown")
 
         return prediction, confidence
 
-    def _explain_with_integrated_gradients(self,
-                                         text: str,
-                                         prediction: str,
-                                         confidence: float) -> ExplanationResult:
+    def _explain_with_integrated_gradients(
+        self, text: str, prediction: str, confidence: float
+    ) -> ExplanationResult:
         """使用 Integrated Gradients 進行解釋"""
 
         if not CAPTUM_AVAILABLE:
@@ -216,15 +215,11 @@ class ExplainabilityAnalyzer:
 
         # 編碼文本
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
-        input_ids = inputs['input_ids'].to(self.device)
-        attention_mask = inputs['attention_mask'].to(self.device)
+        input_ids = inputs["input_ids"].to(self.device)
+        attention_mask = inputs["attention_mask"].to(self.device)
 
         # 生成基準線（全部填充為 PAD token）
         baseline_ids = self.token_reference.generate_reference(
@@ -237,11 +232,7 @@ class ExplainabilityAnalyzer:
             return outputs.logits
 
         attributions = self.integrated_gradients.attribute(
-            input_ids,
-            baseline_ids,
-            target=None,
-            n_steps=50,
-            return_convergence_delta=False
+            input_ids, baseline_ids, target=None, n_steps=50, return_convergence_delta=False
         )
 
         # 處理歸因分數
@@ -255,21 +246,20 @@ class ExplainabilityAnalyzer:
         # 組合 token 和歸因分數
         token_attributions = []
         for token, score in zip(tokens, attributions):
-            if token not in ['[CLS]', '[SEP]', '[PAD]']:
+            if token not in ["[CLS]", "[SEP]", "[PAD]"]:
                 token_attributions.append((token, float(score)))
 
         return ExplanationResult(
             text=text,
             prediction=prediction,
             confidence=confidence,
-            method='integrated_gradients',
-            token_attributions=token_attributions
+            method="integrated_gradients",
+            token_attributions=token_attributions,
         )
 
-    def _explain_with_shap(self,
-                          text: str,
-                          prediction: str,
-                          confidence: float) -> ExplanationResult:
+    def _explain_with_shap(
+        self, text: str, prediction: str, confidence: float
+    ) -> ExplanationResult:
         """使用 SHAP 進行解釋"""
 
         if not SHAP_AVAILABLE:
@@ -282,11 +272,7 @@ class ExplainabilityAnalyzer:
                 pred, conf = self._get_prediction(text)
                 # 返回所有類別的概率
                 inputs = self.tokenizer(
-                    text,
-                    return_tensors='pt',
-                    truncation=True,
-                    padding=True,
-                    max_length=512
+                    text, return_tensors="pt", truncation=True, padding=True, max_length=512
                 )
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
@@ -305,7 +291,7 @@ class ExplainabilityAnalyzer:
                 "這是正常的對話",
                 "今天天氣很好",
                 "謝謝你的幫助",
-                ""  # 空文本作為基準
+                "",  # 空文本作為基準
             ]
             self.shap_explainer = shap.Explainer(model_wrapper, background_texts)
 
@@ -318,7 +304,7 @@ class ExplainabilityAnalyzer:
             tokens = [text]
 
         # 獲取預測類別的 SHAP 值
-        pred_class_idx = {'none': 0, 'toxic': 1, 'severe': 2}.get(prediction, 0)
+        pred_class_idx = {"none": 0, "toxic": 1, "severe": 2}.get(prediction, 0)
 
         if len(shap_values.values.shape) > 2:
             attributions = shap_values.values[0, :, pred_class_idx]
@@ -327,23 +313,19 @@ class ExplainabilityAnalyzer:
 
         # 確保長度匹配
         min_length = min(len(tokens), len(attributions))
-        token_attributions = [
-            (tokens[i], float(attributions[i]))
-            for i in range(min_length)
-        ]
+        token_attributions = [(tokens[i], float(attributions[i])) for i in range(min_length)]
 
         return ExplanationResult(
             text=text,
             prediction=prediction,
             confidence=confidence,
-            method='shap',
-            token_attributions=token_attributions
+            method="shap",
+            token_attributions=token_attributions,
         )
 
-    def _explain_with_lime(self,
-                          text: str,
-                          prediction: str,
-                          confidence: float) -> ExplanationResult:
+    def _explain_with_lime(
+        self, text: str, prediction: str, confidence: float
+    ) -> ExplanationResult:
         """使用 LIME 進行解釋"""
 
         if not LIME_AVAILABLE:
@@ -354,11 +336,7 @@ class ExplainabilityAnalyzer:
             results = []
             for text in texts:
                 inputs = self.tokenizer(
-                    text,
-                    return_tensors='pt',
-                    truncation=True,
-                    padding=True,
-                    max_length=512
+                    text, return_tensors="pt", truncation=True, padding=True, max_length=512
                 )
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
@@ -372,41 +350,31 @@ class ExplainabilityAnalyzer:
 
         # 生成解釋
         explanation = self.lime_explainer.explain_instance(
-            text,
-            predict_fn,
-            num_features=20,
-            num_samples=1000
+            text, predict_fn, num_features=20, num_samples=1000
         )
 
         # 獲取特徵重要性
         feature_importance = explanation.as_list()
 
         # 轉換為 token attributions 格式
-        token_attributions = [
-            (feature, score) for feature, score in feature_importance
-        ]
+        token_attributions = [(feature, score) for feature, score in feature_importance]
 
         return ExplanationResult(
             text=text,
             prediction=prediction,
             confidence=confidence,
-            method='lime',
-            token_attributions=token_attributions
+            method="lime",
+            token_attributions=token_attributions,
         )
 
-    def _explain_with_attention(self,
-                               text: str,
-                               prediction: str,
-                               confidence: float) -> ExplanationResult:
+    def _explain_with_attention(
+        self, text: str, prediction: str, confidence: float
+    ) -> ExplanationResult:
         """使用注意力權重進行解釋"""
 
         # 編碼文本
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
@@ -428,20 +396,20 @@ class ExplainabilityAnalyzer:
         attention_scores = cls_attention.cpu().numpy()
 
         # 獲取 tokens
-        tokens = self.tokenizer.convert_ids_to_tokens(inputs['input_ids'].squeeze().cpu())
+        tokens = self.tokenizer.convert_ids_to_tokens(inputs["input_ids"].squeeze().cpu())
 
         # 組合 token 和注意力分數
         token_attributions = []
         for token, score in zip(tokens, attention_scores):
-            if token not in ['[CLS]', '[SEP]', '[PAD]']:
+            if token not in ["[CLS]", "[SEP]", "[PAD]"]:
                 token_attributions.append((token, float(score)))
 
         return ExplanationResult(
             text=text,
             prediction=prediction,
             confidence=confidence,
-            method='attention',
-            token_attributions=token_attributions
+            method="attention",
+            token_attributions=token_attributions,
         )
 
     def _create_visualization(self, result: ExplanationResult):
@@ -460,7 +428,7 @@ class ExplainabilityAnalyzer:
             scores = scores[:max_tokens]
 
         # 創建顏色映射
-        colors = ['red' if score < 0 else 'green' for score in scores]
+        colors = ["red" if score < 0 else "green" for score in scores]
         alphas = [min(abs(score) * 2, 1.0) for score in scores]
 
         # 創建條形圖
@@ -471,10 +439,12 @@ class ExplainabilityAnalyzer:
             bar.set_alpha(alpha)
 
         plt.yticks(range(len(tokens)), tokens)
-        plt.xlabel('Attribution Score')
-        plt.title(f'{result.method.upper()} Explanation\\n'
-                 f'Text: {result.text[:50]}...\\n'
-                 f'Prediction: {result.prediction} (Confidence: {result.confidence:.3f})')
+        plt.xlabel("Attribution Score")
+        plt.title(
+            f"{result.method.upper()} Explanation\\n"
+            f"Text: {result.text[:50]}...\\n"
+            f"Prediction: {result.prediction} (Confidence: {result.confidence:.3f})"
+        )
 
         plt.tight_layout()
 
@@ -482,7 +452,7 @@ class ExplainabilityAnalyzer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{result.method}_explanation_{timestamp}.png"
         filepath = os.path.join(self.output_dir, filename)
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.savefig(filepath, dpi=300, bbox_inches="tight")
         plt.close()
 
         # 更新結果中的可視化路徑
@@ -490,10 +460,9 @@ class ExplainabilityAnalyzer:
 
         logger.info(f"可視化已保存至: {filepath}")
 
-    def generate_global_explanations(self,
-                                   texts: List[str],
-                                   labels: List[str],
-                                   method: str = 'integrated_gradients') -> Dict[str, Any]:
+    def generate_global_explanations(
+        self, texts: List[str], labels: List[str], method: str = "integrated_gradients"
+    ) -> Dict[str, Any]:
         """
         生成全局解釋（特徵重要性統計）
 
@@ -509,7 +478,7 @@ class ExplainabilityAnalyzer:
         logger.info(f"開始生成全局解釋，方法: {method}")
 
         # 按類別分組
-        label_groups = {'none': [], 'toxic': [], 'severe': []}
+        label_groups = {"none": [], "toxic": [], "severe": []}
         for text, label in zip(texts, labels):
             if label in label_groups:
                 label_groups[label].append(text)
@@ -524,9 +493,7 @@ class ExplainabilityAnalyzer:
 
             # 獲取該類別的解釋
             explanations = self.explain_batch(
-                label_texts[:50],  # 限制數量以提高效率
-                methods=[method],
-                max_examples=50
+                label_texts[:50], methods=[method], max_examples=50  # 限制數量以提高效率
             )[method]
 
             # 統計詞彙重要性
@@ -543,17 +510,13 @@ class ExplainabilityAnalyzer:
             }
 
             # 排序並取前20
-            top_tokens = sorted(
-                avg_importance.items(),
-                key=lambda x: abs(x[1]),
-                reverse=True
-            )[:20]
+            top_tokens = sorted(avg_importance.items(), key=lambda x: abs(x[1]), reverse=True)[:20]
 
             global_explanations[label] = {
-                'top_positive_tokens': [(token, score) for token, score in top_tokens if score > 0],
-                'top_negative_tokens': [(token, score) for token, score in top_tokens if score < 0],
-                'sample_count': len(explanations),
-                'method': method
+                "top_positive_tokens": [(token, score) for token, score in top_tokens if score > 0],
+                "top_negative_tokens": [(token, score) for token, score in top_tokens if score < 0],
+                "sample_count": len(explanations),
+                "method": method,
             }
 
         return global_explanations
@@ -569,22 +532,23 @@ class ExplainabilityAnalyzer:
         serializable_explanations = []
         for explanation in explanations:
             explanation_dict = {
-                'text': explanation.text,
-                'prediction': explanation.prediction,
-                'confidence': explanation.confidence,
-                'method': explanation.method,
-                'token_attributions': explanation.token_attributions,
-                'visualization_path': explanation.visualization_path
+                "text": explanation.text,
+                "prediction": explanation.prediction,
+                "confidence": explanation.confidence,
+                "method": explanation.method,
+                "token_attributions": explanation.token_attributions,
+                "visualization_path": explanation.visualization_path,
             }
             if explanation.global_explanation:
-                explanation_dict['global_explanation'] = explanation.global_explanation
+                explanation_dict["global_explanation"] = explanation.global_explanation
 
             serializable_explanations.append(explanation_dict)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(serializable_explanations, f, ensure_ascii=False, indent=2)
 
         logger.info(f"解釋結果已保存至: {filepath}")
+
 
 class SHAPExplainer:
     """SHAP 專門解釋器"""
@@ -602,6 +566,7 @@ class SHAPExplainer:
         # 實現 SHAP 特定的解釋和可視化
         pass
 
+
 class LIMEExplainer:
     """LIME 專門解釋器"""
 
@@ -618,21 +583,22 @@ class LIMEExplainer:
         # 實現 LIME 特定的解釋和 HTML 生成
         pass
 
+
 # 工具函數
 def compare_explanations(explanations: List[ExplanationResult]) -> Dict[str, Any]:
     """比較不同解釋方法的結果"""
 
     if len(explanations) < 2:
-        return {'error': '需要至少兩個解釋結果進行比較'}
+        return {"error": "需要至少兩個解釋結果進行比較"}
 
     comparison_results = {
-        'methods_compared': [exp.method for exp in explanations],
-        'text': explanations[0].text,
-        'prediction_consistency': len(set(exp.prediction for exp in explanations)) == 1,
-        'confidence_range': (
+        "methods_compared": [exp.method for exp in explanations],
+        "text": explanations[0].text,
+        "prediction_consistency": len(set(exp.prediction for exp in explanations)) == 1,
+        "confidence_range": (
             min(exp.confidence for exp in explanations),
-            max(exp.confidence for exp in explanations)
-        )
+            max(exp.confidence for exp in explanations),
+        ),
     }
 
     # 計算 token 重要性相關性
@@ -646,8 +612,12 @@ def compare_explanations(explanations: List[ExplanationResult]) -> Dict[str, Any
         common_tokens = tokens1.intersection(tokens2)
 
         if common_tokens:
-            scores1 = {token: score for token, score in exp1.token_attributions if token in common_tokens}
-            scores2 = {token: score for token, score in exp2.token_attributions if token in common_tokens}
+            scores1 = {
+                token: score for token, score in exp1.token_attributions if token in common_tokens
+            }
+            scores2 = {
+                token: score for token, score in exp2.token_attributions if token in common_tokens
+            }
 
             # 計算相關係數
             s1_values = [scores1[token] for token in common_tokens]
@@ -655,11 +625,11 @@ def compare_explanations(explanations: List[ExplanationResult]) -> Dict[str, Any
 
             correlation = np.corrcoef(s1_values, s2_values)[0, 1] if len(s1_values) > 1 else 0
 
-            comparison_results['token_correlation'] = {
-                'correlation_coefficient': float(correlation),
-                'common_tokens_count': len(common_tokens),
-                'method1': exp1.method,
-                'method2': exp2.method
+            comparison_results["token_correlation"] = {
+                "correlation_coefficient": float(correlation),
+                "common_tokens_count": len(common_tokens),
+                "method1": exp1.method,
+                "method2": exp2.method,
             }
 
     return comparison_results

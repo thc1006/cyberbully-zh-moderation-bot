@@ -6,27 +6,22 @@ Provides commands for text analysis, model training, evaluation, and export.
 """
 
 import argparse
-import json
 import csv
-import sys
+import json
 import logging
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+import sys
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import yaml
 from rich.console import Console
-from rich.table import Table
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    BarColumn,
-    TaskProgressColumn,
-)
-from rich.panel import Panel
 from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.progress import (BarColumn, Progress, SpinnerColumn,
+                           TaskProgressColumn, TextColumn)
+from rich.table import Table
 
 # Import core CyberPuppy components
 try:
@@ -35,10 +30,10 @@ except ImportError:
     # Fallback mock detector for CLI testing
     CyberPuppyDetector = None
 
-from .models.trainer import ModelTrainer
+from .config import get_default_config, load_config
 from .models.baselines import ModelEvaluator
 from .models.exporter import ModelExporter
-from .config import load_config, get_default_config
+from .models.trainer import ModelTrainer
 
 
 class MockDetectionResult:
@@ -239,7 +234,7 @@ class AnalyzeCommand(BaseCommand):
         with self._create_progress_bar("Analyzing texts") as progress:
             task = progress.add_task("Processing", total=len(texts))
 
-            for i, text_data in enumerate(texts):
+            for _i, text_data in enumerate(texts):
                 text = text_data["text"] if isinstance(text_data, dict) else text_data
                 detection_result = self.detector.analyze(text)
 
@@ -276,9 +271,7 @@ class AnalyzeCommand(BaseCommand):
 
     def _analyze_interactive(self, output_format: str) -> int:
         """Analyze text from stdin interactively."""
-        self.console.print(
-            "[blue]Enter text to analyze (Ctrl" "+D or empty line to exit):[/blue]"
-        )
+        self.console.print("[blue]Enter text to analyze (Ctrl" "+D or empty line to exit):[/blue]")
 
         try:
             while True:
@@ -347,18 +340,14 @@ class AnalyzeCommand(BaseCommand):
             elif isinstance(data, dict) and "texts" in data:
                 return data["texts"]
             else:
-                raise CLIError(
-                    "JSON file must contain a list" " of texts or {'texts': [...]}"
-                )
+                raise CLIError("JSON file must contain a list" " of texts or {'texts': [...]}")
 
     def _read_text_file(self, filepath: Path) -> List[str]:
         """Read texts from plain text file (one per line)."""
         with open(filepath, "r", encoding="utf-8") as f:
             return [line.strip() for line in f if line.strip()]
 
-    def _save_results(
-        self, results: List[Dict[str, Any]], output_path: str, format_type: str
-    ):
+    def _save_results(self, results: List[Dict[str, Any]], output_path: str, format_type: str):
         """Save results to file."""
         if format_type == "json" or output_path.endswith(".json"):
             with open(output_path, "w", encoding="utf-8") as f:
@@ -386,11 +375,7 @@ class AnalyzeCommand(BaseCommand):
             table.add_column("Confidence", style="blue")
 
             for result in results:
-                text = (
-                    result["text"][:50] + "..."
-                    if len(result["text"]) > 50
-                    else result["text"]
-                )
+                text = result["text"][:50] + "..." if len(result["text"]) > 50 else result["text"]
                 table.add_row(
                     text,
                     result.get("toxicity", "none"),
@@ -403,33 +388,23 @@ class AnalyzeCommand(BaseCommand):
 
     def _print_table_result(self, result: AnalysisResult):
         """Print analysis result as a formatted table."""
-        table = Table(
-            title="Analysis Result", show_header=True, header_style="bold magenta"
-        )
+        table = Table(title="Analysis Result", show_header=True, header_style="bold magenta")
         table.add_column("Attribute", style="cyan", width=15)
         table.add_column("Value", style="white")
 
         # Color code based on severity
         toxicity_color = "red" if result.toxicity in ["toxic", "severe"] else "green"
-        bullying_color = (
-            "red" if result.bullying in ["harassment", "threat"] else "green"
-        )
+        bullying_color = "red" if result.bullying in ["harassment", "threat"] else "green"
         emotion_color = (
-            "green"
-            if result.emotion == "pos"
-            else ("red" if result.emotion == "neg" else "yellow")
+            "green" if result.emotion == "pos" else ("red" if result.emotion == "neg" else "yellow")
         )
 
         table.add_row(
             "Text",
             result.text[:100] + "." ".." if len(result.text) > 100 else result.text,
         )
-        table.add_row(
-            "Toxicity", f"[{toxicity_color}]{result.toxicity}[/{toxicity_color}]"
-        )
-        table.add_row(
-            "Bullying", f"[{bullying_color}]{result.bullying}[/{bullying_color}]"
-        )
+        table.add_row("Toxicity", f"[{toxicity_color}]{result.toxicity}[/{toxicity_color}]")
+        table.add_row("Bullying", f"[{bullying_color}]{result.bullying}[/{bullying_color}]")
         table.add_row("Emotion", f"[{emotion_color}]{result.emotion}[/{emotion_color}]")
         table.add_row("Emotion Strength", str(result.emotion_strength))
         table.add_row("Role", result.role)
@@ -476,8 +451,7 @@ class TrainCommand(BaseCommand):
                 "dataset": args.dataset,
                 "epochs": args.epochs or config.get("epochs", 10),
                 "batch_size": args.batch_size or config.get("batch_size", 32),
-                "learning_rate": args.learning_rate
-                or config.get("learning_rate", 2e-5),
+                "learning_rate": args.learning_rate or config.get("learning_rate", 2e-5),
                 "output": args.output or "model.pt",
                 "config": config,
             }
@@ -549,9 +523,7 @@ class TrainCommand(BaseCommand):
 
     def _display_training_results(self, results: Dict[str, Any]):
         """Display training results."""
-        table = Table(
-            title="Training Results", show_header=True, header_style="bold green"
-        )
+        table = Table(title="Training Results", show_header=True, header_style="bold green")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="white")
 
@@ -564,13 +536,11 @@ class TrainCommand(BaseCommand):
 
         if results.get("best_f1", 0) > 0.8:
             self.console.print(
-                "[green]* Training completed success"
-                "fully with good performance![/green]"
+                "[green]* Training completed success" "fully with good performance![/green]"
             )
         else:
             self.console.print(
-                "[yellow]! Training completed but pe"
-                "rformance may be suboptimal[/yellow]"
+                "[yellow]! Training completed but pe" "rformance may be suboptimal[/yellow]"
             )
 
 
@@ -611,13 +581,9 @@ class EvaluateCommand(BaseCommand):
         except Exception as e:
             raise CLIError(f"Evaluation failed: {str(e)}")
 
-    def _display_evaluation_results(
-        self, results: Dict[str, Any], requested_metrics: List[str]
-    ):
+    def _display_evaluation_results(self, results: Dict[str, Any], requested_metrics: List[str]):
         """Display evaluation results in formatted table."""
-        table = Table(
-            title="Evaluation Results", show_header=True, header_style="bold magenta"
-        )
+        table = Table(title="Evaluation Results", show_header=True, header_style="bold magenta")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="white")
 
@@ -650,7 +616,7 @@ class EvaluateCommand(BaseCommand):
         for label in labels:
             table.add_column(f"Pred {label}", justify="center")
 
-        for i, (actual_label, row) in enumerate(zip(labels, confusion_matrix)):
+        for _i, (actual_label, row) in enumerate(zip(labels, confusion_matrix)):
             table.add_row(f"Actual {actual_label}", *[str(val) for val in row])
 
         self.console.print(table)
@@ -712,13 +678,9 @@ class ExportCommand(BaseCommand):
                 if args.format == "onnx":
                     results = self.exporter.export_to_onnx(args.model, args.output)
                 elif args.format == "torchscript":
-                    results = self.exporter.export_to_torchscript(
-                        args.model, args.output
-                    )
+                    results = self.exporter.export_to_torchscript(args.model, args.output)
                 elif args.format == "huggingface":
-                    results = self.exporter.export_to_huggingface(
-                        args.model, args.output
-                    )
+                    results = self.exporter.export_to_huggingface(args.model, args.output)
 
             # Display results
             self._display_export_results(results)
@@ -765,8 +727,7 @@ class ConfigCommand(BaseCommand):
                 return self._set_config_value(args.set, args.value)
             else:
                 self.console.print(
-                    "[yellow]No config action specified"
-                    ". Use --help for options.[/yellow]"
+                    "[yellow]No config action specified" ". Use --help for options.[/yellow]"
                 )
                 return 1
 
@@ -811,9 +772,7 @@ class ConfigCommand(BaseCommand):
     def _set_config_value(self, key: str, value: str) -> int:
         """Set configuration value."""
         # This would need implementation to modify config file
-        self.console.print(
-            "[yellow]Config modification " "not yet implemented[/yellow]"
-        )
+        self.console.print("[yellow]Config modification " "not yet implemented[/yellow]")
         return 1
 
 
@@ -924,9 +883,7 @@ For more information, visit: https://github.com/yourusername/cyberpuppy
     )
 
     # Global options
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
     parser.add_argument("--quiet", "-q", action="store_true", help="Enable quiet mode")
     parser.add_argument(
         "--config-file",
@@ -940,16 +897,10 @@ For more information, visit: https://github.com/yourusername/cyberpuppy
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Analyze command
-    analyze_parser = subparsers.add_parser(
-        "analyze", help="Analyze text for toxicity and emotions"
-    )
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze text for toxicity and emotions")
     analyze_parser.add_argument("text", nargs="?", help="Text to analyze")
-    analyze_parser.add_argument(
-        "--input", "-i", type=str, help="Input file (CSV, JSON, or TXT)"
-    )
-    analyze_parser.add_argument(
-        "--output", "-o", type=str, help="Output file for results"
-    )
+    analyze_parser.add_argument("--input", "-i", type=str, help="Input file (CSV, JSON, or TXT)")
+    analyze_parser.add_argument("--output", "-o", type=str, help="Output file for results")
     analyze_parser.add_argument(
         "--format",
         "-f",
@@ -984,15 +935,11 @@ For more information, visit: https://github.com/yourusername/cyberpuppy
 
     # Evaluate command
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate model performance")
-    eval_parser.add_argument(
-        "--model", "-m", type=str, required=True, help="Path to model file"
-    )
+    eval_parser.add_argument("--model", "-m", type=str, required=True, help="Path to model file")
     eval_parser.add_argument(
         "--dataset", "-d", type=str, required=True, help="Path to evaluation dataset"
     )
-    eval_parser.add_argument(
-        "--output", "-o", type=str, help="Output file for evaluation results"
-    )
+    eval_parser.add_argument("--output", "-o", type=str, help="Output file for evaluation results")
     eval_parser.add_argument(
         "--metrics",
         nargs="+",
@@ -1003,9 +950,7 @@ For more information, visit: https://github.com/yourusername/cyberpuppy
 
     # Export command
     export_parser = subparsers.add_parser("export", help="Export model for deployment")
-    export_parser.add_argument(
-        "--model", "-m", type=str, required=True, help="Path to model file"
-    )
+    export_parser.add_argument("--model", "-m", type=str, required=True, help="Path to model file")
     export_parser.add_argument(
         "--format",
         "-f",
@@ -1014,21 +959,15 @@ For more information, visit: https://github.com/yourusername/cyberpuppy
         choices=["onnx", "torchscript", "huggingface"],
         help="Export format",
     )
-    export_parser.add_argument(
-        "--output", "-o", type=str, required=True, help="Output path"
-    )
+    export_parser.add_argument("--output", "-o", type=str, required=True, help="Output path")
 
     # Config command
     config_parser = subparsers.add_parser("config", help="Manage configuration")
     config_group = config_parser.add_mutually_exclusive_group(required=True)
-    config_group.add_argument(
-        "--show", action="store_true", help="Show current configuration"
-    )
+    config_group.add_argument("--show", action="store_true", help="Show current configuration")
     config_group.add_argument("--get", type=str, help="Get configuration value by key")
     config_group.add_argument("--set", type=str, help="Set configuration value")
-    config_parser.add_argument(
-        "--value", type=str, help="Value to set (used with --set)"
-    )
+    config_parser.add_argument("--value", type=str, help="Value to set (used with --set)")
 
     return parser
 

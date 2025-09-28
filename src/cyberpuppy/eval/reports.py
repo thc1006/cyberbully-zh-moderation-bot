@@ -3,28 +3,28 @@
 提供多格式的評估報告生成功能
 """
 
-import logging
 import json
+import logging
 import os
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict
-import pandas as pd
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-import base64
-from io import BytesIO
-import tempfile
+import pandas as pd
 
 # PDF 生成
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter, A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate,
+                                    Spacer, Table, TableStyle)
+
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
@@ -33,8 +33,9 @@ except ImportError:
 # Excel 生成
 try:
     import openpyxl
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-    from openpyxl.chart import BarChart, Reference, LineChart
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
     OPENPYXL_AVAILABLE = True
 except ImportError:
     OPENPYXL_AVAILABLE = False
@@ -42,9 +43,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ReportConfig:
     """報告配置"""
+
     title: str = "CyberPuppy 霸凌偵測系統評估報告"
     subtitle: str = "模型效能與分析報告"
     author: str = "CyberPuppy Team"
@@ -53,6 +56,7 @@ class ReportConfig:
     include_charts: bool = True
     include_detailed_analysis: bool = True
     language: str = "zh-TW"
+
 
 class ReportGenerator:
     """報告生成器主類"""
@@ -63,21 +67,23 @@ class ReportGenerator:
 
         # 設定報告樣式
         self.colors = {
-            'primary': '#2E86AB',
-            'secondary': '#A23B72',
-            'success': '#28A745',
-            'warning': '#FFC107',
-            'danger': '#DC3545',
-            'info': '#17A2B8'
+            "primary": "#2E86AB",
+            "secondary": "#A23B72",
+            "success": "#28A745",
+            "warning": "#FFC107",
+            "danger": "#DC3545",
+            "info": "#17A2B8",
         }
 
-    def generate_comprehensive_report(self,
-                                    evaluation_results: Dict[str, Any],
-                                    error_analysis: Dict[str, Any] = None,
-                                    robustness_results: Dict[str, Any] = None,
-                                    explanations: List[Dict[str, Any]] = None,
-                                    config: ReportConfig = None,
-                                    formats: List[str] = ['html', 'pdf', 'json', 'excel']) -> Dict[str, str]:
+    def generate_comprehensive_report(
+        self,
+        evaluation_results: Dict[str, Any],
+        error_analysis: Dict[str, Any] = None,
+        robustness_results: Dict[str, Any] = None,
+        explanations: List[Dict[str, Any]] = None,
+        config: ReportConfig = None,
+        formats: List[str] = None,
+    ) -> Dict[str, str]:
         """
         生成綜合評估報告（多格式）
 
@@ -93,6 +99,8 @@ class ReportGenerator:
             生成的報告文件路徑字典
         """
 
+        if formats is None:
+            formats = ["html", "pdf", "json", "excel"]
         if config is None:
             config = ReportConfig()
 
@@ -100,18 +108,18 @@ class ReportGenerator:
 
         # 整合所有數據
         report_data = {
-            'metadata': {
-                'title': config.title,
-                'subtitle': config.subtitle,
-                'author': config.author,
-                'company': config.company,
-                'generation_time': datetime.now().isoformat(),
-                'version': '1.0.0'
+            "metadata": {
+                "title": config.title,
+                "subtitle": config.subtitle,
+                "author": config.author,
+                "company": config.company,
+                "generation_time": datetime.now().isoformat(),
+                "version": "1.0.0",
             },
-            'evaluation_results': evaluation_results,
-            'error_analysis': error_analysis,
-            'robustness_results': robustness_results,
-            'explanations': explanations
+            "evaluation_results": evaluation_results,
+            "error_analysis": error_analysis,
+            "robustness_results": robustness_results,
+            "explanations": explanations,
         }
 
         generated_files = {}
@@ -119,18 +127,18 @@ class ReportGenerator:
         # 生成各種格式的報告
         for format_type in formats:
             try:
-                if format_type.lower() == 'html':
+                if format_type.lower() == "html":
                     filepath = self._generate_html_report(report_data, config)
-                    generated_files['html'] = filepath
-                elif format_type.lower() == 'pdf':
+                    generated_files["html"] = filepath
+                elif format_type.lower() == "pdf":
                     filepath = self._generate_pdf_report(report_data, config)
-                    generated_files['pdf'] = filepath
-                elif format_type.lower() == 'json':
+                    generated_files["pdf"] = filepath
+                elif format_type.lower() == "json":
                     filepath = self._generate_json_report(report_data, config)
-                    generated_files['json'] = filepath
-                elif format_type.lower() == 'excel':
+                    generated_files["json"] = filepath
+                elif format_type.lower() == "excel":
                     filepath = self._generate_excel_report(report_data, config)
-                    generated_files['excel'] = filepath
+                    generated_files["excel"] = filepath
                 else:
                     logger.warning(f"不支援的報告格式: {format_type}")
 
@@ -381,7 +389,7 @@ class ReportGenerator:
         content_sections.append(header_content)
 
         # 元數據信息
-        metadata = report_data['metadata']
+        metadata = report_data["metadata"]
         meta_content = f"""
         <div class="meta-info">
             <div class="meta-grid">
@@ -407,8 +415,8 @@ class ReportGenerator:
         content_sections.append(meta_content)
 
         # 總體指標
-        if report_data['evaluation_results'] and 'metrics' in report_data['evaluation_results']:
-            metrics = report_data['evaluation_results']['metrics']
+        if report_data["evaluation_results"] and "metrics" in report_data["evaluation_results"]:
+            metrics = report_data["evaluation_results"]["metrics"]
             metrics_content = f"""
             <div class="section">
                 <h2>總體效能指標</h2>
@@ -467,16 +475,16 @@ class ReportGenerator:
         """
 
         # 填充各標籤頁內容
-        performance_content = self._generate_performance_content(report_data['evaluation_results'])
-        error_content = self._generate_error_content(report_data['error_analysis'])
-        robustness_content = self._generate_robustness_content(report_data['robustness_results'])
+        performance_content = self._generate_performance_content(report_data["evaluation_results"])
+        error_content = self._generate_error_content(report_data["error_analysis"])
+        robustness_content = self._generate_robustness_content(report_data["robustness_results"])
         recommendations_content = self._generate_recommendations_content(report_data)
 
         tabs_content = tabs_content.format(
             performance_content=performance_content,
             error_content=error_content,
             robustness_content=robustness_content,
-            recommendations_content=recommendations_content
+            recommendations_content=recommendations_content,
         )
 
         content_sections.append(tabs_content)
@@ -512,7 +520,7 @@ class ReportGenerator:
         """
 
         # 組合完整內容
-        full_content = '\n'.join(content_sections)
+        full_content = "\n".join(content_sections)
 
         # 填入模板
         html_content = html_template.format(
@@ -520,7 +528,7 @@ class ReportGenerator:
             title=config.title,
             css_styles=css_styles,
             content=full_content,
-            javascript=javascript
+            javascript=javascript,
         )
 
         # 保存文件
@@ -528,7 +536,7 @@ class ReportGenerator:
         filename = f"evaluation_report_{timestamp}.html"
         filepath = os.path.join(self.output_dir, filename)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_content)
 
         logger.info(f"HTML 報告已保存至: {filepath}")
@@ -543,8 +551,8 @@ class ReportGenerator:
         content = []
 
         # 類別詳細指標
-        if 'per_class_metrics' in evaluation_results:
-            per_class = evaluation_results['per_class_metrics']
+        if "per_class_metrics" in evaluation_results:
+            per_class = evaluation_results["per_class_metrics"]
 
             table_html = """
             <div class="table-container">
@@ -563,7 +571,7 @@ class ReportGenerator:
             """
 
             for class_name, metrics in per_class.items():
-                f1_score = metrics.get('f1-score', 0)
+                f1_score = metrics.get("f1-score", 0)
 
                 # 確定狀態
                 if f1_score >= 0.9:
@@ -595,10 +603,12 @@ class ReportGenerator:
             content.append(table_html)
 
         # 混淆矩陣
-        if 'confusion_matrix' in evaluation_results:
-            content.append('<div class="chart-container"><h4>混淆矩陣</h4><p>混淆矩陣圖表將在這裡顯示</p></div>')
+        if "confusion_matrix" in evaluation_results:
+            content.append(
+                '<div class="chart-container"><h4>混淆矩陣</h4><p>混淆矩陣圖表將在這裡顯示</p></div>'
+            )
 
-        return '\n'.join(content)
+        return "\n".join(content)
 
     def _generate_error_content(self, error_analysis: Dict[str, Any]) -> str:
         """生成錯誤分析內容"""
@@ -609,8 +619,8 @@ class ReportGenerator:
         content = []
 
         # 錯誤統計
-        if 'statistics' in error_analysis:
-            stats = error_analysis['statistics']
+        if "statistics" in error_analysis:
+            stats = error_analysis["statistics"]
 
             stats_html = f"""
             <div class="metrics-grid">
@@ -620,8 +630,8 @@ class ReportGenerator:
                 </div>
             """
 
-            if 'error_types' in stats:
-                error_types = stats['error_types']
+            if "error_types" in stats:
+                error_types = stats["error_types"]
                 for error_type, count in error_types.items():
                     stats_html += f"""
                     <div class="metric-card">
@@ -634,8 +644,8 @@ class ReportGenerator:
             content.append(stats_html)
 
         # 改進建議
-        if 'improvement_suggestions' in error_analysis:
-            suggestions = error_analysis['improvement_suggestions']
+        if "improvement_suggestions" in error_analysis:
+            suggestions = error_analysis["improvement_suggestions"]
             if suggestions:
                 suggestions_html = "<h4>改進建議</h4><ul class='recommendation-list'>"
                 for suggestion in suggestions[:5]:  # 顯示前5個建議
@@ -643,7 +653,7 @@ class ReportGenerator:
                 suggestions_html += "</ul>"
                 content.append(suggestions_html)
 
-        return '\n'.join(content)
+        return "\n".join(content)
 
     def _generate_robustness_content(self, robustness_results: Dict[str, Any]) -> str:
         """生成穩健性測試內容"""
@@ -654,10 +664,10 @@ class ReportGenerator:
         content = []
 
         # 總體穩健性分數
-        if 'overall_statistics' in robustness_results:
-            overall = robustness_results['overall_statistics']
-            score = overall.get('overall_robustness_score', 0)
-            level = overall.get('robustness_level', 'unknown')
+        if "overall_statistics" in robustness_results:
+            overall = robustness_results["overall_statistics"]
+            score = overall.get("overall_robustness_score", 0)
+            level = overall.get("robustness_level", "unknown")
 
             score_html = f"""
             <div class="metrics-grid">
@@ -674,8 +684,8 @@ class ReportGenerator:
             content.append(score_html)
 
         # 攻擊測試結果
-        if 'summary_statistics' in robustness_results:
-            summary = robustness_results['summary_statistics']
+        if "summary_statistics" in robustness_results:
+            summary = robustness_results["summary_statistics"]
 
             table_html = """
             <div class="table-container">
@@ -693,9 +703,9 @@ class ReportGenerator:
             """
 
             for attack_type, stats in summary.items():
-                success_rate = stats.get('attack_success_rate', 0)
-                conf_drop = stats.get('average_confidence_drop', 0)
-                total_tests = stats.get('total_tests', 0)
+                success_rate = stats.get("attack_success_rate", 0)
+                conf_drop = stats.get("average_confidence_drop", 0)
+                total_tests = stats.get("total_tests", 0)
 
                 table_html += f"""
                 <tr>
@@ -714,7 +724,7 @@ class ReportGenerator:
 
             content.append(table_html)
 
-        return '\n'.join(content)
+        return "\n".join(content)
 
     def _generate_recommendations_content(self, report_data: Dict[str, Any]) -> str:
         """生成改進建議內容"""
@@ -722,19 +732,27 @@ class ReportGenerator:
         recommendations = []
 
         # 從錯誤分析中獲取建議
-        if report_data['error_analysis'] and 'improvement_suggestions' in report_data['error_analysis']:
-            recommendations.extend(report_data['error_analysis']['improvement_suggestions'])
+        if (
+            report_data["error_analysis"]
+            and "improvement_suggestions" in report_data["error_analysis"]
+        ):
+            recommendations.extend(report_data["error_analysis"]["improvement_suggestions"])
 
         # 從穩健性測試中獲取建議
-        if report_data['robustness_results'] and 'recommendations' in report_data['robustness_results']:
-            recommendations.extend(report_data['robustness_results']['recommendations'])
+        if (
+            report_data["robustness_results"]
+            and "recommendations" in report_data["robustness_results"]
+        ):
+            recommendations.extend(report_data["robustness_results"]["recommendations"])
 
         if not recommendations:
             return "<p>暫無改進建議</p>"
 
         content = "<ul class='recommendation-list'>"
         for i, recommendation in enumerate(recommendations[:10], 1):  # 最多顯示10個建議
-            content += f"<li class='recommendation-item'><strong>{i}.</strong> {recommendation}</li>"
+            content += (
+                f"<li class='recommendation-item'><strong>{i}.</strong> {recommendation}</li>"
+            )
         content += "</ul>"
 
         return content
@@ -761,110 +779,131 @@ class ReportGenerator:
 
         # 自定義樣式
         title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
+            "CustomTitle",
+            parent=styles["Heading1"],
             fontSize=24,
             spaceAfter=30,
             alignment=TA_CENTER,
-            textColor=colors.HexColor('#2E86AB')
+            textColor=colors.HexColor("#2E86AB"),
         )
 
         heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
+            "CustomHeading",
+            parent=styles["Heading2"],
             fontSize=16,
             spaceAfter=20,
-            textColor=colors.HexColor('#2E86AB')
+            textColor=colors.HexColor("#2E86AB"),
         )
 
         # 標題
         story.append(Paragraph(config.title, title_style))
-        story.append(Paragraph(config.subtitle, styles['Normal']))
+        story.append(Paragraph(config.subtitle, styles["Normal"]))
         story.append(Spacer(1, 20))
 
         # 元數據
-        metadata = report_data['metadata']
+        metadata = report_data["metadata"]
         meta_data = [
-            ['作者', metadata['author']],
-            ['公司', metadata['company']],
-            ['生成時間', datetime.fromisoformat(metadata['generation_time']).strftime('%Y-%m-%d %H:%M:%S')],
-            ['版本', metadata['version']]
+            ["作者", metadata["author"]],
+            ["公司", metadata["company"]],
+            [
+                "生成時間",
+                datetime.fromisoformat(metadata["generation_time"]).strftime("%Y-%m-%d %H:%M:%S"),
+            ],
+            ["版本", metadata["version"]],
         ]
 
-        meta_table = Table(meta_data, colWidths=[2*inch, 4*inch])
-        meta_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
+        meta_table = Table(meta_data, colWidths=[2 * inch, 4 * inch])
+        meta_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, -1), colors.grey),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("BACKGROUND", (1, 0), (1, -1), colors.beige),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ]
+            )
+        )
 
         story.append(meta_table)
         story.append(Spacer(1, 30))
 
         # 總體指標
-        if report_data['evaluation_results'] and 'metrics' in report_data['evaluation_results']:
+        if report_data["evaluation_results"] and "metrics" in report_data["evaluation_results"]:
             story.append(Paragraph("總體效能指標", heading_style))
 
-            metrics = report_data['evaluation_results']['metrics']
+            metrics = report_data["evaluation_results"]["metrics"]
             metrics_data = [
-                ['指標', '數值'],
-                ['Precision', f"{metrics.get('precision', 0):.3f}"],
-                ['Recall', f"{metrics.get('recall', 0):.3f}"],
-                ['F1-Score', f"{metrics.get('f1', 0):.3f}"],
-                ['Accuracy', f"{metrics.get('accuracy', 0):.3f}"]
+                ["指標", "數值"],
+                ["Precision", f"{metrics.get('precision', 0):.3f}"],
+                ["Recall", f"{metrics.get('recall', 0):.3f}"],
+                ["F1-Score", f"{metrics.get('f1', 0):.3f}"],
+                ["Accuracy", f"{metrics.get('accuracy', 0):.3f}"],
             ]
 
-            metrics_table = Table(metrics_data, colWidths=[3*inch, 3*inch])
-            metrics_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 12),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
+            metrics_table = Table(metrics_data, colWidths=[3 * inch, 3 * inch])
+            metrics_table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2E86AB")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 12),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ]
+                )
+            )
 
             story.append(metrics_table)
             story.append(Spacer(1, 20))
 
         # 類別詳細指標
-        if (report_data['evaluation_results'] and
-            'per_class_metrics' in report_data['evaluation_results']):
+        if (
+            report_data["evaluation_results"]
+            and "per_class_metrics" in report_data["evaluation_results"]
+        ):
 
             story.append(Paragraph("類別詳細指標", heading_style))
 
-            per_class = report_data['evaluation_results']['per_class_metrics']
-            class_data = [['類別', 'Precision', 'Recall', 'F1-Score', 'Support']]
+            per_class = report_data["evaluation_results"]["per_class_metrics"]
+            class_data = [["類別", "Precision", "Recall", "F1-Score", "Support"]]
 
             for class_name, metrics in per_class.items():
-                class_data.append([
-                    class_name,
-                    f"{metrics.get('precision', 0):.3f}",
-                    f"{metrics.get('recall', 0):.3f}",
-                    f"{metrics.get('f1-score', 0):.3f}",
-                    str(int(metrics.get('support', 0)))
-                ])
+                class_data.append(
+                    [
+                        class_name,
+                        f"{metrics.get('precision', 0):.3f}",
+                        f"{metrics.get('recall', 0):.3f}",
+                        f"{metrics.get('f1-score', 0):.3f}",
+                        str(int(metrics.get("support", 0))),
+                    ]
+                )
 
-            class_table = Table(class_data, colWidths=[1.2*inch, 1.2*inch, 1.2*inch, 1.2*inch, 1.2*inch])
-            class_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
+            class_table = Table(
+                class_data, colWidths=[1.2 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch]
+            )
+            class_table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2E86AB")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ]
+                )
+            )
 
             story.append(class_table)
 
@@ -886,7 +925,7 @@ class ReportGenerator:
         # 確保所有數據都可序列化
         serializable_data = self._make_serializable(report_data)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(serializable_data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"JSON 報告已保存至: {filepath}")
@@ -911,8 +950,12 @@ class ReportGenerator:
         # 設定樣式
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="2E86AB", end_color="2E86AB", fill_type="solid")
-        border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                       top=Side(style='thin'), bottom=Side(style='thin'))
+        border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
 
         # 移除默認工作表
         wb.remove(wb.active)
@@ -920,46 +963,48 @@ class ReportGenerator:
         # 1. 總體指標工作表
         ws_overview = wb.create_sheet("總體指標")
 
-        if report_data['evaluation_results'] and 'metrics' in report_data['evaluation_results']:
-            metrics = report_data['evaluation_results']['metrics']
+        if report_data["evaluation_results"] and "metrics" in report_data["evaluation_results"]:
+            metrics = report_data["evaluation_results"]["metrics"]
 
             # 標題
-            ws_overview['A1'] = "指標"
-            ws_overview['B1'] = "數值"
+            ws_overview["A1"] = "指標"
+            ws_overview["B1"] = "數值"
 
             # 應用標題樣式
-            for cell in ['A1', 'B1']:
+            for cell in ["A1", "B1"]:
                 ws_overview[cell].font = header_font
                 ws_overview[cell].fill = header_fill
                 ws_overview[cell].border = border
 
             # 數據
             metrics_list = [
-                ('Precision', metrics.get('precision', 0)),
-                ('Recall', metrics.get('recall', 0)),
-                ('F1-Score', metrics.get('f1', 0)),
-                ('Accuracy', metrics.get('accuracy', 0))
+                ("Precision", metrics.get("precision", 0)),
+                ("Recall", metrics.get("recall", 0)),
+                ("F1-Score", metrics.get("f1", 0)),
+                ("Accuracy", metrics.get("accuracy", 0)),
             ]
 
             for i, (metric_name, value) in enumerate(metrics_list, 2):
-                ws_overview[f'A{i}'] = metric_name
-                ws_overview[f'B{i}'] = value
-                for cell in [f'A{i}', f'B{i}']:
+                ws_overview[f"A{i}"] = metric_name
+                ws_overview[f"B{i}"] = value
+                for cell in [f"A{i}", f"B{i}"]:
                     ws_overview[cell].border = border
 
             # 調整列寬
-            ws_overview.column_dimensions['A'].width = 15
-            ws_overview.column_dimensions['B'].width = 15
+            ws_overview.column_dimensions["A"].width = 15
+            ws_overview.column_dimensions["B"].width = 15
 
         # 2. 類別詳細指標工作表
-        if (report_data['evaluation_results'] and
-            'per_class_metrics' in report_data['evaluation_results']):
+        if (
+            report_data["evaluation_results"]
+            and "per_class_metrics" in report_data["evaluation_results"]
+        ):
 
             ws_classes = wb.create_sheet("類別指標")
-            per_class = report_data['evaluation_results']['per_class_metrics']
+            per_class = report_data["evaluation_results"]["per_class_metrics"]
 
             # 標題行
-            headers = ['類別', 'Precision', 'Recall', 'F1-Score', 'Support']
+            headers = ["類別", "Precision", "Recall", "F1-Score", "Support"]
             for i, header in enumerate(headers, 1):
                 cell = ws_classes.cell(row=1, column=i, value=header)
                 cell.font = header_font
@@ -969,50 +1014,54 @@ class ReportGenerator:
             # 數據行
             for row, (class_name, metrics) in enumerate(per_class.items(), 2):
                 ws_classes.cell(row=row, column=1, value=class_name).border = border
-                ws_classes.cell(row=row, column=2, value=metrics.get('precision', 0)).border = border
-                ws_classes.cell(row=row, column=3, value=metrics.get('recall', 0)).border = border
-                ws_classes.cell(row=row, column=4, value=metrics.get('f1-score', 0)).border = border
-                ws_classes.cell(row=row, column=5, value=int(metrics.get('support', 0))).border = border
+                ws_classes.cell(row=row, column=2, value=metrics.get("precision", 0)).border = (
+                    border
+                )
+                ws_classes.cell(row=row, column=3, value=metrics.get("recall", 0)).border = border
+                ws_classes.cell(row=row, column=4, value=metrics.get("f1-score", 0)).border = border
+                ws_classes.cell(row=row, column=5, value=int(metrics.get("support", 0))).border = (
+                    border
+                )
 
             # 調整列寬
             for i in range(1, 6):
-                ws_classes.column_dimensions[chr(64+i)].width = 12
+                ws_classes.column_dimensions[chr(64 + i)].width = 12
 
         # 3. 錯誤分析工作表
-        if report_data['error_analysis']:
+        if report_data["error_analysis"]:
             ws_errors = wb.create_sheet("錯誤分析")
 
             # 寫入錯誤統計
-            ws_errors['A1'] = "錯誤分析統計"
-            ws_errors['A1'].font = Font(bold=True, size=14)
+            ws_errors["A1"] = "錯誤分析統計"
+            ws_errors["A1"].font = Font(bold=True, size=14)
 
-            if 'statistics' in report_data['error_analysis']:
-                stats = report_data['error_analysis']['statistics']
+            if "statistics" in report_data["error_analysis"]:
+                stats = report_data["error_analysis"]["statistics"]
 
                 # 總錯誤數
-                ws_errors['A3'] = "總錯誤數"
-                ws_errors['B3'] = stats.get('total_errors', 0)
+                ws_errors["A3"] = "總錯誤數"
+                ws_errors["B3"] = stats.get("total_errors", 0)
 
                 # 錯誤類型分布
-                if 'error_types' in stats:
+                if "error_types" in stats:
                     row = 5
-                    ws_errors[f'A{row}'] = "錯誤類型分布"
-                    ws_errors[f'A{row}'].font = Font(bold=True)
+                    ws_errors[f"A{row}"] = "錯誤類型分布"
+                    ws_errors[f"A{row}"].font = Font(bold=True)
 
-                    for error_type, count in stats['error_types'].items():
+                    for error_type, count in stats["error_types"].items():
                         row += 1
-                        ws_errors[f'A{row}'] = error_type
-                        ws_errors[f'B{row}'] = count
+                        ws_errors[f"A{row}"] = error_type
+                        ws_errors[f"B{row}"] = count
 
         # 4. 穩健性測試工作表
-        if report_data['robustness_results']:
+        if report_data["robustness_results"]:
             ws_robustness = wb.create_sheet("穩健性測試")
 
-            if 'summary_statistics' in report_data['robustness_results']:
-                summary = report_data['robustness_results']['summary_statistics']
+            if "summary_statistics" in report_data["robustness_results"]:
+                summary = report_data["robustness_results"]["summary_statistics"]
 
                 # 標題
-                headers = ['攻擊類型', '成功率', '平均信心下降', '測試數量']
+                headers = ["攻擊類型", "成功率", "平均信心下降", "測試數量"]
                 for i, header in enumerate(headers, 1):
                     cell = ws_robustness.cell(row=1, column=i, value=header)
                     cell.font = header_font
@@ -1021,14 +1070,22 @@ class ReportGenerator:
 
                 # 數據
                 for row, (attack_type, stats) in enumerate(summary.items(), 2):
-                    ws_robustness.cell(row=row, column=1, value=attack_type.replace('_', ' ')).border = border
-                    ws_robustness.cell(row=row, column=2, value=stats.get('attack_success_rate', 0)).border = border
-                    ws_robustness.cell(row=row, column=3, value=stats.get('average_confidence_drop', 0)).border = border
-                    ws_robustness.cell(row=row, column=4, value=stats.get('total_tests', 0)).border = border
+                    ws_robustness.cell(
+                        row=row, column=1, value=attack_type.replace("_", " ")
+                    ).border = border
+                    ws_robustness.cell(
+                        row=row, column=2, value=stats.get("attack_success_rate", 0)
+                    ).border = border
+                    ws_robustness.cell(
+                        row=row, column=3, value=stats.get("average_confidence_drop", 0)
+                    ).border = border
+                    ws_robustness.cell(
+                        row=row, column=4, value=stats.get("total_tests", 0)
+                    ).border = border
 
                 # 調整列寬
                 for i in range(1, 5):
-                    ws_robustness.column_dimensions[chr(64+i)].width = 15
+                    ws_robustness.column_dimensions[chr(64 + i)].width = 15
 
         # 保存文件
         wb.save(filepath)
@@ -1043,7 +1100,7 @@ class ReportGenerator:
             return {k: self._make_serializable(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [self._make_serializable(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             return self._make_serializable(obj.__dict__)
         elif isinstance(obj, (np.integer, np.floating)):
             return float(obj)
@@ -1054,16 +1111,18 @@ class ReportGenerator:
         else:
             return obj
 
+
 class HTMLReportGenerator:
     """HTML 專門報告生成器"""
 
     def __init__(self, template_dir: str = None):
-        self.template_dir = template_dir or os.path.join(os.path.dirname(__file__), 'templates')
+        self.template_dir = template_dir or os.path.join(os.path.dirname(__file__), "templates")
 
     def generate_interactive_dashboard(self, data: Dict[str, Any]) -> str:
         """生成互動式儀表板"""
         # 實現互動式儀表板生成
         pass
+
 
 class PDFReportGenerator:
     """PDF 專門報告生成器"""
@@ -1072,7 +1131,7 @@ class PDFReportGenerator:
         self.font_path = font_path
         if font_path and REPORTLAB_AVAILABLE:
             try:
-                pdfmetrics.registerFont(TTFont('Chinese', font_path))
+                pdfmetrics.registerFont(TTFont("Chinese", font_path))
             except:
                 logger.warning("無法註冊中文字體，將使用默認字體")
 

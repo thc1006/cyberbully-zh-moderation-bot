@@ -98,7 +98,7 @@ class MetricsVisualizer:
         """
         fig, ax = plt.subplots(figsize=figsize)
 
-        for i, (label, (precision, recall, ap)) in enumerate(pr_data.items()):
+        for i, (label, (precision, recall, _ap)) in enumerate(pr_data.items()):
             ax.plot(
                 recall,
                 precision,
@@ -122,7 +122,7 @@ class MetricsVisualizer:
     def plot_training_curves(
         self,
         history: Dict[str, List],
-        metrics: List[str] = ["loss", "accuracy", "f1_score"],
+        metrics: List[str] = None,
         figsize: Tuple[int, int] = (14, 10),
     ) -> plt.Figure:
         """
@@ -136,6 +136,8 @@ class MetricsVisualizer:
         Returns:
             matplotlib figure
         """
+        if metrics is None:
+            metrics = ["loss", "accuracy", "f1_score"]
         n_metrics = len(metrics)
         n_cols = min(2, n_metrics)
         n_rows = (n_metrics + n_cols - 1) // n_cols
@@ -230,9 +232,7 @@ class MetricsVisualizer:
             df["hour"] = pd.to_datetime(df["time"]).dt.hour
             success_by_hour = df.groupby("hour")["success"].mean()
 
-            axes[1, 0].plot(
-                success_by_hour.index, success_by_hour.values, marker="" "o"
-            )
+            axes[1, 0].plot(success_by_hour.index, success_by_hour.values, marker="" "o")
             axes[1, 0].set_xlabel("小時")
             axes[1, 0].set_ylabel("成功率")
             axes[1, 0].set_title("介入成功率（按時段）")
@@ -241,9 +241,7 @@ class MetricsVisualizer:
             axes[1, 0].text(0.5, 0.5, "無介入資料", ha="center", va="center")
 
         # 4. 平均會話持續時間
-        durations = [
-            s.get("duration" "_seconds", 0) / 60 for s in sessions_data
-        ]  # 轉換為分鐘
+        durations = [s.get("duration" "_seconds", 0) / 60 for s in sessions_data]  # 轉換為分鐘
         axes[1, 1].boxplot(durations)
         axes[1, 1].set_ylabel("持續時間（分鐘）")
         axes[1, 1].set_title("會話持續時間分佈")
@@ -348,9 +346,7 @@ class MetricsVisualizer:
         plt.tight_layout()
         return fig
 
-    def save_all_figures(
-        self, figures: Dict[str, plt.Figure], output_dir: str = "./figures"
-    ):
+    def save_all_figures(self, figures: Dict[str, plt.Figure], output_dir: str = "./figures"):
         """
         儲存所有圖表
 
@@ -387,7 +383,7 @@ def example_visualizations():
         "accuracy": [min(0.95, 0.5 + i * 0.005) for i in range(100)],
         "f1_score": [min(0.9, 0.4 + i * 0.005) for i in range(100)],
     }
-    fig2 = visualizer.plot_training_curves(history)
+    visualizer.plot_training_curves(history)
 
     # 3. 基準比較
     benchmarks = {
@@ -396,7 +392,7 @@ def example_visualizations():
             "目標": {"F1": 0.80, "Precision": 0.85, "Recall": 0.78, "AUCPR": 0.75},
         }
     }
-    fig3 = visualizer.plot_benchmark_comparison(benchmarks)
+    visualizer.plot_benchmark_comparison(benchmarks)
 
     # 顯示所有圖表
     plt.show()

@@ -4,7 +4,7 @@ Provides a mock detector with the same interface as the full model loader.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +32,16 @@ class MockDetector:
                 "toxicity": {"none": 0.9, "toxic": 0.08, "severe": 0.02},
                 "bullying": {"none": 0.85, "harassment": 0.1, "threat": 0.05},
                 "role": {"none": 0.88, "perpetrator": 0.05, "victim": 0.04, "bystander": 0.03},
-                "emotion": {"pos": 0.2, "neu": 0.6, "neg": 0.2}
+                "emotion": {"pos": 0.2, "neu": 0.6, "neg": 0.2},
             },
             "explanations": {
                 "important_words": [
                     {"word": "测试", "importance": 0.75},
-                    {"word": "文本", "importance": 0.65}
+                    {"word": "文本", "importance": 0.65},
                 ],
                 "method": "keyword_based_mock",
-                "confidence": 0.75
-            }
+                "confidence": 0.75,
+            },
         }
 
 
@@ -64,7 +64,7 @@ class SimpleModelLoader:
         return {
             "models_loaded": self.detector is not None,
             "device": "cpu",
-            "warmup_complete": True
+            "warmup_complete": True,
         }
 
 

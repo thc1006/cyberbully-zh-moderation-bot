@@ -2,11 +2,12 @@
 Simple API test script to verify functionality.
 """
 
-import requests
 import json
-import time
-import sys
 import os
+import sys
+import time
+
+import requests
 
 # Set UTF-8 encoding for Windows console
 if os.name == "nt":  # Windows

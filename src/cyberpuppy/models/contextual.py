@@ -15,7 +15,8 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoderLayer
 from transformers import AutoModel, AutoTokenizer
 
-from ..labeling.label_map import BullyingLevel, RoleType, ToxicityLevel, UnifiedLabel
+from ..labeling.label_map import (BullyingLevel, RoleType, ToxicityLevel,
+                                  UnifiedLabel)
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +101,7 @@ class HierarchicalThreadEncoder(nn.Module):
         self.position_embedding = nn.Embedding(max_thread_length, hidden_size)
 
         # 角色編碼
-        self.role_embedding = nn.Embedding(
-            4, hidden_size
-        )  # none, perpetrator, victim, bystander
+        self.role_embedding = nn.Embedding(4, hidden_size)  # none, perpetrator, victim, bystander
 
         # 注意力池化
         self.attention_pooler = nn.MultiheadAttention(
@@ -175,9 +174,7 @@ class HierarchicalThreadEncoder(nn.Module):
         # 添加角色編碼
         if roles:
             role_map = {"none": 0, "perpetrator": 1, "victim": 2, "bystander": 3}
-            role_ids = torch.tensor(
-                [role_map.get(role.lower(), 0) for role in roles]
-            ).to(device)
+            role_ids = torch.tensor([role_map.get(role.lower(), 0) for role in roles]).to(device)
             role_embeddings = self.role_embedding(role_ids).unsqueeze(0)
             message_embeddings += role_embeddings
 
@@ -239,9 +236,7 @@ class EventFeatureExtractor(nn.Module):
             nn.Linear(hidden_size, hidden_size),
         )
 
-    def extract_temporal_features(
-        self, temporal_info: Dict[str, Union[int, str]]
-    ) -> torch.Tensor:
+    def extract_temporal_features(self, temporal_info: Dict[str, Union[int, str]]) -> torch.Tensor:
         """抽取時序特徵"""
         device = next(self.text_encoder.parameters()).device
 
@@ -262,9 +257,7 @@ class EventFeatureExtractor(nn.Module):
                 intervals = temporal_info["time_intervals"]
                 if isinstance(intervals, list) and intervals:
                     temporal_features[2] = float(np.mean(intervals))
-                    temporal_features[3] = float(
-                        np.std(intervals) if len(intervals) > 1 else 0
-                    )
+                    temporal_features[3] = float(np.std(intervals) if len(intervals) > 1 else 0)
 
             # 週期性特徵
             if "periodicity" in temporal_info:
@@ -324,9 +317,7 @@ class EventFeatureExtractor(nn.Module):
                 "normal": 0,
             }
             event_type_id = event_type_map.get(event_context["event_type"], 0)
-            event_type_emb = self.event_type_embedding(
-                torch.tensor([event_type_id]).to(device)
-            )
+            event_type_emb = self.event_type_embedding(torch.tensor([event_type_id]).to(device))
             features.append(event_type_emb)
             feature_names.append("event_type")
 
@@ -334,9 +325,7 @@ class EventFeatureExtractor(nn.Module):
         if "severity" in event_context:
             severity_map = {"none": 0, "low": 1, "moderate": 2, "high": 3, "severe": 4}
             severity_id = severity_map.get(event_context["severity"], 0)
-            severity_emb = self.severity_embedding(
-                torch.tensor([severity_id]).to(device)
-            )
+            severity_emb = self.severity_embedding(torch.tensor([severity_id]).to(device))
             features.append(severity_emb)
             feature_names.append("severity")
 
@@ -362,9 +351,7 @@ class EventFeatureExtractor(nn.Module):
 
         # 特徵融合
         if len(features) > 1:
-            feature_stack = torch.stack(
-                features, dim=1
-            )  # [1, num_features, hidden_size]
+            feature_stack = torch.stack(features, dim=1)  # [1, num_features, hidden_size]
 
             # 使用注意力融合特徵
             query = feature_stack[:, 0:1, :]  # 使用文本作為查詢
@@ -378,8 +365,7 @@ class EventFeatureExtractor(nn.Module):
 
             # 整理注意力權重
             feature_weights = {
-                name: attention_weights[0, 0, i].item()
-                for i, name in enumerate(feature_names)
+                name: attention_weights[0, 0, i].item() for i, name in enumerate(feature_names)
             }
         else:
             event_embedding = text_embedding
@@ -457,9 +443,7 @@ class ContrastiveLearningModule(nn.Module):
         # 建立正負樣本掩碼
         if session_ids is not None:
             # 同會話/事件的樣本作為正樣本
-            session_mask = (
-                session_ids.unsqueeze(0) == session_ids.unsqueeze(1)
-            ).float()
+            session_mask = (session_ids.unsqueeze(0) == session_ids.unsqueeze(1)).float()
             # 同標籤的樣本也作為正樣本
             label_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
             positive_mask = torch.max(session_mask, label_mask)
@@ -624,9 +608,7 @@ class ContextualModel(nn.Module):
                 if ctx_input.role_info and "thread_roles" in ctx_input.role_info:
                     roles = ctx_input.role_info["thread_roles"]
 
-                context_emb, thread_attention = self.thread_encoder(
-                    ctx_input.thread_context, roles
-                )
+                context_emb, thread_attention = self.thread_encoder(ctx_input.thread_context, roles)
                 embeddings_list.append(context_emb)
                 embedding_names.append("context")
 
@@ -798,9 +780,7 @@ class ContextualModel(nn.Module):
         losses["bullying"] = (
             F.cross_entropy(bullying_logits, bullying_labels) * loss_weights["bullying"]
         )
-        losses["role"] = (
-            F.cross_entropy(role_logits, role_labels) * loss_weights["role"]
-        )
+        losses["role"] = F.cross_entropy(role_logits, role_labels) * loss_weights["role"]
         losses["emotion"] = (
             F.cross_entropy(emotion_logits, emotion_labels) * loss_weights["emotion"]
         )
@@ -820,9 +800,7 @@ class ContextualModel(nn.Module):
 
         return losses
 
-    def predict(
-        self, contextual_input: ContextualInput
-    ) -> Dict[str, Union[str, float]]:
+    def predict(self, contextual_input: ContextualInput) -> Dict[str, Union[str, float]]:
         """
         預測單個樣本
 

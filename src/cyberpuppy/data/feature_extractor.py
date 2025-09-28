@@ -3,12 +3,10 @@
 """
 
 import json
-import re
 import logging
+import re
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
-from collections import Counter
-import numpy as np
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +41,16 @@ class NTUSDFeatureExtractor:
         try:
             path = Path(ntusd_path)
 
-            if path.suffix == '.json':
-                with open(path, 'r', encoding='utf-8') as f:
+            if path.suffix == ".json":
+                with open(path, "r", encoding="utf-8") as f:
                     ntusd_data = json.load(f)
 
-                self.positive_words = set(ntusd_data.get('positive', []))
-                self.negative_words = set(ntusd_data.get('negative', []))
+                self.positive_words = set(ntusd_data.get("positive", []))
+                self.negative_words = set(ntusd_data.get("negative", []))
 
-            elif path.suffix == '.txt':
+            elif path.suffix == ".txt":
                 # 假設格式為：每行一個詞，正面詞在前，負面詞在後，用空行分隔
-                with open(path, 'r', encoding='utf-8') as f:
+                with open(path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
 
                 current_set = self.positive_words
@@ -68,8 +66,10 @@ class NTUSDFeatureExtractor:
                 return False
 
             self.loaded = True
-            logger.info(f"Loaded NTUSD: {len(self.positive_words)} positive, "
-                       f"{len(self.negative_words)} negative words")
+            logger.info(
+                f"Loaded NTUSD: {len(self.positive_words)} positive, "
+                f"{len(self.negative_words)} negative words"
+            )
             return True
 
         except Exception as e:
@@ -88,11 +88,11 @@ class NTUSDFeatureExtractor:
         """
         if not text or not self.loaded:
             return {
-                'ntusd_pos_ratio': 0.0,
-                'ntusd_neg_ratio': 0.0,
-                'ntusd_sentiment': 0.0,
-                'ntusd_pos_count': 0.0,
-                'ntusd_neg_count': 0.0
+                "ntusd_pos_ratio": 0.0,
+                "ntusd_neg_ratio": 0.0,
+                "ntusd_sentiment": 0.0,
+                "ntusd_pos_count": 0.0,
+                "ntusd_neg_count": 0.0,
             }
 
         # 中文按字符分割，也可以考慮詞級別分割
@@ -111,11 +111,11 @@ class NTUSDFeatureExtractor:
         sentiment = pos_ratio - neg_ratio
 
         return {
-            'ntusd_pos_ratio': pos_ratio,
-            'ntusd_neg_ratio': neg_ratio,
-            'ntusd_sentiment': sentiment,
-            'ntusd_pos_count': float(pos_count),
-            'ntusd_neg_count': float(neg_count)
+            "ntusd_pos_ratio": pos_ratio,
+            "ntusd_neg_ratio": neg_ratio,
+            "ntusd_sentiment": sentiment,
+            "ntusd_pos_count": float(pos_count),
+            "ntusd_neg_count": float(neg_count),
         }
 
     def _segment_words(self, text: str) -> List[str]:
@@ -127,7 +127,7 @@ class NTUSDFeatureExtractor:
         # 提取2-4字詞
         for length in [2, 3, 4]:
             for i in range(len(text) - length + 1):
-                word = text[i:i+length]
+                word = text[i : i + length]
                 if self._is_valid_word(word):
                     words.append(word)
 
@@ -136,7 +136,7 @@ class NTUSDFeatureExtractor:
     def _is_valid_word(self, word: str) -> bool:
         """檢查是否為有效詞彙"""
         # 基本檢查：至少包含一個中文字符
-        return bool(re.search(r'[\u4e00-\u9fff]', word))
+        return bool(re.search(r"[\u4e00-\u9fff]", word))
 
 
 class TextFeatureExtractor:
@@ -161,28 +161,32 @@ class TextFeatureExtractor:
         features = {}
 
         # 長度特徵
-        features['text_length'] = float(len(text))
-        features['char_count'] = float(len(text))
-        features['word_count'] = float(len(text.split()))
+        features["text_length"] = float(len(text))
+        features["char_count"] = float(len(text))
+        features["word_count"] = float(len(text.split()))
 
         # 字符類型特徵
-        chinese_chars = len([c for c in text if '\u4e00' <= c <= '\u9fff'])
+        chinese_chars = len([c for c in text if "\u4e00" <= c <= "\u9fff"])
         english_chars = len([c for c in text if c.isalpha() and c.isascii()])
         digit_chars = len([c for c in text if c.isdigit()])
         punct_chars = len([c for c in text if not c.isalnum() and not c.isspace()])
 
         total_chars = len(text)
-        features['chinese_ratio'] = chinese_chars / total_chars if total_chars > 0 else 0.0
-        features['english_ratio'] = english_chars / total_chars if total_chars > 0 else 0.0
-        features['digit_ratio'] = digit_chars / total_chars if total_chars > 0 else 0.0
-        features['punct_ratio'] = punct_chars / total_chars if total_chars > 0 else 0.0
+        features["chinese_ratio"] = chinese_chars / total_chars if total_chars > 0 else 0.0
+        features["english_ratio"] = english_chars / total_chars if total_chars > 0 else 0.0
+        features["digit_ratio"] = digit_chars / total_chars if total_chars > 0 else 0.0
+        features["punct_ratio"] = punct_chars / total_chars if total_chars > 0 else 0.0
 
         # 重複字符特徵
-        features['repeated_chars'] = self._count_repeated_chars(text)
-        features['repeated_char_ratio'] = features['repeated_chars'] / total_chars if total_chars > 0 else 0.0
+        features["repeated_chars"] = self._count_repeated_chars(text)
+        features["repeated_char_ratio"] = (
+            features["repeated_chars"] / total_chars if total_chars > 0 else 0.0
+        )
 
         # 大寫字母特徵
-        features['uppercase_ratio'] = sum(1 for c in text if c.isupper()) / total_chars if total_chars > 0 else 0.0
+        features["uppercase_ratio"] = (
+            sum(1 for c in text if c.isupper()) / total_chars if total_chars > 0 else 0.0
+        )
 
         return features
 
@@ -202,19 +206,19 @@ class TextFeatureExtractor:
         features = {}
 
         # 常見標點符號計數
-        exclamation_count = text.count('!') + text.count('！')
-        question_count = text.count('?') + text.count('？')
-        period_count = text.count('.') + text.count('。')
-        comma_count = text.count(',') + text.count('，')
+        exclamation_count = text.count("!") + text.count("！")
+        question_count = text.count("?") + text.count("？")
+        period_count = text.count(".") + text.count("。")
+        comma_count = text.count(",") + text.count("，")
 
         total_chars = len(text)
-        features['exclamation_ratio'] = exclamation_count / total_chars if total_chars > 0 else 0.0
-        features['question_ratio'] = question_count / total_chars if total_chars > 0 else 0.0
-        features['period_ratio'] = period_count / total_chars if total_chars > 0 else 0.0
-        features['comma_ratio'] = comma_count / total_chars if total_chars > 0 else 0.0
+        features["exclamation_ratio"] = exclamation_count / total_chars if total_chars > 0 else 0.0
+        features["question_ratio"] = question_count / total_chars if total_chars > 0 else 0.0
+        features["period_ratio"] = period_count / total_chars if total_chars > 0 else 0.0
+        features["comma_ratio"] = comma_count / total_chars if total_chars > 0 else 0.0
 
         # 連續標點符號
-        features['consecutive_punct'] = len(re.findall(r'[!！?？。.]{2,}', text))
+        features["consecutive_punct"] = len(re.findall(r"[!！?？。.]{2,}", text))
 
         return features
 
@@ -234,9 +238,9 @@ class TextFeatureExtractor:
         features = {}
 
         # 情緒詞列表（簡化版）
-        positive_words = {'好', '棒', '讚', '開心', '高興', '喜歡', '愛', '滿意', '不錯', '優秀'}
-        negative_words = {'壞', '糟', '爛', '討厭', '生氣', '憤怒', '痛苦', '失望', '難過', '垃圾'}
-        intense_words = {'超', '非常', '很', '特別', '極', '太', '超級', '最', '絕對', '完全'}
+        positive_words = {"好", "棒", "讚", "開心", "高興", "喜歡", "愛", "滿意", "不錯", "優秀"}
+        negative_words = {"壞", "糟", "爛", "討厭", "生氣", "憤怒", "痛苦", "失望", "難過", "垃圾"}
+        intense_words = {"超", "非常", "很", "特別", "極", "太", "超級", "最", "絕對", "完全"}
 
         # 計算情緒詞比例
         total_chars = len(text)
@@ -244,13 +248,15 @@ class TextFeatureExtractor:
         neg_count = sum(1 for word in negative_words if word in text)
         intense_count = sum(1 for word in intense_words if word in text)
 
-        features['positive_words'] = float(pos_count)
-        features['negative_words'] = float(neg_count)
-        features['intense_words'] = float(intense_count)
-        features['emotion_word_ratio'] = (pos_count + neg_count) / total_chars if total_chars > 0 else 0.0
+        features["positive_words"] = float(pos_count)
+        features["negative_words"] = float(neg_count)
+        features["intense_words"] = float(intense_count)
+        features["emotion_word_ratio"] = (
+            (pos_count + neg_count) / total_chars if total_chars > 0 else 0.0
+        )
 
         # 全大寫詞（表示強調）
-        features['caps_words'] = len(re.findall(r'\b[A-Z]{2,}\b', text))
+        features["caps_words"] = len(re.findall(r"\b[A-Z]{2,}\b", text))
 
         return features
 
@@ -275,43 +281,43 @@ class TextFeatureExtractor:
     def _count_repeated_chars(self, text: str) -> float:
         """計算重複字符數量"""
         repeated_count = 0
-        for match in re.finditer(r'(.)\1+', text):
+        for match in re.finditer(r"(.)\1+", text):
             repeated_count += len(match.group()) - 1
         return float(repeated_count)
 
     def _get_empty_basic_features(self) -> Dict[str, float]:
         """獲取空的基本特徵"""
         return {
-            'text_length': 0.0,
-            'char_count': 0.0,
-            'word_count': 0.0,
-            'chinese_ratio': 0.0,
-            'english_ratio': 0.0,
-            'digit_ratio': 0.0,
-            'punct_ratio': 0.0,
-            'repeated_chars': 0.0,
-            'repeated_char_ratio': 0.0,
-            'uppercase_ratio': 0.0
+            "text_length": 0.0,
+            "char_count": 0.0,
+            "word_count": 0.0,
+            "chinese_ratio": 0.0,
+            "english_ratio": 0.0,
+            "digit_ratio": 0.0,
+            "punct_ratio": 0.0,
+            "repeated_chars": 0.0,
+            "repeated_char_ratio": 0.0,
+            "uppercase_ratio": 0.0,
         }
 
     def _get_empty_punct_features(self) -> Dict[str, float]:
         """獲取空的標點特徵"""
         return {
-            'exclamation_ratio': 0.0,
-            'question_ratio': 0.0,
-            'period_ratio': 0.0,
-            'comma_ratio': 0.0,
-            'consecutive_punct': 0.0
+            "exclamation_ratio": 0.0,
+            "question_ratio": 0.0,
+            "period_ratio": 0.0,
+            "comma_ratio": 0.0,
+            "consecutive_punct": 0.0,
         }
 
     def _get_empty_emotion_features(self) -> Dict[str, float]:
         """獲取空的情緒特徵"""
         return {
-            'positive_words': 0.0,
-            'negative_words': 0.0,
-            'intense_words': 0.0,
-            'emotion_word_ratio': 0.0,
-            'caps_words': 0.0
+            "positive_words": 0.0,
+            "negative_words": 0.0,
+            "intense_words": 0.0,
+            "emotion_word_ratio": 0.0,
+            "caps_words": 0.0,
         }
 
 

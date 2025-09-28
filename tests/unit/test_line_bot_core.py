@@ -4,23 +4,25 @@ LINE Bot 核心功能單元測試
 Tests for LINE Bot core functionality
 """
 
-import pytest
 import asyncio
+import base64
 import hashlib
 import hmac
-import base64
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from fastapi.testclient import TestClient
 import json
-import time
-
 # Import bot components to test
 import sys
+import time
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent / "bot"))
 
 try:
-    from line_bot import app, line_bot_api, handler
+    from line_bot import app, handler, line_bot_api
+
     from config import Settings, get_settings
 except ImportError:
     # Create mock imports if files don't exist
@@ -32,29 +34,29 @@ except ImportError:
 class TestLineBotConfiguration:
     """測試 LINE Bot 配置"""
 
-    @patch.dict('os.environ', {
-        'LINE_CHANNEL_ACCESS_TOKEN': 'test_token_123',
-        'LINE_CHANNEL_SECRET': 'test_secret_456',
-        'CYBERPUPPY_API_URL': 'http://localhost:8000'
-    })
+    @patch.dict(
+        "os.environ",
+        {
+            "LINE_CHANNEL_ACCESS_TOKEN": "test_token_123",
+            "LINE_CHANNEL_SECRET": "test_secret_456",
+            "CYBERPUPPY_API_URL": "http://localhost:8000",
+        },
+    )
     def test_settings_initialization(self):
         """測試設定初始化"""
         from config import Settings
+
         settings = Settings()
 
-        assert settings.line_channel_access_token == 'test_token_123'
-        assert settings.line_channel_secret == 'test_secret_456'
-        assert settings.cyberpuppy_api_url == 'http://localhost:8000'
+        assert settings.line_channel_access_token == "test_token_123"
+        assert settings.line_channel_secret == "test_secret_456"
+        assert settings.cyberpuppy_api_url == "http://localhost:8000"
 
     def test_settings_validation(self):
         """測試設定驗證"""
         with pytest.raises(ValueError):
             # Missing required environment variables
-            Settings(
-                line_channel_access_token="",
-                line_channel_secret="",
-                cyberpuppy_api_url=""
-            )
+            Settings(line_channel_access_token="", line_channel_secret="", cyberpuppy_api_url="")
 
 
 class TestWebhookValidation:
@@ -77,22 +79,22 @@ class TestWebhookValidation:
         """測試有效的 Webhook 簽名驗證"""
         payload = {
             "destination": "test_destination",
-            "events": [{
-                "type": "message",
-                "message": {"type": "text", "text": "測試訊息"},
-                "source": {"type": "user", "userId": "test_user"},
-                "replyToken": "test_token"
-            }]
+            "events": [
+                {
+                    "type": "message",
+                    "message": {"type": "text", "text": "測試訊息"},
+                    "source": {"type": "user", "userId": "test_user"},
+                    "replyToken": "test_token",
+                }
+            ],
         }
 
         body = json.dumps(payload).encode()
         signature = self.create_line_signature(body)
 
-        with patch.dict('os.environ', {'LINE_CHANNEL_SECRET': self.test_secret}):
+        with patch.dict("os.environ", {"LINE_CHANNEL_SECRET": self.test_secret}):
             response = self.client.post(
-                "/webhook",
-                data=body,
-                headers={"X-Line-Signature": signature}
+                "/webhook", data=body, headers={"X-Line-Signature": signature}
             )
 
         # Should not reject due to signature (other errors may occur)
@@ -103,21 +105,21 @@ class TestWebhookValidation:
         """測試無效的 Webhook 簽名驗證"""
         payload = {
             "destination": "test_destination",
-            "events": [{
-                "type": "message",
-                "message": {"type": "text", "text": "測試訊息"},
-                "source": {"type": "user", "userId": "test_user"},
-                "replyToken": "test_token"
-            }]
+            "events": [
+                {
+                    "type": "message",
+                    "message": {"type": "text", "text": "測試訊息"},
+                    "source": {"type": "user", "userId": "test_user"},
+                    "replyToken": "test_token",
+                }
+            ],
         }
 
         body = json.dumps(payload).encode()
         invalid_signature = "invalid_signature"
 
         response = self.client.post(
-            "/webhook",
-            data=body,
-            headers={"X-Line-Signature": invalid_signature}
+            "/webhook", data=body, headers={"X-Line-Signature": invalid_signature}
         )
 
         assert response.status_code == 400  # Bad Request
@@ -140,7 +142,7 @@ class TestMessageHandling:
         """每個測試方法前的設置"""
         self.mock_api_client = Mock()
 
-    @patch('line_bot.httpx.AsyncClient')
+    @patch("line_bot.httpx.AsyncClient")
     async def test_cyberpuppy_api_call(self, mock_client):
         """測試 CyberPuppy API 調用"""
         # Mock API response
@@ -151,9 +153,9 @@ class TestMessageHandling:
                 "toxicity": {"label": "toxic", "confidence": 0.85},
                 "bullying": {"label": "harassment", "confidence": 0.80},
                 "emotion": {"label": "negative", "confidence": 0.90},
-                "role": {"label": "perpetrator", "confidence": 0.75}
+                "role": {"label": "perpetrator", "confidence": 0.75},
             },
-            "processing_time_ms": 150
+            "processing_time_ms": 150,
         }
 
         mock_client_instance = AsyncMock()
@@ -163,6 +165,7 @@ class TestMessageHandling:
         # Import and test the API call function
         try:
             from line_bot import call_cyberpuppy_api
+
             result = await call_cyberpuppy_api("測試有毒文字")
 
             assert result is not None
@@ -174,38 +177,31 @@ class TestMessageHandling:
     def test_message_type_filtering(self):
         """測試訊息類型過濾"""
         # Test different message types
-        text_message = {
-            "type": "message",
-            "message": {"type": "text", "text": "文字訊息"}
-        }
+        text_message = {"type": "message", "message": {"type": "text", "text": "文字訊息"}}
 
-        image_message = {
-            "type": "message",
-            "message": {"type": "image", "id": "image123"}
-        }
+        image_message = {"type": "message", "message": {"type": "image", "id": "image123"}}
 
-        follow_event = {
-            "type": "follow",
-            "source": {"type": "user", "userId": "user123"}
-        }
+        follow_event = {"type": "follow", "source": {"type": "user", "userId": "user123"}}
 
         # Only text messages should be processed for toxicity detection
-        assert self.should_process_for_toxicity(text_message) == True
-        assert self.should_process_for_toxicity(image_message) == False
-        assert self.should_process_for_toxicity(follow_event) == False
+        assert self.should_process_for_toxicity(text_message)
+        assert not self.should_process_for_toxicity(image_message)
+        assert not self.should_process_for_toxicity(follow_event)
 
     def should_process_for_toxicity(self, event):
         """Helper method to determine if event should be processed"""
-        return (event.get("type") == "message" and
-                event.get("message", {}).get("type") == "text")
+        return event.get("type") == "message" and event.get("message", {}).get("type") == "text"
 
-    @pytest.mark.parametrize("text,expected_action", [
-        ("你好", "normal_response"),
-        ("你這個笨蛋", "toxicity_warning"),
-        ("我要殺了你", "severe_warning"),
-        ("", "no_action"),
-        ("   ", "no_action"),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_action",
+        [
+            ("你好", "normal_response"),
+            ("你這個笨蛋", "toxicity_warning"),
+            ("我要殺了你", "severe_warning"),
+            ("", "no_action"),
+            ("   ", "no_action"),
+        ],
+    )
     def test_response_strategy(self, text, expected_action):
         """測試不同文字的回應策略"""
         # Mock toxicity results
@@ -278,7 +274,7 @@ class TestResponseGeneration:
 class TestErrorHandling:
     """測試錯誤處理"""
 
-    @patch('line_bot.httpx.AsyncClient')
+    @patch("line_bot.httpx.AsyncClient")
     async def test_api_timeout_handling(self, mock_client):
         """測試 API 超時處理"""
         import asyncio
@@ -289,6 +285,7 @@ class TestErrorHandling:
 
         try:
             from line_bot import call_cyberpuppy_api
+
             result = await call_cyberpuppy_api("test text")
 
             # Should handle timeout gracefully
@@ -296,7 +293,7 @@ class TestErrorHandling:
         except ImportError:
             pytest.skip("Bot module not available")
 
-    @patch('line_bot.httpx.AsyncClient')
+    @patch("line_bot.httpx.AsyncClient")
     async def test_api_error_handling(self, mock_client):
         """測試 API 錯誤處理"""
         mock_response = Mock()
@@ -309,6 +306,7 @@ class TestErrorHandling:
 
         try:
             from line_bot import call_cyberpuppy_api
+
             result = await call_cyberpuppy_api("test text")
 
             # Should handle API errors gracefully
@@ -323,12 +321,12 @@ class TestErrorHandling:
             {"events": "not_a_list"},
             {"events": [{"type": "unknown"}]},
             {},
-            None
+            None,
         ]
 
         for data in malformed_data:
             result = self.validate_webhook_data(data)
-            assert result == False
+            assert not result
 
     def validate_webhook_data(self, data):
         """Helper method to validate webhook data"""
@@ -360,7 +358,7 @@ class TestPrivacyAndSecurity:
         sensitive_texts = [
             "我的密碼是123456",
             "信用卡號碼：1234-5678-9012-3456",
-            "身分證字號：A123456789"
+            "身分證字號：A123456789",
         ]
 
         for text in sensitive_texts:
@@ -374,8 +372,7 @@ class TestPrivacyAndSecurity:
 
     def is_valid_hash(self, hash_string):
         """Helper method to validate hash format"""
-        return (len(hash_string) == 64 and
-                all(c in '0123456789abcdef' for c in hash_string))
+        return len(hash_string) == 64 and all(c in "0123456789abcdef" for c in hash_string)
 
     def create_safe_log_entry(self, text):
         """Helper method to create privacy-safe log entry"""
@@ -384,7 +381,7 @@ class TestPrivacyAndSecurity:
             "text_hash": text_hash,
             "timestamp": time.time(),
             "text_length": len(text),
-            "detected_categories": ["toxicity_check"]
+            "detected_categories": ["toxicity_check"],
         }
 
 
@@ -419,7 +416,7 @@ class TestPerformanceAndScaling:
         # Check if rate limiting should be applied
         should_limit = self.check_rate_limit(user_id, message_times, limit=3, window=60)
 
-        assert should_limit == True  # Should limit due to too many messages
+        assert should_limit  # Should limit due to too many messages
 
     def check_rate_limit(self, user_id, message_times, limit=5, window=60):
         """Helper method to check rate limiting"""
@@ -439,22 +436,23 @@ class TestIntegrationScenarios:
             "type": "message",
             "message": {"type": "text", "text": "你這個笨蛋"},
             "source": {"type": "user", "userId": "test_user"},
-            "replyToken": "reply_token_123"
+            "replyToken": "reply_token_123",
         }
 
         # Simulate full processing flow
-        with patch('line_bot.call_cyberpuppy_api') as mock_api, \
-             patch('line_bot.line_bot_api.reply_message') as mock_reply:
+        with (
+            patch("line_bot.call_cyberpuppy_api") as mock_api,
+            patch("line_bot.line_bot_api.reply_message") as mock_reply,
+        ):
 
             mock_api.return_value = {
-                "results": {
-                    "toxicity": {"label": "toxic", "confidence": 0.85}
-                }
+                "results": {"toxicity": {"label": "toxic", "confidence": 0.85}}
             }
 
             # Process the event (this would be called by LINE webhook)
             try:
                 from line_bot import handle_message_event
+
                 await handle_message_event(line_event)
 
                 # Verify API was called

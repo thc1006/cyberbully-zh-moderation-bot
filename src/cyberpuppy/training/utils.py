@@ -2,40 +2,43 @@
 訓練工具模組
 包含自動batch size finder、記憶體優化、梯度累積等工具
 """
+
+import gc
+import json
 import logging
+import math
+import random
+import time
+from pathlib import Path
+from typing import Any, Dict, Tuple
+
+import numpy as np
+import psutil
 import torch
 import torch.nn as nn
-from typing import Optional, Tuple, Dict, Any
-import gc
-import psutil
-import time
-import math
-from pathlib import Path
-import json
-import numpy as np
-from torch.utils.data import DataLoader, Subset
-import random
+from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
+
 
 class AutoBatchSizeFinder:
     """自動尋找最佳batch size"""
 
-    def __init__(self,
-                 model: nn.Module,
-                 device: torch.device,
-                 max_memory_gb: float = 3.5,  # RTX 3050 安全閾值
-                 growth_factor: float = 1.5,
-                 max_trials: int = 10):
+    def __init__(
+        self,
+        model: nn.Module,
+        device: torch.device,
+        max_memory_gb: float = 3.5,  # RTX 3050 安全閾值
+        growth_factor: float = 1.5,
+        max_trials: int = 10,
+    ):
         self.model = model
         self.device = device
         self.max_memory_gb = max_memory_gb
         self.growth_factor = growth_factor
         self.max_trials = max_trials
 
-    def find_batch_size(self,
-                       dataloader: DataLoader,
-                       start_batch_size: int = 1) -> int:
+    def find_batch_size(self, dataloader: DataLoader, start_batch_size: int = 1) -> int:
         """
         自動尋找最佳batch size
 
@@ -55,15 +58,16 @@ class AutoBatchSizeFinder:
         if isinstance(sample_batch, (list, tuple)):
             sample_inputs = [x.to(self.device) if torch.is_tensor(x) else x for x in sample_batch]
         elif isinstance(sample_batch, dict):
-            sample_inputs = {k: v.to(self.device) if torch.is_tensor(v) else v
-                           for k, v in sample_batch.items()}
+            sample_inputs = {
+                k: v.to(self.device) if torch.is_tensor(v) else v for k, v in sample_batch.items()
+            }
         else:
             sample_inputs = sample_batch.to(self.device)
 
         current_batch_size = start_batch_size
         best_batch_size = start_batch_size
 
-        for trial in range(self.max_trials):
+        for _trial in range(self.max_trials):
             try:
                 # 清理記憶體
                 torch.cuda.empty_cache()
@@ -128,13 +132,14 @@ class AutoBatchSizeFinder:
         else:
             return inputs
 
+
 class MemoryOptimizer:
     """記憶體優化工具"""
 
     @staticmethod
     def enable_gradient_checkpointing(model: nn.Module):
         """啟用梯度檢查點"""
-        if hasattr(model, 'gradient_checkpointing_enable'):
+        if hasattr(model, "gradient_checkpointing_enable"):
             model.gradient_checkpointing_enable()
             logger.info("梯度檢查點已啟用")
         else:
@@ -152,20 +157,22 @@ class MemoryOptimizer:
             return None
 
     @staticmethod
-    def optimize_dataloader(dataloader: DataLoader,
-                          pin_memory: bool = True,
-                          num_workers: int = 2,
-                          prefetch_factor: int = 2) -> DataLoader:
+    def optimize_dataloader(
+        dataloader: DataLoader,
+        pin_memory: bool = True,
+        num_workers: int = 2,
+        prefetch_factor: int = 2,
+    ) -> DataLoader:
         """優化DataLoader設定"""
         # 重新建立優化後的DataLoader
         optimized_loader = DataLoader(
             dataloader.dataset,
             batch_size=dataloader.batch_size,
-            shuffle=dataloader.shuffle if hasattr(dataloader, 'shuffle') else False,
+            shuffle=dataloader.shuffle if hasattr(dataloader, "shuffle") else False,
             num_workers=num_workers,
             pin_memory=pin_memory and torch.cuda.is_available(),
             prefetch_factor=prefetch_factor,
-            drop_last=dataloader.drop_last
+            drop_last=dataloader.drop_last,
         )
 
         logger.info(f"DataLoader已優化: workers={num_workers}, pin_memory={pin_memory}")
@@ -185,16 +192,17 @@ class MemoryOptimizer:
 
         # CPU記憶體
         cpu_memory = psutil.virtual_memory()
-        stats['cpu_memory_used_gb'] = cpu_memory.used / (1024**3)
-        stats['cpu_memory_percent'] = cpu_memory.percent
+        stats["cpu_memory_used_gb"] = cpu_memory.used / (1024**3)
+        stats["cpu_memory_percent"] = cpu_memory.percent
 
         # GPU記憶體
         if torch.cuda.is_available():
-            stats['gpu_memory_allocated_gb'] = torch.cuda.memory_allocated() / (1024**3)
-            stats['gpu_memory_reserved_gb'] = torch.cuda.memory_reserved() / (1024**3)
-            stats['gpu_memory_max_allocated_gb'] = torch.cuda.max_memory_allocated() / (1024**3)
+            stats["gpu_memory_allocated_gb"] = torch.cuda.memory_allocated() / (1024**3)
+            stats["gpu_memory_reserved_gb"] = torch.cuda.memory_reserved() / (1024**3)
+            stats["gpu_memory_max_allocated_gb"] = torch.cuda.max_memory_allocated() / (1024**3)
 
         return stats
+
 
 class GradientAccumulator:
     """梯度累積工具"""
@@ -216,20 +224,23 @@ class GradientAccumulator:
         """重置計數器"""
         self.current_step = 0
 
+
 class WarmupScheduler:
     """學習率預熱排程器"""
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 warmup_steps: int,
-                 total_steps: int,
-                 scheduler_type: str = "cosine"):
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        warmup_steps: int,
+        total_steps: int,
+        scheduler_type: str = "cosine",
+    ):
         self.optimizer = optimizer
         self.warmup_steps = warmup_steps
         self.total_steps = total_steps
         self.scheduler_type = scheduler_type
         self.current_step = 0
-        self.base_lrs = [group['lr'] for group in optimizer.param_groups]
+        self.base_lrs = [group["lr"] for group in optimizer.param_groups]
 
     def step(self):
         """執行一步學習率更新"""
@@ -239,10 +250,12 @@ class WarmupScheduler:
             # 預熱階段
             warmup_factor = self.current_step / self.warmup_steps
             for i, param_group in enumerate(self.optimizer.param_groups):
-                param_group['lr'] = self.base_lrs[i] * warmup_factor
+                param_group["lr"] = self.base_lrs[i] * warmup_factor
         else:
             # 主要排程階段
-            progress = (self.current_step - self.warmup_steps) / (self.total_steps - self.warmup_steps)
+            progress = (self.current_step - self.warmup_steps) / (
+                self.total_steps - self.warmup_steps
+            )
 
             if self.scheduler_type == "cosine":
                 factor = 0.5 * (1 + math.cos(math.pi * progress))
@@ -252,11 +265,12 @@ class WarmupScheduler:
                 factor = 1
 
             for i, param_group in enumerate(self.optimizer.param_groups):
-                param_group['lr'] = self.base_lrs[i] * factor
+                param_group["lr"] = self.base_lrs[i] * factor
 
     def get_last_lr(self):
         """獲取當前學習率"""
-        return [group['lr'] for group in self.optimizer.param_groups]
+        return [group["lr"] for group in self.optimizer.param_groups]
+
 
 class TrainingMonitor:
     """訓練監控工具"""
@@ -285,7 +299,7 @@ class TrainingMonitor:
         self.losses.append(loss)
 
         if step % self.log_interval == 0:
-            avg_loss = np.mean(self.losses[-self.log_interval:])
+            avg_loss = np.mean(self.losses[-self.log_interval :])
             memory_stats = MemoryOptimizer.get_memory_stats()
 
             logger.info(
@@ -304,13 +318,14 @@ class TrainingMonitor:
         steps_per_second = len(self.losses) / epoch_time if epoch_time > 0 else 0
 
         stats = {
-            'epoch_time': epoch_time,
-            'avg_loss': avg_loss,
-            'steps_per_second': steps_per_second
+            "epoch_time": epoch_time,
+            "avg_loss": avg_loss,
+            "steps_per_second": steps_per_second,
         }
 
         logger.info(f"Epoch {epoch} 統計: {stats}")
         return stats
+
 
 class ExperimentTracker:
     """實驗追蹤工具"""
@@ -323,24 +338,24 @@ class ExperimentTracker:
 
     def log_config(self, config: Dict[str, Any]):
         """記錄配置"""
-        with open(self.config_file, 'w', encoding='utf-8') as f:
+        with open(self.config_file, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
     def log_metrics(self, epoch: int, metrics: Dict[str, float]):
         """記錄指標"""
         # 讀取現有指標
         if self.metrics_file.exists():
-            with open(self.metrics_file, 'r', encoding='utf-8') as f:
+            with open(self.metrics_file, "r", encoding="utf-8") as f:
                 all_metrics = json.load(f)
         else:
             all_metrics = []
 
         # 添加新指標
-        metric_entry = {'epoch': epoch, 'timestamp': time.time(), **metrics}
+        metric_entry = {"epoch": epoch, "timestamp": time.time(), **metrics}
         all_metrics.append(metric_entry)
 
         # 保存
-        with open(self.metrics_file, 'w', encoding='utf-8') as f:
+        with open(self.metrics_file, "w", encoding="utf-8") as f:
             json.dump(all_metrics, f, indent=2, ensure_ascii=False)
 
     def save_model(self, model: nn.Module, filename: str = "final_model.pt"):
@@ -353,10 +368,11 @@ class ExperimentTracker:
         """載入模型"""
         model_path = self.experiment_dir / filename
         if model_path.exists():
-            model.load_state_dict(torch.load(model_path, map_location='cpu'))
+            model.load_state_dict(torch.load(model_path, map_location="cpu"))
             logger.info(f"模型已從 {model_path} 載入")
         else:
             logger.warning(f"模型檔案不存在: {model_path}")
+
 
 def set_seed(seed: int):
     """設定隨機種子"""
@@ -368,16 +384,17 @@ def set_seed(seed: int):
         torch.cuda.manual_seed_all(seed)
     logger.info(f"隨機種子設定為: {seed}")
 
+
 def count_parameters(model: nn.Module) -> Tuple[int, int]:
     """計算模型參數數量"""
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return total_params, trainable_params
 
-def estimate_training_time(num_samples: int,
-                         batch_size: int,
-                         num_epochs: int,
-                         seconds_per_batch: float = 0.5) -> str:
+
+def estimate_training_time(
+    num_samples: int, batch_size: int, num_epochs: int, seconds_per_batch: float = 0.5
+) -> str:
     """估算訓練時間"""
     total_batches = (num_samples // batch_size) * num_epochs
     total_seconds = total_batches * seconds_per_batch
@@ -387,30 +404,22 @@ def estimate_training_time(num_samples: int,
 
     return f"{hours}小時{minutes}分鐘"
 
-def create_optimizer(model: nn.Module,
-                    optimizer_name: str,
-                    learning_rate: float,
-                    weight_decay: float = 0.01) -> torch.optim.Optimizer:
+
+def create_optimizer(
+    model: nn.Module, optimizer_name: str, learning_rate: float, weight_decay: float = 0.01
+) -> torch.optim.Optimizer:
     """建立優化器"""
     if optimizer_name.lower() == "adamw":
         optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=learning_rate,
-            weight_decay=weight_decay,
-            eps=1e-8
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay, eps=1e-8
         )
     elif optimizer_name.lower() == "adam":
         optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=learning_rate,
-            weight_decay=weight_decay
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
     elif optimizer_name.lower() == "sgd":
         optimizer = torch.optim.SGD(
-            model.parameters(),
-            lr=learning_rate,
-            weight_decay=weight_decay,
-            momentum=0.9
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay, momentum=0.9
         )
     else:
         raise ValueError(f"不支援的優化器: {optimizer_name}")
@@ -418,19 +427,16 @@ def create_optimizer(model: nn.Module,
     logger.info(f"建立優化器: {optimizer_name}, LR: {learning_rate}, Weight Decay: {weight_decay}")
     return optimizer
 
-def save_predictions(predictions: Dict[str, Any],
-                    output_path: Path,
-                    metadata: Dict[str, Any] = None):
+
+def save_predictions(
+    predictions: Dict[str, Any], output_path: Path, metadata: Dict[str, Any] = None
+):
     """保存預測結果"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    result = {
-        'predictions': predictions,
-        'metadata': metadata or {},
-        'timestamp': time.time()
-    }
+    result = {"predictions": predictions, "metadata": metadata or {}, "timestamp": time.time()}
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
     logger.info(f"預測結果已保存到: {output_path}")

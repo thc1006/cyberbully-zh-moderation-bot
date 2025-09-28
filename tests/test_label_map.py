@@ -2,26 +2,16 @@
 """
 測試標籤映射系統
 """
-from unittest.mock import patch
 
 import pytest
 
-from cyberpuppy.labeling import (
-    BullyingLevel,
-    EmotionType,
-    LabelMapper,
-    RoleType,
-    ToxicityLevel,
-    UnifiedLabel,
-    from_chnci_to_unified,
-    from_cold_to_unified,
-    from_sccd_to_unified,
-    from_sentiment_to_unified,
-    to_chnci_label,
-    to_cold_label,
-    to_sccd_label,
-    to_sentiment_label,
-)
+from cyberpuppy.labeling import (BullyingLevel, EmotionType, LabelMapper,
+                                 RoleType, ToxicityLevel, UnifiedLabel,
+                                 from_chnci_to_unified, from_cold_to_unified,
+                                 from_sccd_to_unified,
+                                 from_sentiment_to_unified, to_chnci_label,
+                                 to_cold_label, to_sccd_label,
+                                 to_sentiment_label)
 
 
 class TestEnums:

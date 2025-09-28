@@ -15,28 +15,19 @@ References:
         "eak Supervision with Triplet Methods"
 """
 
-import json
-import tempfile
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
-import pandas as pd
 import pytest
-import torch
 
-from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
-                                               RoleType, ToxicityLevel,
-                                               UnifiedLabel)
 from cyberpuppy.models.baselines import BaselineModel, ModelConfig
 # Import project modules
 from cyberpuppy.models.weak_supervision import (ChineseLabelingFunction,
-                                                    LabelingFunctionSet,
-                                                    UncertaintyQuantifier,
-                                                    WeakSupervisionConfig,
-                                                    WeakSupervisionDataset,
-                                                    WeakSupervisionModel)
+                                                LabelingFunctionSet,
+                                                UncertaintyQuantifier,
+                                                WeakSupervisionConfig,
+                                                WeakSupervisionDataset,
+                                                WeakSupervisionModel)
 
 
 class TestWeakSupervisionConfig:
@@ -131,8 +122,7 @@ class TestChineseLabelingFunction:
         harassment_indicators = ["骚扰", "跟踪", "纠缠", "恶心"]
 
         lf = ChineseLabelingFunction.create_harassment_context_lf(
-            name="harassmen"
-                "t_context", indicators=harassment_indicators, context_window=20
+            name="harassmen" "t_context", indicators=harassment_indicators, context_window=20
         )
 
         harassment_text = "这个人一直在骚扰我"
@@ -146,8 +136,7 @@ class TestChineseLabelingFunction:
         negative_emotions = ["愤怒", "讨厌", "恶心", "愤恨"]
 
         lf = ChineseLabelingFunction.create_emotion_correlation_lf(
-            name="emotion_"
-                "toxicity", negative_emotions=negative_emotions, intensity_threshold=0.6
+            name="emotion_" "toxicity", negative_emotions=negative_emotions, intensity_threshold=0.6
         )
 
         angry_text = "我对你感到非常愤怒和讨厌"
@@ -202,12 +191,8 @@ class TestLabelingFunctionSet:
         lf_set = LabelingFunctionSet()
 
         # Add multiple LFs
-        profanity_lf = ChineseLabelingFunction.create_profanity_lf(
-            "profanity", ["笨蛋", "白痴"]
-        )
-        threat_lf = ChineseLabelingFunction.create_threat_pattern_lf(
-            "threats", [r"打你", r"揍你"]
-        )
+        profanity_lf = ChineseLabelingFunction.create_profanity_lf("profanity", ["笨蛋", "白痴"])
+        threat_lf = ChineseLabelingFunction.create_threat_pattern_lf("threats", [r"打你", r"揍你"])
 
         lf_set.add_function(profanity_lf)
         lf_set.add_function(threat_lf)
@@ -235,8 +220,7 @@ class TestLabelingFunctionSet:
             return 1 if len(text) > 5 else -1
 
         lf_set.add_function(ChineseLabelingFunction("abstain", always_abstain))
-        lf_set.add_function(ChineseLabelingFunction("some"
-            "times", sometimes_label))
+        lf_set.add_function(ChineseLabelingFunction("some" "times", sometimes_label))
 
         texts = ["短文", "这是一个比较长的文本示例"]
         labels_matrix = lf_set.apply_functions(texts)
@@ -299,11 +283,7 @@ class TestWeakSupervisionModel:
     @pytest.fixture
     def sample_config(self):
         """Fixture providing a sample configuration"""
-        return WeakSupervisionConfig(
-            min_coverage=0.1,
-            max_abstains=0.6,
-            uncertainty_threshold=0.7
-        )
+        return WeakSupervisionConfig(min_coverage=0.1, max_abstains=0.6, uncertainty_threshold=0.7)
 
     @pytest.fixture
     def sample_baseline_model(self):
@@ -313,10 +293,7 @@ class TestWeakSupervisionModel:
 
     def test_model_initialization(self, sample_config, sample_baseline_model):
         """Test WeakSupervisionModel initialization"""
-        model = WeakSupervisionModel(
-            config=sample_config,
-            baseline_model=sample_baseline_model
-        )
+        model = WeakSupervisionModel(config=sample_config, baseline_model=sample_baseline_model)
 
         assert model.config == sample_config
         assert model.baseline_model == sample_baseline_model
@@ -383,11 +360,7 @@ class TestWeakSupervisionModel:
         assert model.label_model == mock_model_instance
 
     @patch("src.cyberpuppy.models.weak_supervision.LabelModel")
-    def test_predict_with_weak_supervision_only(
-        self,
-        mock_label_model,
-        sample_config
-    ):
+    def test_predict_with_weak_supervision_only(self, mock_label_model, sample_config):
         """Test prediction using only weak supervision"""
         # Setup mock
         mock_model_instance = Mock()
@@ -420,8 +393,7 @@ class TestWeakSupervisionModel:
 
     def test_ensemble_prediction(self, sample_config, sample_baseline_model):
         """Test ensemble prediction combining weak supervision and baseline"""
-        with patch("src.cyberpuppy.models.we"
-            "ak_supervision.LabelModel") as mock_label_model:
+        with patch("src.cyberpuppy.models.we" "ak_supervision.LabelModel") as mock_label_model:
             # Setup weak supervision mock
             mock_ws_instance = Mock()
             mock_label_model.return_value = mock_ws_instance
@@ -430,11 +402,9 @@ class TestWeakSupervisionModel:
             )
 
             # Setup baseline model mock
-            with patch.object(sample_baseline_model, "pre"
-                "dict") as mock_baseline_predict:
+            with patch.object(sample_baseline_model, "pre" "dict") as mock_baseline_predict:
                 mock_baseline_predict.return_value = {
-                    "toxicit"
-                        "y_probs": np.array([[0.8, 0.15, 0.05], [0.1, 0.7, 0.2]])
+                    "toxicit" "y_probs": np.array([[0.8, 0.15, 0.05], [0.1, 0.7, 0.2]])
                 }
 
                 model = WeakSupervisionModel(
@@ -452,8 +422,7 @@ class TestWeakSupervisionModel:
 
     def test_confidence_scoring(self, sample_config):
         """Test confidence scoring and uncertainty estimation"""
-        with patch("src.cyberpuppy.models.we"
-            "ak_supervision.LabelModel") as mock_label_model:
+        with patch("src.cyberpuppy.models.we" "ak_supervision.LabelModel") as mock_label_model:
             mock_model_instance = Mock()
             mock_label_model.return_value = mock_model_instance
 
@@ -519,8 +488,7 @@ class TestWeakSupervisionModel:
         model = WeakSupervisionModel(config=sample_config)
 
         # Mock a fitted label model without adding complex labeling functions
-        with patch("src.cyberpuppy.models.we"
-            "ak_supervision.LabelModel") as mock_label_model:
+        with patch("src.cyberpuppy.models.we" "ak_supervision.LabelModel") as mock_label_model:
             mock_model_instance = Mock()
             mock_label_model.return_value = mock_model_instance
             model.label_model = mock_model_instance
@@ -583,14 +551,10 @@ class TestWeakSupervisionModel:
         ]
 
         # Should handle all edge cases without crashing
-        with patch("src.cyberpuppy.models.we"
-            "ak_supervision.LabelModel") as mock_label_model:
+        with patch("src.cyberpuppy.models.we" "ak_supervision.LabelModel") as mock_label_model:
             mock_model_instance = Mock()
             mock_label_model.return_value = mock_model_instance
-            mock_model_instance.predict_proba.return_value = np.random.rand(
-                len(edge_case_texts),
-                3
-            )
+            mock_model_instance.predict_proba.return_value = np.random.rand(len(edge_case_texts), 3)
 
             model.label_model = mock_model_instance
             predictions = model.predict(edge_case_texts)
@@ -654,8 +618,7 @@ class TestUncertaintyQuantifier:
 
     def test_uncertainty_thresholding(self):
         """Test uncertainty thresholding for filtering predictions"""
-        quantifier = UncertaintyQuantifier(method="ent"
-            "ropy", threshold=0.8)  # Higher threshold
+        quantifier = UncertaintyQuantifier(method="ent" "ropy", threshold=0.8)  # Higher threshold
 
         probs = np.array(
             [
@@ -689,10 +652,7 @@ class TestIntegrationWithBaselines:
             ensemble_weights={"weak_supervision": 0.6, "baseline": 0.4}
         )
 
-        ws_model = WeakSupervisionModel(
-            config=ws_config,
-            baseline_model=baseline_model
-        )
+        ws_model = WeakSupervisionModel(config=ws_config, baseline_model=baseline_model)
 
         assert ws_model.baseline_model == baseline_model
         assert ws_model.config.ensemble_weights["baseline"] == 0.4
@@ -704,10 +664,7 @@ class TestIntegrationWithBaselines:
             ensemble_weights={"weak_supervision": 0.8, "baseline": 0.6}
         )
 
-        ws_model = WeakSupervisionModel(
-            config=ws_config,
-            baseline_model=baseline_model
-        )
+        ws_model = WeakSupervisionModel(config=ws_config, baseline_model=baseline_model)
 
         # Weights should be normalized to sum to 1
         total_weight = (
@@ -720,23 +677,20 @@ class TestIntegrationWithBaselines:
         """Test fallback to baseline model when weak supervision fails"""
         ws_config = WeakSupervisionConfig(uncertainty_threshold=0.1)  # Very low threshold
 
-        ws_model = WeakSupervisionModel(
-            config=ws_config,
-            baseline_model=baseline_model
-        )
+        ws_model = WeakSupervisionModel(config=ws_config, baseline_model=baseline_model)
 
         # Mock high uncertainty predictions from weak supervision
         with patch.object(ws_model, "predict") as mock_ws_predict:
             mock_ws_predict.return_value = {
-                "uncertain"
-                    "ty_scores": np.array([0.9, 0.8, 0.95]),  # High uncertainty
+                "uncertain" "ty_scores": np.array([0.9, 0.8, 0.95]),  # High uncertainty
                 "toxicity_pred": np.array([0, 1, 2]),
                 "toxicit"
-                    "y_probs": np.array([[0.4, 0.3, 0.3], [0.35, 0.35, 0.3], [0.33, 0.33, 0.34]]),  # High uncertainty probs
+                "y_probs": np.array(
+                    [[0.4, 0.3, 0.3], [0.35, 0.35, 0.3], [0.33, 0.33, 0.34]]
+                ),  # High uncertainty probs
             }
 
-            with patch.object(baseline_model, "pre"
-                "dict") as mock_baseline_predict:
+            with patch.object(baseline_model, "pre" "dict") as mock_baseline_predict:
                 mock_baseline_predict.return_value = {
                     "toxicity_pred": np.array([1, 0, 1]),
                     "toxicity_probs": np.array(
@@ -749,8 +703,7 @@ class TestIntegrationWithBaselines:
 
                 # Should use baseline predictions for high uncertainty samples
                 assert "fallback_used" in predictions
-                assert predictions["fallba"
-                    "ck_used"].sum() == 3  # All samples used fallback
+                assert predictions["fallba" "ck_used"].sum() == 3  # All samples used fallback
 
 
 if __name__ == "__main__":

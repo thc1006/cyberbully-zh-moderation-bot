@@ -2,22 +2,23 @@
 Unit tests for semi-supervised learning components.
 """
 
+import sys
+from pathlib import Path
+from unittest.mock import Mock
+
+import numpy as np
 import pytest
 import torch
 import torch.nn as nn
-import numpy as np
-from unittest.mock import Mock, patch
-from transformers import AutoTokenizer
 
-import sys
-from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.cyberpuppy.semi_supervised import (
-    PseudoLabelingPipeline, PseudoLabelConfig,
-    SelfTrainingFramework, SelfTrainingConfig,
-    ConsistencyRegularizer, ConsistencyConfig
-)
+from src.cyberpuppy.semi_supervised import (ConsistencyConfig,
+                                            ConsistencyRegularizer,
+                                            PseudoLabelConfig,
+                                            PseudoLabelingPipeline,
+                                            SelfTrainingConfig,
+                                            SelfTrainingFramework)
 
 
 class MockModel(nn.Module):
@@ -32,7 +33,7 @@ class MockModel(nn.Module):
         batch_size = input_ids.size(0)
         features = torch.randn(batch_size, 10)
         logits = self.linear(features)
-        return type('obj', (object,), {'logits': logits})()
+        return type("obj", (object,), {"logits": logits})()
 
 
 class MockDataset(torch.utils.data.Dataset):
@@ -48,10 +49,10 @@ class MockDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return {
-            'input_ids': torch.randint(1, 1000, (self.seq_len,)),
-            'attention_mask': torch.ones(self.seq_len),
-            'labels': torch.randint(0, self.num_classes, (1,)).item(),
-            'text': f"Sample text {idx}"
+            "input_ids": torch.randint(1, 1000, (self.seq_len,)),
+            "attention_mask": torch.ones(self.seq_len),
+            "labels": torch.randint(0, self.num_classes, (1,)).item(),
+            "text": f"Sample text {idx}",
         }
 
 
@@ -61,8 +62,8 @@ def mock_tokenizer():
     tokenizer = Mock()
     tokenizer.decode.return_value = "mock decoded text"
     tokenizer.return_value = {
-        'input_ids': torch.randint(1, 1000, (1, 20)),
-        'attention_mask': torch.ones(1, 20)
+        "input_ids": torch.randint(1, 1000, (1, 20)),
+        "attention_mask": torch.ones(1, 20),
     }
     return tokenizer
 
@@ -70,7 +71,7 @@ def mock_tokenizer():
 @pytest.fixture
 def device():
     """Get device for testing."""
-    return 'cuda' if torch.cuda.is_available() else 'cpu'
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class TestPseudoLabelingPipeline:
@@ -78,10 +79,7 @@ class TestPseudoLabelingPipeline:
 
     def test_config_creation(self):
         """Test configuration creation."""
-        config = PseudoLabelConfig(
-            confidence_threshold=0.9,
-            max_pseudo_samples=1000
-        )
+        config = PseudoLabelConfig(confidence_threshold=0.9, max_pseudo_samples=1000)
         assert config.confidence_threshold == 0.9
         assert config.max_pseudo_samples == 1000
 
@@ -135,9 +133,7 @@ class TestPseudoLabelingPipeline:
         """Test threshold update mechanism."""
         model = MockModel()
         config = PseudoLabelConfig(
-            confidence_threshold=0.9,
-            min_confidence_threshold=0.7,
-            max_confidence_threshold=0.95
+            confidence_threshold=0.9, min_confidence_threshold=0.7, max_confidence_threshold=0.95
         )
         pipeline = PseudoLabelingPipeline(model, mock_tokenizer, config, device)
 
@@ -169,10 +165,7 @@ class TestSelfTrainingFramework:
 
     def test_config_creation(self):
         """Test configuration creation."""
-        config = SelfTrainingConfig(
-            distillation_temperature=4.0,
-            ema_decay=0.999
-        )
+        config = SelfTrainingConfig(distillation_temperature=4.0, ema_decay=0.999)
         assert config.distillation_temperature == 4.0
         assert config.ema_decay == 0.999
 
@@ -185,8 +178,9 @@ class TestSelfTrainingFramework:
         teacher_model = trainer.create_teacher_model(student_model)
 
         # Teacher should be a copy with frozen parameters
-        assert sum(p.numel() for p in teacher_model.parameters()) == \
-               sum(p.numel() for p in student_model.parameters())
+        assert sum(p.numel() for p in teacher_model.parameters()) == sum(
+            p.numel() for p in student_model.parameters()
+        )
         assert not any(p.requires_grad for p in teacher_model.parameters())
 
     def test_knowledge_distillation_loss(self, device):
@@ -222,19 +216,21 @@ class TestSelfTrainingFramework:
         trainer = SelfTrainingFramework(config, device).trainer
 
         # Create logits with known max probabilities
-        logits = torch.tensor([
-            [2.0, 0.0, 0.0],  # High confidence
-            [0.1, 0.1, 0.1],  # Low confidence
-            [3.0, 0.0, 0.0],  # High confidence
-        ]).to(device)
+        logits = torch.tensor(
+            [
+                [2.0, 0.0, 0.0],  # High confidence
+                [0.1, 0.1, 0.1],  # Low confidence
+                [3.0, 0.0, 0.0],  # High confidence
+            ]
+        ).to(device)
 
         mask = trainer.compute_confidence_mask(logits)
 
         assert mask.dtype == torch.bool
         assert len(mask) == 3
         # First and third samples should have high confidence
-        assert mask[0] == True
-        assert mask[2] == True
+        assert mask[0]
+        assert mask[2]
 
     def test_teacher_model_update(self, device):
         """Test EMA update of teacher model."""
@@ -265,10 +261,7 @@ class TestConsistencyRegularizer:
 
     def test_config_creation(self):
         """Test configuration creation."""
-        config = ConsistencyConfig(
-            consistency_weight=2.0,
-            augmentation_strength=0.2
-        )
+        config = ConsistencyConfig(consistency_weight=2.0, augmentation_strength=0.2)
         assert config.consistency_weight == 2.0
         assert config.augmentation_strength == 0.2
 
@@ -278,17 +271,17 @@ class TestConsistencyRegularizer:
         regularizer = ConsistencyRegularizer(config, device)
 
         batch = {
-            'input_ids': torch.randint(1, 1000, (2, 20)),
-            'attention_mask': torch.ones(2, 20),
-            'labels': torch.tensor([0, 1])
+            "input_ids": torch.randint(1, 1000, (2, 20)),
+            "attention_mask": torch.ones(2, 20),
+            "labels": torch.tensor([0, 1]),
         }
 
         augmented_batch = regularizer.augmenter.augment_batch(batch)
 
-        assert 'input_ids' in augmented_batch
-        assert 'attention_mask' in augmented_batch
-        assert 'labels' in augmented_batch
-        assert augmented_batch['input_ids'].shape == batch['input_ids'].shape
+        assert "input_ids" in augmented_batch
+        assert "attention_mask" in augmented_batch
+        assert "labels" in augmented_batch
+        assert augmented_batch["input_ids"].shape == batch["input_ids"].shape
 
     def test_token_dropout(self, device):
         """Test token dropout augmentation."""
@@ -331,10 +324,7 @@ class TestConsistencyRegularizer:
 
     def test_consistency_weight_rampup(self, device):
         """Test consistency weight ramp-up schedule."""
-        config = ConsistencyConfig(
-            consistency_ramp_up_epochs=5,
-            max_consistency_weight=10.0
-        )
+        config = ConsistencyConfig(consistency_ramp_up_epochs=5, max_consistency_weight=10.0)
         regularizer = ConsistencyRegularizer(config, device)
 
         # Test ramp-up
@@ -345,26 +335,25 @@ class TestConsistencyRegularizer:
 
     def test_confidence_masking(self, device):
         """Test confidence-based masking."""
-        config = ConsistencyConfig(
-            use_confidence_masking=True,
-            confidence_threshold=0.8
-        )
+        config = ConsistencyConfig(use_confidence_masking=True, confidence_threshold=0.8)
         regularizer = ConsistencyRegularizer(config, device)
 
         # Create logits with known confidence levels
-        logits = torch.tensor([
-            [3.0, 0.0, 0.0],  # High confidence (~0.95)
-            [1.0, 1.0, 1.0],  # Low confidence (~0.33)
-        ]).to(device)
+        logits = torch.tensor(
+            [
+                [3.0, 0.0, 0.0],  # High confidence (~0.95)
+                [1.0, 1.0, 1.0],  # Low confidence (~0.33)
+            ]
+        ).to(device)
 
         confidence_mask = regularizer.compute_confidence_mask(logits)
-        assert confidence_mask[0] == True   # High confidence
-        assert confidence_mask[1] == False  # Low confidence
+        assert confidence_mask[0]  # High confidence
+        assert not confidence_mask[1]  # Low confidence
 
 
 def test_integration():
     """Test integration between components."""
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Create components
     model = MockModel().to(device)
@@ -385,6 +374,6 @@ def test_integration():
     assert consistency is not None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests
-    pytest.main([__file__, '-v'])
+    pytest.main([__file__, "-v"])

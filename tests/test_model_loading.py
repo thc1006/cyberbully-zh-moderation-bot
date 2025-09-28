@@ -15,7 +15,7 @@ import logging
 import sys
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import numpy as np
 import torch
@@ -23,8 +23,7 @@ from transformers import AutoModel, AutoTokenizer
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -32,8 +31,10 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 try:
+    from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
+                                               RoleType, ToxicityLevel)
     from cyberpuppy.models.baselines import BaselineModel, ModelConfig
-    from cyberpuppy.labeling.label_map import ToxicityLevel, BullyingLevel, EmotionType, RoleType
+
     MODEL_IMPORTS_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Could not import model classes: {e}")
@@ -132,12 +133,12 @@ class ModelDiagnostics:
             print(f"      File size: {file_size / (1024*1024):.1f} MB")
 
             if file_size < 100 * 1024 * 1024:  # Less than 100MB
-                print(f"   [WARN] Checkpoint file seems small for a BERT model")
+                print("   [WARN] Checkpoint file seems small for a BERT model")
 
             try:
                 # Try to load checkpoint
                 checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-                print(f"      [OK] Checkpoint loaded successfully")
+                print("      [OK] Checkpoint loaded successfully")
 
                 # Check checkpoint structure
                 required_keys = ["model_state_dict"]
@@ -180,15 +181,19 @@ class ModelDiagnostics:
                 return False
 
             try:
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
 
-                print(f"      [OK] JSON loaded successfully")
+                print("      [OK] JSON loaded successfully")
 
                 # Check required fields
                 required_fields = [
-                    "model_name", "max_length", "num_toxicity_classes",
-                    "num_bullying_classes", "num_role_classes", "num_emotion_classes"
+                    "model_name",
+                    "max_length",
+                    "num_toxicity_classes",
+                    "num_bullying_classes",
+                    "num_role_classes",
+                    "num_emotion_classes",
                 ]
 
                 for field in required_fields:
@@ -226,7 +231,7 @@ class ModelDiagnostics:
             try:
                 # Try to load tokenizer using transformers
                 tokenizer = AutoTokenizer.from_pretrained(str(model_path))
-                print(f"      [OK] Tokenizer loaded successfully")
+                print("      [OK] Tokenizer loaded successfully")
                 print(f"      Vocab size: {tokenizer.vocab_size}")
 
                 # Test tokenization
@@ -261,7 +266,7 @@ class ModelDiagnostics:
 
                 # Try to load base model with transformers
                 config_path = model_path / "model_config.json"
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
 
                 model_name = config["model_name"]
@@ -269,7 +274,7 @@ class ModelDiagnostics:
 
                 # Load base transformer model
                 base_model = AutoModel.from_pretrained(model_name)
-                print(f"      [OK] Base transformer model loaded")
+                print("      [OK] Base transformer model loaded")
 
                 # Check state dict compatibility
                 state_dict = checkpoint["model_state_dict"]
@@ -301,6 +306,7 @@ class ModelDiagnostics:
         """Test transformers library compatibility"""
         try:
             import transformers
+
             print(f"   [INFO] Transformers version: {transformers.__version__}")
             print(f"   [INFO] Python version: {sys.version}")
             print(f"   [INFO] PyTorch version: {torch.__version__}")
@@ -314,7 +320,7 @@ class ModelDiagnostics:
                 try:
                     tokenizer = AutoTokenizer.from_pretrained(model_name)
                     model = AutoModel.from_pretrained(model_name)
-                    print(f"      [OK] Model loaded successfully")
+                    print("      [OK] Model loaded successfully")
 
                     # Test inference
                     test_text = "這是一個測試。"
@@ -352,7 +358,7 @@ class ModelDiagnostics:
             try:
                 # Load model using our custom class
                 model = BaselineModel.load_model(str(model_path))
-                print(f"      [OK] Model loaded with custom class")
+                print("      [OK] Model loaded with custom class")
 
                 # Test inference
                 test_texts = [
@@ -368,11 +374,7 @@ class ModelDiagnostics:
 
                     # Tokenize
                     inputs = model.tokenizer(
-                        text,
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        max_length=256
+                        text, return_tensors="pt", padding=True, truncation=True, max_length=256
                     )
 
                     # Inference
@@ -380,7 +382,7 @@ class ModelDiagnostics:
                         predictions = model.predict(
                             inputs["input_ids"],
                             inputs["attention_mask"],
-                            inputs.get("token_type_ids")
+                            inputs.get("token_type_ids"),
                         )
 
                     # Print results
@@ -393,7 +395,7 @@ class ModelDiagnostics:
                         else:
                             print(f"        {key}: {value}")
 
-                print(f"      [OK] Inference completed successfully")
+                print("      [OK] Inference completed successfully")
 
             except Exception as e:
                 print(f"   [ERROR] Model inference failed: {e}")
@@ -508,13 +510,22 @@ def main():
     results_path = Path("tests/model_diagnostics_results.json")
     results_path.parent.mkdir(exist_ok=True)
 
-    with open(results_path, 'w', encoding='utf-8') as f:
-        json.dump({
-            "results": results,
-            "timestamp": str(torch.utils.data.get_worker_info() if hasattr(torch.utils.data, 'get_worker_info') else "unknown"),
-            "python_version": sys.version,
-            "pytorch_version": torch.__version__,
-        }, f, indent=2, ensure_ascii=False)
+    with open(results_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "results": results,
+                "timestamp": str(
+                    torch.utils.data.get_worker_info()
+                    if hasattr(torch.utils.data, "get_worker_info")
+                    else "unknown"
+                ),
+                "python_version": sys.version,
+                "pytorch_version": torch.__version__,
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
 
     print(f"\n[INFO] Results saved to: {results_path}")
 
@@ -522,7 +533,7 @@ def main():
     example_path = Path("examples/minimal_inference.py")
     example_path.parent.mkdir(exist_ok=True)
 
-    with open(example_path, 'w', encoding='utf-8') as f:
+    with open(example_path, "w", encoding="utf-8") as f:
         f.write(create_minimal_inference_example())
 
     print(f"[INFO] Minimal example saved to: {example_path}")

@@ -8,7 +8,6 @@ import logging
 import os
 
 from ..integration import validate_with_arbiter
-
 # 導入 CyberPuppy 模組
 from ..perspective import PerspectiveAPI, UncertaintyDetector
 
@@ -180,8 +179,7 @@ async def integrated_validation_example():
             if metadata["uncertainty_analysis"]:
                 ua = metadata["uncertainty_analysis"]
                 logger.info(
-                    f"不確定性分析: {ua['is_uncertain']} "
-                    f"({ua['confidence_score']:.3f})"
+                    f"不確定性分析: {ua['is_uncertain']} " f"({ua['confidence_score']:.3f})"
                 )
                 logger.info(f"不確定原因: {ua['reasons']}")
 
@@ -189,14 +187,10 @@ async def integrated_validation_example():
                 pr = metadata["perspective_result"]
                 logger.info(f"Perspective 毒性分數: {pr['toxicity_score']:.3f}")
                 logger.info(f"Perspective 威脅分數: {pr['threat_score']:.3f}")
-                logger.info(
-                    f"信心度評估: {pr['confidence_assessment']['confidence_level']}"
-                )
+                logger.info(f"信心度評估: {pr['confidence_assessment']['confidence_level']}")
 
                 if "confidence_adjustment" in enhanced_prediction:
-                    logger.info(
-                        f"信心度調整: {enhanced_prediction['confidence_adjustment']}"
-                    )
+                    logger.info(f"信心度調整: {enhanced_prediction['confidence_adjustment']}")
                     logger.info(f"驗證備註: {enhanced_prediction['validation_note']}")
 
             logger.info(f"最終建議: {metadata['recommendation']}")
@@ -255,8 +249,7 @@ async def performance_analysis_example():
         # 配額使用情況
         quota = await perspective.get_quota_status()
         logger.info(
-            f"API 配額使用: {quota['daily_requests_used']}/"
-            f"{quota['daily_requests_limit']}"
+            f"API 配額使用: {quota['daily_requests_used']}/" f"{quota['daily_requests_limit']}"
         )
 
 

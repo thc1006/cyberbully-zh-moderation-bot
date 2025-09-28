@@ -4,24 +4,19 @@ SHAP 解釋性 AI 單元測試
 Tests for SHAP explainability functionality
 """
 
-import pytest
-import torch
-import numpy as np
-import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pytest
 
 # Test target modules - these would be in cyberpuppy.explain.shap
 # Since SHAP module might not exist yet, we'll create mock structures
 try:
-    from cyberpuppy.explain.shap import (
-        SHAPExplainer,
-        SHAPConfig,
-        SHAPResult,
-        SHAPVisualizer,
-        TextClassificationExplainer,
-    )
+    from cyberpuppy.explain.shap import (SHAPConfig, SHAPExplainer, SHAPResult,
+                                         SHAPVisualizer,
+                                         TextClassificationExplainer)
 except ImportError:
     # Create mock classes for testing structure
     class SHAPConfig:
@@ -58,25 +53,25 @@ class TestSHAPConfig:
         """測試 SHAP 配置預設值"""
         config = SHAPConfig()
 
-        assert hasattr(config, 'algorithm')
-        assert hasattr(config, 'max_evals')
+        assert hasattr(config, "algorithm")
+        assert hasattr(config, "max_evals")
 
     def test_shap_config_custom_values(self):
         """測試自定義 SHAP 配置"""
-        config = SHAPConfig(
-            algorithm="permutation",
-            max_evals=200
-        )
+        config = SHAPConfig(algorithm="permutation", max_evals=200)
 
         assert config.algorithm == "permutation"
         assert config.max_evals == 200
 
-    @pytest.mark.parametrize("algorithm,max_evals", [
-        ("partition", 50),
-        ("permutation", 100),
-        ("sampling", 150),
-        ("tree", 75),
-    ])
+    @pytest.mark.parametrize(
+        "algorithm,max_evals",
+        [
+            ("partition", 50),
+            ("permutation", 100),
+            ("sampling", 150),
+            ("tree", 75),
+        ],
+    )
     def test_shap_config_algorithms(self, algorithm, max_evals):
         """測試不同 SHAP 演算法配置"""
         config = SHAPConfig(algorithm=algorithm, max_evals=max_evals)
@@ -95,9 +90,7 @@ class TestSHAPResult:
         base_value = 0.0
 
         result = SHAPResult(
-            shap_values=shap_values,
-            feature_names=feature_names,
-            base_value=base_value
+            shap_values=shap_values, feature_names=feature_names, base_value=base_value
         )
 
         assert np.array_equal(result.shap_values, shap_values)
@@ -109,10 +102,7 @@ class TestSHAPResult:
         shap_values = np.array([[0.1, 0.5, -0.2, 0.3, -0.1]])
         feature_names = ["token1", "token2", "token3", "token4", "token5"]
 
-        result = SHAPResult(
-            shap_values=shap_values,
-            feature_names=feature_names
-        )
+        result = SHAPResult(shap_values=shap_values, feature_names=feature_names)
 
         # Test getting top positive contributions
         top_positive = self.get_top_features(result, positive=True, k=2)
@@ -187,17 +177,13 @@ class TestSHAPExplainer:
     def test_shap_explainer_initialization(self, mock_model, mock_tokenizer):
         """測試 SHAP 解釋器初始化"""
         config = SHAPConfig()
-        explainer = SHAPExplainer(
-            model=mock_model,
-            tokenizer=mock_tokenizer,
-            config=config
-        )
+        explainer = SHAPExplainer(model=mock_model, tokenizer=mock_tokenizer, config=config)
 
         assert explainer.model == mock_model
         assert explainer.tokenizer == mock_tokenizer
         assert explainer.config == config
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_shap_explainer_creation(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試 SHAP 解釋器創建"""
         # Mock SHAP explainer
@@ -217,13 +203,7 @@ class TestSHAPExplainer:
         """測試文本前處理"""
         explainer = SHAPExplainer(mock_model, mock_tokenizer)
 
-        test_texts = [
-            "你好世界",
-            "這個笨蛋很討厭",
-            "我愛你",
-            "",
-            "   空白文字   "
-        ]
+        test_texts = ["你好世界", "這個笨蛋很討厭", "我愛你", "", "   空白文字   "]
 
         for text in test_texts:
             processed = explainer._preprocess_text(text)
@@ -250,7 +230,7 @@ class TestTextClassificationExplainer:
         assert explainer.model == mock_model
         assert explainer.tokenizer == mock_tokenizer
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_explain_single_text(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試單一文本解釋"""
         # Mock SHAP values
@@ -265,17 +245,13 @@ class TestTextClassificationExplainer:
         result = explainer.explain_text(text, target_class=1)
 
         # Should return SHAPResult or similar structure
-        assert hasattr(result, 'shap_values') or isinstance(result, dict)
+        assert hasattr(result, "shap_values") or isinstance(result, dict)
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_explain_batch_texts(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試批次文本解釋"""
         # Mock batch SHAP values
-        mock_shap_values = np.array([
-            [0.1, 0.5, -0.2],
-            [0.3, -0.1, 0.4],
-            [-0.2, 0.6, 0.1]
-        ])
+        mock_shap_values = np.array([[0.1, 0.5, -0.2], [0.3, -0.1, 0.4], [-0.2, 0.6, 0.1]])
         mock_explainer_instance = Mock()
         mock_explainer_instance.shap_values.return_value = mock_shap_values
         mock_shap_explainer.return_value = mock_explainer_instance
@@ -297,7 +273,7 @@ class TestTextClassificationExplainer:
             "這個笨蛋",
             "我愛你，但是你不愛我",
             "今天天氣真好！😊",
-            "混合 English 和中文"
+            "混合 English 和中文",
         ]
 
         for text in chinese_texts:
@@ -310,8 +286,9 @@ class TestTextClassificationExplainer:
         """Helper method for Chinese tokenization"""
         # Simple Chinese tokenization for testing
         import re
+
         # Remove extra spaces and split into characters/words
-        cleaned = re.sub(r'\s+', ' ', text.strip())
+        cleaned = re.sub(r"\s+", " ", text.strip())
         tokens = list(cleaned)
         return [t for t in tokens if t.strip()]
 
@@ -323,10 +300,10 @@ class TestSHAPVisualizer:
         """測試 SHAP 可視化器初始化"""
         visualizer = SHAPVisualizer()
 
-        assert hasattr(visualizer, 'config')
+        assert hasattr(visualizer, "config")
 
-    @patch('matplotlib.pyplot.figure')
-    @patch('matplotlib.pyplot.savefig')
+    @patch("matplotlib.pyplot.figure")
+    @patch("matplotlib.pyplot.savefig")
     def test_create_waterfall_plot(self, mock_savefig, mock_figure, mock_model):
         """測試瀑布圖創建"""
         mock_fig = Mock()
@@ -338,26 +315,18 @@ class TestSHAPVisualizer:
         shap_values = np.array([0.1, 0.5, -0.2, 0.3])
         feature_names = ["我", "很", "討", "厭"]
 
-        result = SHAPResult(
-            shap_values=shap_values,
-            feature_names=feature_names,
-            base_value=0.0
-        )
+        result = SHAPResult(shap_values=shap_values, feature_names=feature_names, base_value=0.0)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "waterfall.png"
 
-            visualizer.create_waterfall_plot(
-                result,
-                title="測試瀑布圖",
-                output_path=output_path
-            )
+            visualizer.create_waterfall_plot(result, title="測試瀑布圖", output_path=output_path)
 
             # Should attempt to save figure
             mock_savefig.assert_called_once()
 
-    @patch('matplotlib.pyplot.figure')
-    @patch('matplotlib.pyplot.savefig')
+    @patch("matplotlib.pyplot.figure")
+    @patch("matplotlib.pyplot.savefig")
     def test_create_summary_plot(self, mock_savefig, mock_figure):
         """測試摘要圖創建"""
         mock_fig = Mock()
@@ -366,11 +335,9 @@ class TestSHAPVisualizer:
         visualizer = SHAPVisualizer()
 
         # Mock multiple SHAP results
-        shap_values = np.array([
-            [0.1, 0.5, -0.2, 0.3],
-            [0.2, -0.1, 0.4, -0.3],
-            [-0.1, 0.3, 0.1, 0.2]
-        ])
+        shap_values = np.array(
+            [[0.1, 0.5, -0.2, 0.3], [0.2, -0.1, 0.4, -0.3], [-0.1, 0.3, 0.1, 0.2]]
+        )
         feature_names = ["我", "很", "討", "厭"]
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -380,7 +347,7 @@ class TestSHAPVisualizer:
                 shap_values=shap_values,
                 feature_names=feature_names,
                 title="測試摘要圖",
-                output_path=output_path
+                output_path=output_path,
             )
 
             mock_savefig.assert_called_once()
@@ -392,15 +359,9 @@ class TestSHAPVisualizer:
         shap_values = np.array([0.1, 0.5, -0.2, 0.3])
         feature_names = ["我", "很", "討", "厭"]
 
-        result = SHAPResult(
-            shap_values=shap_values,
-            feature_names=feature_names
-        )
+        result = SHAPResult(shap_values=shap_values, feature_names=feature_names)
 
-        html_output = visualizer.create_text_highlighting(
-            result,
-            original_text="我很討厭"
-        )
+        html_output = visualizer.create_text_highlighting(result, original_text="我很討厭")
 
         assert isinstance(html_output, str)
         assert "我很討厭" in html_output
@@ -410,7 +371,7 @@ class TestSHAPVisualizer:
 class TestSHAPIntegration:
     """測試 SHAP 整合場景"""
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_full_explanation_pipeline(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試完整 SHAP 解釋流程"""
         # Mock SHAP explainer
@@ -420,7 +381,7 @@ class TestSHAPIntegration:
         mock_shap_explainer.return_value = mock_explainer_instance
 
         # Setup components
-        config = SHAPConfig(algorithm="partition", max_evals=50)
+        SHAPConfig(algorithm="partition", max_evals=50)
         explainer = TextClassificationExplainer(mock_model, mock_tokenizer)
         visualizer = SHAPVisualizer()
 
@@ -428,11 +389,11 @@ class TestSHAPIntegration:
         text = "你真的很討厭"
 
         # 1. Get SHAP explanation
-        with patch.object(explainer, 'explain_text') as mock_explain:
+        with patch.object(explainer, "explain_text") as mock_explain:
             mock_result = SHAPResult(
                 shap_values=mock_shap_values[0],
                 feature_names=["你", "真", "的", "很", "討", "厭"],
-                base_value=0.0
+                base_value=0.0,
             )
             mock_explain.return_value = mock_result
 
@@ -443,21 +404,14 @@ class TestSHAPIntegration:
                 waterfall_path = Path(tmp_dir) / "waterfall.png"
                 text_html_path = Path(tmp_dir) / "text_highlight.html"
 
-                with patch('matplotlib.pyplot.savefig'), \
-                     patch('matplotlib.pyplot.figure'):
+                with patch("matplotlib.pyplot.savefig"), patch("matplotlib.pyplot.figure"):
 
-                    visualizer.create_waterfall_plot(
-                        result,
-                        output_path=waterfall_path
-                    )
+                    visualizer.create_waterfall_plot(result, output_path=waterfall_path)
 
-                    html_output = visualizer.create_text_highlighting(
-                        result,
-                        original_text=text
-                    )
+                    html_output = visualizer.create_text_highlighting(result, original_text=text)
 
                     # Save HTML output
-                    with open(text_html_path, 'w', encoding='utf-8') as f:
+                    with open(text_html_path, "w", encoding="utf-8") as f:
                         f.write(html_output)
 
                     assert text_html_path.exists()
@@ -469,17 +423,15 @@ class TestSHAPIntegration:
         # Compare explanations for different texts
         texts = [
             "你好，很高興見到你",  # Positive
-            "你這個笨蛋，滾開",    # Negative
-            "今天天氣如何？"       # Neutral
+            "你這個笨蛋，滾開",  # Negative
+            "今天天氣如何？",  # Neutral
         ]
 
         results = []
         for text in texts:
-            with patch.object(explainer, 'explain_text') as mock_explain:
+            with patch.object(explainer, "explain_text") as mock_explain:
                 mock_result = SHAPResult(
-                    shap_values=np.random.rand(len(text)),
-                    feature_names=list(text),
-                    base_value=0.0
+                    shap_values=np.random.rand(len(text)), feature_names=list(text), base_value=0.0
                 )
                 mock_explain.return_value = mock_result
 
@@ -488,14 +440,14 @@ class TestSHAPIntegration:
 
         assert len(results) == len(texts)
         for result in results:
-            assert hasattr(result, 'shap_values')
-            assert hasattr(result, 'feature_names')
+            assert hasattr(result, "shap_values")
+            assert hasattr(result, "feature_names")
 
 
 class TestSHAPPerformance:
     """測試 SHAP 效能"""
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_explanation_speed(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試解釋速度"""
         import time
@@ -510,10 +462,10 @@ class TestSHAPPerformance:
         text = "效能測試文本"
 
         start_time = time.time()
-        with patch.object(explainer, 'explain_text') as mock_explain:
+        with patch.object(explainer, "explain_text") as mock_explain:
             mock_explain.return_value = SHAPResult(
                 shap_values=np.array([0.1, 0.5, 0.3]),
-                feature_names=["效", "能", "測", "試", "文", "本"]
+                feature_names=["效", "能", "測", "試", "文", "本"],
             )
             result = explainer.explain_text(text, target_class=1)
 
@@ -530,12 +482,12 @@ class TestSHAPPerformance:
         # Process multiple texts
         texts = [f"測試文本{i}" for i in range(10)]
 
-        with patch.object(explainer, 'explain_batch') as mock_explain_batch:
+        with patch.object(explainer, "explain_batch") as mock_explain_batch:
             mock_explain_batch.return_value = [
                 SHAPResult(
-                    shap_values=np.random.rand(5),
-                    feature_names=[f"token{j}" for j in range(5)]
-                ) for _ in texts
+                    shap_values=np.random.rand(5), feature_names=[f"token{j}" for j in range(5)]
+                )
+                for _ in texts
             ]
 
             results = explainer.explain_batch(texts, target_class=1)
@@ -571,15 +523,13 @@ class TestSHAPErrorHandling:
             with pytest.raises((ValueError, TypeError)):
                 explainer.explain_text(text, target_class=invalid_class)
 
-    @patch('shap.Explainer')
+    @patch("shap.Explainer")
     def test_shap_explainer_failure(self, mock_shap_explainer, mock_model, mock_tokenizer):
         """測試 SHAP 解釋器故障處理"""
         # Mock SHAP explainer that raises exception
         mock_shap_explainer.side_effect = Exception("SHAP explainer failed")
 
         explainer = TextClassificationExplainer(mock_model, mock_tokenizer)
-
-        text = "測試SHAP故障"
 
         with pytest.raises(Exception):
             explainer._create_explainer()

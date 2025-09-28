@@ -12,9 +12,10 @@ Integration tests for CyberPuppy cyberbullying detection system
 - Docker 容器化測試
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # 設定測試環境路徑
 TEST_ROOT = Path(__file__).parent

@@ -4,13 +4,13 @@
 使用中文同義詞庫進行詞彙替換，同時保護關鍵霸凌詞彙不被替換。
 """
 
-import random
-import jieba
-import numpy as np
-from typing import List, Dict, Set, Tuple, Optional
-from pathlib import Path
 import json
 import logging
+import random
+from pathlib import Path
+from typing import Dict, List, Optional, Set
+
+import jieba
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class SynonymReplacer:
         synonym_dict_path: Optional[str] = None,
         bullying_keywords_path: Optional[str] = None,
         replacement_rate: float = 0.1,
-        preserve_bullying_terms: bool = True
+        preserve_bullying_terms: bool = True,
     ):
         """
         初始化同義詞替換器
@@ -49,7 +49,7 @@ class SynonymReplacer:
     def _load_synonym_dict(self, path: Optional[str]) -> Dict[str, List[str]]:
         """載入同義詞字典"""
         if path and Path(path).exists():
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
 
         # 預設同義詞字典 (可擴展)
@@ -70,31 +70,57 @@ class SynonymReplacer:
             "高興": ["開心", "快樂", "愉快", "歡喜"],
             "難過": ["傷心", "悲傷", "憂愁", "沮喪"],
             "生氣": ["憤怒", "惱火", "氣憤", "發火"],
-            "害怕": ["恐懼", "畏懼", "驚慌", "膽怯"]
+            "害怕": ["恐懼", "畏懼", "驚慌", "膽怯"],
         }
 
     def _load_bullying_keywords(self, path: Optional[str]) -> Set[str]:
         """載入霸凌關鍵詞"""
         if path and Path(path).exists():
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 keywords = json.load(f)
                 return set(keywords) if isinstance(keywords, list) else set(keywords.keys())
 
         # 預設霸凌關鍵詞 (根據 COLD 數據集特徵)
         return {
-            "死", "殺", "滾", "廢物", "垃圾", "白癡", "智障", "腦殘",
-            "去死", "找死", "該死", "活該", "報應", "詛咒",
-            "排擠", "孤立", "欺負", "霸凌", "威脅", "恐嚇",
-            "胖子", "醜八怪", "窮鬼", "土包子", "鄉巴佬",
-            "閉嘴", "住口", "別說話", "沒人問你", "誰理你",
-            "沒用", "無能", "失敗者", "魯蛇", "邊緣人"
+            "死",
+            "殺",
+            "滾",
+            "廢物",
+            "垃圾",
+            "白癡",
+            "智障",
+            "腦殘",
+            "去死",
+            "找死",
+            "該死",
+            "活該",
+            "報應",
+            "詛咒",
+            "排擠",
+            "孤立",
+            "欺負",
+            "霸凌",
+            "威脅",
+            "恐嚇",
+            "胖子",
+            "醜八怪",
+            "窮鬼",
+            "土包子",
+            "鄉巴佬",
+            "閉嘴",
+            "住口",
+            "別說話",
+            "沒人問你",
+            "誰理你",
+            "沒用",
+            "無能",
+            "失敗者",
+            "魯蛇",
+            "邊緣人",
         }
 
     def augment(
-        self,
-        text: str,
-        num_augmented: int = 1,
-        custom_replacement_rate: Optional[float] = None
+        self, text: str, num_augmented: int = 1, custom_replacement_rate: Optional[float] = None
     ) -> List[str]:
         """
         對文本進行同義詞替換增強
@@ -142,8 +168,7 @@ class SynonymReplacer:
 
         # 隨機選擇要替換的詞
         indices_to_replace = random.sample(
-            replaceable_indices,
-            min(num_replacements, len(replaceable_indices))
+            replaceable_indices, min(num_replacements, len(replaceable_indices))
         )
 
         # 執行替換
@@ -154,7 +179,7 @@ class SynonymReplacer:
                 synonyms = self.synonym_dict[word]
                 new_words[idx] = random.choice(synonyms)
 
-        return ''.join(new_words)
+        return "".join(new_words)
 
     def _is_replaceable(self, word: str) -> bool:
         """判斷詞是否可替換"""
@@ -185,13 +210,13 @@ class SynonymReplacer:
 
     def save_synonym_dict(self, path: str) -> None:
         """保存同義詞字典"""
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self.synonym_dict, f, ensure_ascii=False, indent=2)
 
     def save_bullying_keywords(self, path: str) -> None:
         """保存霸凌關鍵詞"""
         keywords_list = list(self.bullying_keywords)
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(keywords_list, f, ensure_ascii=False, indent=2)
 
     def get_stats(self) -> Dict[str, int]:
@@ -200,7 +225,7 @@ class SynonymReplacer:
             "synonym_groups": len(self.synonym_dict),
             "total_synonyms": sum(len(synonyms) for synonyms in self.synonym_dict.values()),
             "bullying_keywords": len(self.bullying_keywords),
-            "replacement_rate": self.replacement_rate
+            "replacement_rate": self.replacement_rate,
         }
 
 
@@ -222,12 +247,7 @@ if __name__ == "__main__":
     # 測試範例
     replacer = SynonymReplacer()
 
-    test_texts = [
-        "你很笨，去死吧！",
-        "這個人說話很難聽",
-        "我覺得你做得很好",
-        "別再霸凌其他同學了"
-    ]
+    test_texts = ["你很笨，去死吧！", "這個人說話很難聽", "我覺得你做得很好", "別再霸凌其他同學了"]
 
     for text in test_texts:
         print(f"原文: {text}")

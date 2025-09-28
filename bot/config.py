@@ -123,12 +123,14 @@ class Config:
 # 全域配置實例 (延遲驗證以支援測試環境)
 config = None
 
+
 def get_config() -> Config:
     """Get or create global config instance."""
     global config
     if config is None:
         config = Config()
     return config
+
 
 # 預設回應訊息模板
 RESPONSE_TEMPLATES = {

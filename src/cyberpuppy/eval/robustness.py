@@ -3,25 +3,24 @@
 評估霸凌偵測模型在各種攻擊和變化下的穩健性
 """
 
+import json
 import logging
+import os
+import random
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 import torch
-import random
-import string
-from typing import Dict, List, Tuple, Any, Optional, Callable
-from dataclasses import dataclass
-import pandas as pd
-import json
-import os
-from datetime import datetime
-import re
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class RobustnessTestResult:
     """穩健性測試結果"""
+
     test_name: str
     original_text: str
     modified_text: str
@@ -34,15 +33,18 @@ class RobustnessTestResult:
     attack_success: bool
     modification_type: str
 
+
 @dataclass
 class AdversarialAttackResult:
     """對抗攻擊結果"""
+
     attack_method: str
     success_rate: float
     average_confidence_drop: float
     successful_attacks: List[RobustnessTestResult]
     failed_attacks: List[RobustnessTestResult]
     attack_statistics: Dict[str, Any]
+
 
 class RobustnessTestSuite:
     """穩健性測試套件"""
@@ -54,41 +56,40 @@ class RobustnessTestSuite:
         os.makedirs(output_dir, exist_ok=True)
 
         # 設定設備
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         self.model.eval()
 
         # 常見的中文字符替換
         self.char_substitutions = {
-            '的': ['得', '地'],
-            '你': ['妳', '您'],
-            '他': ['她', '它'],
-            '了': ['嘞', '啦'],
-            '是': ['係', '事'],
-            '在': ['再'],
-            '有': ['友', '又'],
-            '不': ['布', '步'],
-            '一': ['壹', '1'],
-            '二': ['貳', '2'],
-            '三': ['叁', '3'],
-            '四': ['肆', '4'],
-            '五': ['伍', '5']
+            "的": ["得", "地"],
+            "你": ["妳", "您"],
+            "他": ["她", "它"],
+            "了": ["嘞", "啦"],
+            "是": ["係", "事"],
+            "在": ["再"],
+            "有": ["友", "又"],
+            "不": ["布", "步"],
+            "一": ["壹", "1"],
+            "二": ["貳", "2"],
+            "三": ["叁", "3"],
+            "四": ["肆", "4"],
+            "五": ["伍", "5"],
         }
 
         # 同義詞替換
         self.synonym_substitutions = {
-            '笨蛋': ['白痴', '蠢貨', '傻瓜'],
-            '垃圾': ['廢物', '渣滓', '糞便'],
-            '死': ['掛', '嗝屁', '歸西'],
-            '滾': ['走開', '消失', '離開'],
-            '討厭': ['煩人', '令人厭惡', '不喜歡'],
-            '噁心': ['惡劣', '糟糕', '令人作嘔']
+            "笨蛋": ["白痴", "蠢貨", "傻瓜"],
+            "垃圾": ["廢物", "渣滓", "糞便"],
+            "死": ["掛", "嗝屁", "歸西"],
+            "滾": ["走開", "消失", "離開"],
+            "討厭": ["煩人", "令人厭惡", "不喜歡"],
+            "噁心": ["惡劣", "糟糕", "令人作嘔"],
         }
 
-    def run_comprehensive_test(self,
-                              texts: List[str],
-                              labels: List[str],
-                              test_types: List[str] = None) -> Dict[str, Any]:
+    def run_comprehensive_test(
+        self, texts: List[str], labels: List[str], test_types: List[str] = None
+    ) -> Dict[str, Any]:
         """
         運行全面的穩健性測試
 
@@ -103,14 +104,14 @@ class RobustnessTestSuite:
 
         if test_types is None:
             test_types = [
-                'character_substitution',
-                'typo_injection',
-                'synonym_replacement',
-                'case_variation',
-                'punctuation_variation',
-                'space_insertion',
-                'repetition_attack',
-                'length_variation'
+                "character_substitution",
+                "typo_injection",
+                "synonym_replacement",
+                "case_variation",
+                "punctuation_variation",
+                "space_insertion",
+                "repetition_attack",
+                "length_variation",
             ]
 
         logger.info(f"開始運行穩健性測試，測試類型: {test_types}")
@@ -121,21 +122,21 @@ class RobustnessTestSuite:
         for test_type in test_types:
             logger.info(f"執行 {test_type} 測試...")
 
-            if test_type == 'character_substitution':
+            if test_type == "character_substitution":
                 results = self._test_character_substitution(texts, labels)
-            elif test_type == 'typo_injection':
+            elif test_type == "typo_injection":
                 results = self._test_typo_injection(texts, labels)
-            elif test_type == 'synonym_replacement':
+            elif test_type == "synonym_replacement":
                 results = self._test_synonym_replacement(texts, labels)
-            elif test_type == 'case_variation':
+            elif test_type == "case_variation":
                 results = self._test_case_variation(texts, labels)
-            elif test_type == 'punctuation_variation':
+            elif test_type == "punctuation_variation":
                 results = self._test_punctuation_variation(texts, labels)
-            elif test_type == 'space_insertion':
+            elif test_type == "space_insertion":
                 results = self._test_space_insertion(texts, labels)
-            elif test_type == 'repetition_attack':
+            elif test_type == "repetition_attack":
                 results = self._test_repetition_attack(texts, labels)
-            elif test_type == 'length_variation':
+            elif test_type == "length_variation":
                 results = self._test_length_variation(texts, labels)
             else:
                 logger.warning(f"未知的測試類型: {test_type}")
@@ -149,15 +150,15 @@ class RobustnessTestSuite:
 
         # 保存結果
         comprehensive_results = {
-            'timestamp': datetime.now().isoformat(),
-            'test_types': test_types,
-            'detailed_results': all_results,
-            'summary_statistics': summary_stats,
-            'overall_statistics': overall_stats,
-            'recommendations': self._generate_robustness_recommendations(summary_stats)
+            "timestamp": datetime.now().isoformat(),
+            "test_types": test_types,
+            "detailed_results": all_results,
+            "summary_statistics": summary_stats,
+            "overall_statistics": overall_stats,
+            "recommendations": self._generate_robustness_recommendations(summary_stats),
         }
 
-        self._save_results(comprehensive_results, 'comprehensive_robustness_test')
+        self._save_results(comprehensive_results, "comprehensive_robustness_test")
 
         logger.info("穩健性測試完成")
 
@@ -167,11 +168,7 @@ class RobustnessTestSuite:
         """獲取模型預測結果"""
 
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
@@ -182,17 +179,19 @@ class RobustnessTestSuite:
             predicted_class = torch.argmax(predictions, dim=-1).item()
             confidence = predictions.max().item()
 
-        label_mapping = {0: 'none', 1: 'toxic', 2: 'severe'}
-        prediction = label_mapping.get(predicted_class, 'unknown')
+        label_mapping = {0: "none", 1: "toxic", 2: "severe"}
+        prediction = label_mapping.get(predicted_class, "unknown")
 
         return prediction, confidence
 
-    def _test_character_substitution(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_character_substitution(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試字符替換攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):  # 限制測試數量
+        for text, _label in zip(texts[:50], labels[:50]):  # 限制測試數量
             original_pred, original_conf = self._get_prediction(text)
 
             # 隨機選擇要替換的字符
@@ -211,7 +210,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='character_substitution',
+                test_name="character_substitution",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -220,20 +219,22 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='字符替換'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="字符替換",
             )
 
             results.append(result)
 
         return results
 
-    def _test_typo_injection(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_typo_injection(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試拼寫錯誤注入攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 隨機插入拼寫錯誤
@@ -242,7 +243,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='typo_injection',
+                test_name="typo_injection",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -251,8 +252,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='拼寫錯誤注入'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="拼寫錯誤注入",
             )
 
             results.append(result)
@@ -273,30 +274,32 @@ class RobustnessTestSuite:
             pos = random.randint(1, len(chars) - 2)
 
             # 隨機選擇錯誤類型
-            typo_type = random.choice(['swap', 'delete', 'insert', 'replace'])
+            typo_type = random.choice(["swap", "delete", "insert", "replace"])
 
-            if typo_type == 'swap' and pos < len(chars) - 1:
+            if typo_type == "swap" and pos < len(chars) - 1:
                 # 交換相鄰字符
                 chars[pos], chars[pos + 1] = chars[pos + 1], chars[pos]
-            elif typo_type == 'delete':
+            elif typo_type == "delete":
                 # 刪除字符
                 chars.pop(pos)
-            elif typo_type == 'insert':
+            elif typo_type == "insert":
                 # 插入隨機字符
-                random_char = random.choice('abcdefghijklmnopqrstuvwxyz')
+                random_char = random.choice("abcdefghijklmnopqrstuvwxyz")
                 chars.insert(pos, random_char)
-            elif typo_type == 'replace':
+            elif typo_type == "replace":
                 # 替換為隨機字符
-                chars[pos] = random.choice('abcdefghijklmnopqrstuvwxyz')
+                chars[pos] = random.choice("abcdefghijklmnopqrstuvwxyz")
 
-        return ''.join(chars)
+        return "".join(chars)
 
-    def _test_synonym_replacement(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_synonym_replacement(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試同義詞替換攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 查找可替換的詞
@@ -314,7 +317,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='synonym_replacement',
+                test_name="synonym_replacement",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -323,20 +326,22 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='同義詞替換'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="同義詞替換",
             )
 
             results.append(result)
 
         return results
 
-    def _test_case_variation(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_case_variation(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試大小寫變化攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 隨機改變英文字母大小寫
@@ -349,7 +354,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='case_variation',
+                test_name="case_variation",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -358,8 +363,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='大小寫變化'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="大小寫變化",
             )
 
             results.append(result)
@@ -377,14 +382,16 @@ class RobustnessTestSuite:
                 else:
                     chars[i] = char.lower()
 
-        return ''.join(chars)
+        return "".join(chars)
 
-    def _test_punctuation_variation(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_punctuation_variation(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試標點符號變化攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 修改標點符號
@@ -393,7 +400,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='punctuation_variation',
+                test_name="punctuation_variation",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -402,8 +409,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='標點符號變化'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="標點符號變化",
             )
 
             results.append(result)
@@ -414,7 +421,7 @@ class RobustnessTestSuite:
         """變化文本中的標點符號"""
 
         # 添加額外的標點符號
-        punctuation_chars = ['!', '?', '.', ',', ';', ':', '...']
+        punctuation_chars = ["!", "?", ".", ",", ";", ":", "..."]
         modified_text = text
 
         # 隨機添加標點符號
@@ -427,17 +434,19 @@ class RobustnessTestSuite:
         if random.random() < 0.3:
             for punct in punctuation_chars:
                 if punct in modified_text:
-                    modified_text = modified_text.replace(punct, '', 1)
+                    modified_text = modified_text.replace(punct, "", 1)
                     break
 
         return modified_text
 
-    def _test_space_insertion(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_space_insertion(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試空格插入攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 在隨機位置插入空格
@@ -446,7 +455,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='space_insertion',
+                test_name="space_insertion",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -455,8 +464,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='空格插入'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="空格插入",
             )
 
             results.append(result)
@@ -474,16 +483,18 @@ class RobustnessTestSuite:
                 break
 
             pos = random.randint(1, len(chars) - 1)
-            chars.insert(pos, ' ')
+            chars.insert(pos, " ")
 
-        return ''.join(chars)
+        return "".join(chars)
 
-    def _test_repetition_attack(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_repetition_attack(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試字符重複攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 重複某些字符
@@ -492,7 +503,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='repetition_attack',
+                test_name="repetition_attack",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -501,8 +512,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='字符重複'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="字符重複",
             )
 
             results.append(result)
@@ -526,14 +537,16 @@ class RobustnessTestSuite:
             repeat_count = random.randint(2, 4)
             chars[pos] = char_to_repeat * repeat_count
 
-        return ''.join(chars)
+        return "".join(chars)
 
-    def _test_length_variation(self, texts: List[str], labels: List[str]) -> List[RobustnessTestResult]:
+    def _test_length_variation(
+        self, texts: List[str], labels: List[str]
+    ) -> List[RobustnessTestResult]:
         """測試長度變化攻擊"""
 
         results = []
 
-        for text, label in zip(texts[:50], labels[:50]):
+        for text, _label in zip(texts[:50], labels[:50]):
             original_pred, original_conf = self._get_prediction(text)
 
             # 隨機截斷或延長文本
@@ -552,7 +565,7 @@ class RobustnessTestSuite:
             modified_pred, modified_conf = self._get_prediction(modified_text)
 
             result = RobustnessTestResult(
-                test_name='length_variation',
+                test_name="length_variation",
                 original_text=text,
                 modified_text=modified_text,
                 original_prediction=original_pred,
@@ -561,8 +574,8 @@ class RobustnessTestSuite:
                 modified_confidence=modified_conf,
                 confidence_drop=original_conf - modified_conf,
                 prediction_changed=original_pred != modified_pred,
-                attack_success=(original_pred != modified_pred and original_pred != 'none'),
-                modification_type='長度變化'
+                attack_success=(original_pred != modified_pred and original_pred != "none"),
+                modification_type="長度變化",
             )
 
             results.append(result)
@@ -582,31 +595,33 @@ class RobustnessTestSuite:
         confidence_drops = [r.confidence_drop for r in results]
 
         stats = {
-            'total_tests': total_tests,
-            'prediction_changes': prediction_changes,
-            'attack_successes': attack_successes,
-            'prediction_change_rate': prediction_changes / total_tests if total_tests > 0 else 0,
-            'attack_success_rate': attack_successes / total_tests if total_tests > 0 else 0,
-            'average_confidence_drop': np.mean(confidence_drops) if confidence_drops else 0,
-            'max_confidence_drop': max(confidence_drops) if confidence_drops else 0,
-            'min_confidence_drop': min(confidence_drops) if confidence_drops else 0,
-            'std_confidence_drop': np.std(confidence_drops) if confidence_drops else 0
+            "total_tests": total_tests,
+            "prediction_changes": prediction_changes,
+            "attack_successes": attack_successes,
+            "prediction_change_rate": prediction_changes / total_tests if total_tests > 0 else 0,
+            "attack_success_rate": attack_successes / total_tests if total_tests > 0 else 0,
+            "average_confidence_drop": np.mean(confidence_drops) if confidence_drops else 0,
+            "max_confidence_drop": max(confidence_drops) if confidence_drops else 0,
+            "min_confidence_drop": min(confidence_drops) if confidence_drops else 0,
+            "std_confidence_drop": np.std(confidence_drops) if confidence_drops else 0,
         }
 
         return stats
 
-    def _generate_overall_statistics(self,
-                                   all_results: Dict[str, List[RobustnessTestResult]],
-                                   summary_stats: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    def _generate_overall_statistics(
+        self,
+        all_results: Dict[str, List[RobustnessTestResult]],
+        summary_stats: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """生成總體統計信息"""
 
         overall_stats = {
-            'total_attack_types': len(all_results),
-            'overall_robustness_score': 0.0,
-            'vulnerability_ranking': [],
-            'most_vulnerable_attack': '',
-            'least_vulnerable_attack': '',
-            'robustness_level': 'unknown'
+            "total_attack_types": len(all_results),
+            "overall_robustness_score": 0.0,
+            "vulnerability_ranking": [],
+            "most_vulnerable_attack": "",
+            "least_vulnerable_attack": "",
+            "robustness_level": "unknown",
         }
 
         if not summary_stats:
@@ -615,8 +630,8 @@ class RobustnessTestSuite:
         # 計算各攻擊類型的脆弱性分數
         vulnerability_scores = {}
         for attack_type, stats in summary_stats.items():
-            success_rate = stats.get('attack_success_rate', 0)
-            avg_conf_drop = stats.get('average_confidence_drop', 0)
+            success_rate = stats.get("attack_success_rate", 0)
+            avg_conf_drop = stats.get("average_confidence_drop", 0)
 
             # 綜合評分（成功率 * 0.7 + 置信度下降 * 0.3）
             vulnerability_score = success_rate * 0.7 + min(avg_conf_drop, 1.0) * 0.3
@@ -625,64 +640,66 @@ class RobustnessTestSuite:
         if vulnerability_scores:
             # 排序漏洞
             sorted_vulnerabilities = sorted(
-                vulnerability_scores.items(),
-                key=lambda x: x[1],
-                reverse=True
+                vulnerability_scores.items(), key=lambda x: x[1], reverse=True
             )
 
-            overall_stats['vulnerability_ranking'] = sorted_vulnerabilities
-            overall_stats['most_vulnerable_attack'] = sorted_vulnerabilities[0][0]
-            overall_stats['least_vulnerable_attack'] = sorted_vulnerabilities[-1][0]
+            overall_stats["vulnerability_ranking"] = sorted_vulnerabilities
+            overall_stats["most_vulnerable_attack"] = sorted_vulnerabilities[0][0]
+            overall_stats["least_vulnerable_attack"] = sorted_vulnerabilities[-1][0]
 
             # 計算總體穩健性分數（1 - 平均脆弱性分數）
             avg_vulnerability = np.mean(list(vulnerability_scores.values()))
-            overall_stats['overall_robustness_score'] = 1.0 - avg_vulnerability
+            overall_stats["overall_robustness_score"] = 1.0 - avg_vulnerability
 
             # 確定穩健性等級
-            robustness_score = overall_stats['overall_robustness_score']
+            robustness_score = overall_stats["overall_robustness_score"]
             if robustness_score >= 0.8:
-                overall_stats['robustness_level'] = 'high'
+                overall_stats["robustness_level"] = "high"
             elif robustness_score >= 0.6:
-                overall_stats['robustness_level'] = 'medium'
+                overall_stats["robustness_level"] = "medium"
             else:
-                overall_stats['robustness_level'] = 'low'
+                overall_stats["robustness_level"] = "low"
 
         return overall_stats
 
-    def _generate_robustness_recommendations(self, summary_stats: Dict[str, Dict[str, Any]]) -> List[str]:
+    def _generate_robustness_recommendations(
+        self, summary_stats: Dict[str, Dict[str, Any]]
+    ) -> List[str]:
         """生成穩健性改進建議"""
 
         recommendations = []
 
         for attack_type, stats in summary_stats.items():
-            success_rate = stats.get('attack_success_rate', 0)
+            success_rate = stats.get("attack_success_rate", 0)
 
             if success_rate > 0.3:  # 如果攻擊成功率超過30%
-                if attack_type == 'character_substitution':
+                if attack_type == "character_substitution":
                     recommendations.append("增強對字符變體的識別能力，考慮使用字符正規化預處理")
-                elif attack_type == 'typo_injection':
+                elif attack_type == "typo_injection":
                     recommendations.append("提高對拼寫錯誤的容忍度，可考慮添加拼寫檢查模組")
-                elif attack_type == 'synonym_replacement':
+                elif attack_type == "synonym_replacement":
                     recommendations.append("改進語義理解能力，增加同義詞訓練數據")
-                elif attack_type == 'case_variation':
+                elif attack_type == "case_variation":
                     recommendations.append("在預處理階段統一大小寫格式")
-                elif attack_type == 'punctuation_variation':
+                elif attack_type == "punctuation_variation":
                     recommendations.append("增強對標點符號變化的穩健性，考慮標點符號正規化")
-                elif attack_type == 'space_insertion':
+                elif attack_type == "space_insertion":
                     recommendations.append("改進詞彙切分能力，添加空格處理邏輯")
-                elif attack_type == 'repetition_attack':
+                elif attack_type == "repetition_attack":
                     recommendations.append("添加字符重複檢測和正規化功能")
-                elif attack_type == 'length_variation':
+                elif attack_type == "length_variation":
                     recommendations.append("提高對不同文本長度的適應性，考慮分段處理")
 
         # 通用建議
-        if len([s for s in summary_stats.values() if s.get('attack_success_rate', 0) > 0.2]) > 3:
-            recommendations.extend([
-                "考慮使用對抗訓練提高模型穩健性",
-                "增加數據增強技術",
-                "實施多模型集成策略",
-                "加強預處理和後處理規則"
-            ])
+        if len([s for s in summary_stats.values() if s.get("attack_success_rate", 0) > 0.2]) > 3:
+            recommendations.extend(
+                [
+                    "考慮使用對抗訓練提高模型穩健性",
+                    "增加數據增強技術",
+                    "實施多模型集成策略",
+                    "加強預處理和後處理規則",
+                ]
+            )
 
         return recommendations
 
@@ -696,7 +713,7 @@ class RobustnessTestSuite:
         # 轉換為可序列化格式
         serializable_results = self._make_serializable(results)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(serializable_results, f, ensure_ascii=False, indent=2)
 
         logger.info(f"穩健性測試結果已保存至: {filepath}")
@@ -708,7 +725,7 @@ class RobustnessTestSuite:
             return {k: self._make_serializable(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [self._make_serializable(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             return self._make_serializable(obj.__dict__)
         elif isinstance(obj, (np.integer, np.floating)):
             return float(obj)
@@ -717,19 +734,18 @@ class RobustnessTestSuite:
         else:
             return obj
 
+
 class AdversarialTester:
     """對抗攻擊測試器"""
 
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def run_gradient_based_attack(self,
-                                 texts: List[str],
-                                 labels: List[str],
-                                 epsilon: float = 0.01,
-                                 num_steps: int = 10) -> AdversarialAttackResult:
+    def run_gradient_based_attack(
+        self, texts: List[str], labels: List[str], epsilon: float = 0.01, num_steps: int = 10
+    ) -> AdversarialAttackResult:
         """
         運行基於梯度的對抗攻擊
 
@@ -759,32 +775,32 @@ class AdversarialTester:
                 logger.error(f"攻擊 '{text[:20]}...' 時發生錯誤: {str(e)}")
 
         success_rate = len(successful_attacks) / len(texts[:20]) if texts else 0
-        avg_confidence_drop = np.mean([
-            attack.confidence_drop for attack in successful_attacks + failed_attacks
-        ]) if successful_attacks + failed_attacks else 0
+        avg_confidence_drop = (
+            np.mean([attack.confidence_drop for attack in successful_attacks + failed_attacks])
+            if successful_attacks + failed_attacks
+            else 0
+        )
 
         attack_statistics = {
-            'total_attempts': len(texts[:20]),
-            'successful_attacks': len(successful_attacks),
-            'failed_attacks': len(failed_attacks),
-            'epsilon': epsilon,
-            'num_steps': num_steps
+            "total_attempts": len(texts[:20]),
+            "successful_attacks": len(successful_attacks),
+            "failed_attacks": len(failed_attacks),
+            "epsilon": epsilon,
+            "num_steps": num_steps,
         }
 
         return AdversarialAttackResult(
-            attack_method='gradient_based',
+            attack_method="gradient_based",
             success_rate=success_rate,
             average_confidence_drop=avg_confidence_drop,
             successful_attacks=successful_attacks,
             failed_attacks=failed_attacks,
-            attack_statistics=attack_statistics
+            attack_statistics=attack_statistics,
         )
 
-    def _single_gradient_attack(self,
-                               text: str,
-                               label: str,
-                               epsilon: float,
-                               num_steps: int) -> RobustnessTestResult:
+    def _single_gradient_attack(
+        self, text: str, label: str, epsilon: float, num_steps: int
+    ) -> RobustnessTestResult:
         """對單個樣本執行基於梯度的攻擊"""
 
         # 獲取原始預測
@@ -792,18 +808,14 @@ class AdversarialTester:
 
         # 編碼文本
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
-        input_ids = inputs['input_ids'].to(self.device)
-        attention_mask = inputs['attention_mask'].to(self.device)
+        input_ids = inputs["input_ids"].to(self.device)
+        attention_mask = inputs["attention_mask"].to(self.device)
 
         # 設定目標標籤（與原始預測不同）
-        target_labels = {'none': 1, 'toxic': 2, 'severe': 0}  # 切換標籤
+        target_labels = {"none": 1, "toxic": 2, "severe": 0}  # 切換標籤
         target_label = target_labels.get(original_pred, 0)
 
         # 將 input_ids 轉換為可求導的 embeddings
@@ -814,19 +826,15 @@ class AdversarialTester:
         # 進行多步攻擊
         perturbed_embeddings = input_embeddings.clone()
 
-        for step in range(num_steps):
+        for _step in range(num_steps):
             perturbed_embeddings.requires_grad_(True)
 
             # 前向傳播
-            outputs = self.model(
-                inputs_embeds=perturbed_embeddings,
-                attention_mask=attention_mask
-            )
+            outputs = self.model(inputs_embeds=perturbed_embeddings, attention_mask=attention_mask)
 
             # 計算損失（目標是讓模型預測錯誤的標籤）
             loss = torch.nn.functional.cross_entropy(
-                outputs.logits,
-                torch.tensor([target_label]).to(self.device)
+                outputs.logits, torch.tensor([target_label]).to(self.device)
             )
 
             # 反向傳播獲取梯度
@@ -857,16 +865,14 @@ class AdversarialTester:
 
             # 轉換為文本
             modified_text = self.tokenizer.decode(
-                perturbed_ids,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=True
+                perturbed_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
             )
 
         # 獲取修改後的預測
         modified_pred, modified_conf = self._get_prediction(modified_text)
 
         return RobustnessTestResult(
-            test_name='gradient_based_attack',
+            test_name="gradient_based_attack",
             original_text=text,
             modified_text=modified_text,
             original_prediction=original_pred,
@@ -876,18 +882,14 @@ class AdversarialTester:
             confidence_drop=original_conf - modified_conf,
             prediction_changed=original_pred != modified_pred,
             attack_success=(original_pred != modified_pred),
-            modification_type='基於梯度的對抗攻擊'
+            modification_type="基於梯度的對抗攻擊",
         )
 
     def _get_prediction(self, text: str) -> Tuple[str, float]:
         """獲取模型預測結果"""
 
         inputs = self.tokenizer(
-            text,
-            return_tensors='pt',
-            truncation=True,
-            padding=True,
-            max_length=512
+            text, return_tensors="pt", truncation=True, padding=True, max_length=512
         )
 
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
@@ -898,7 +900,7 @@ class AdversarialTester:
             predicted_class = torch.argmax(predictions, dim=-1).item()
             confidence = predictions.max().item()
 
-        label_mapping = {0: 'none', 1: 'toxic', 2: 'severe'}
-        prediction = label_mapping.get(predicted_class, 'unknown')
+        label_mapping = {0: "none", 1: "toxic", 2: "severe"}
+        prediction = label_mapping.get(predicted_class, "unknown")
 
         return prediction, confidence

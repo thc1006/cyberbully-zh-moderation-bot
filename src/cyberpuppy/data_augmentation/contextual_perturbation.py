@@ -4,16 +4,18 @@
 使用 MacBERT 的 [MASK] 預測來生成語義相似的文本變體。
 """
 
-import random
 import logging
-from typing import List, Dict, Optional, Tuple, Set
+import random
+from typing import Dict, List, Optional, Set
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 try:
-    from transformers import BertTokenizer, BertForMaskedLM
     import torch
+    from transformers import BertForMaskedLM, BertTokenizer
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -21,6 +23,7 @@ except ImportError:
 
 try:
     import jieba
+
     JIEBA_AVAILABLE = True
 except ImportError:
     JIEBA_AVAILABLE = False
@@ -37,7 +40,7 @@ class ContextualPerturber:
         max_predictions: int = 5,
         min_similarity_threshold: float = 0.3,
         preserve_keywords: Optional[Set[str]] = None,
-        device: Optional[str] = None
+        device: Optional[str] = None,
     ):
         """
         初始化上下文擾動器
@@ -73,8 +76,21 @@ class ContextualPerturber:
 
         # 霸凌關鍵詞 (預設保護詞彙)
         self.default_preserve_keywords = {
-            "死", "殺", "滾", "廢物", "垃圾", "白癡", "智障", "腦殘",
-            "去死", "找死", "該死", "霸凌", "威脅", "恐嚇", "排擠"
+            "死",
+            "殺",
+            "滾",
+            "廢物",
+            "垃圾",
+            "白癡",
+            "智障",
+            "腦殘",
+            "去死",
+            "找死",
+            "該死",
+            "霸凌",
+            "威脅",
+            "恐嚇",
+            "排擠",
         }
 
         logger.info(f"上下文擾動器初始化完成，使用模型: {model_name}")
@@ -94,10 +110,7 @@ class ContextualPerturber:
             raise e
 
     def augment(
-        self,
-        text: str,
-        num_augmented: int = 1,
-        custom_mask_prob: Optional[float] = None
+        self, text: str, num_augmented: int = 1, custom_mask_prob: Optional[float] = None
     ) -> List[str]:
         """
         對文本進行上下文擾動增強
@@ -116,7 +129,7 @@ class ContextualPerturber:
         mask_prob = custom_mask_prob or self.mask_probability
         augmented_texts = []
 
-        for i in range(num_augmented):
+        for _i in range(num_augmented):
             try:
                 perturbed_text = self._contextual_perturbation(text, mask_prob)
                 augmented_texts.append(perturbed_text)
@@ -142,7 +155,9 @@ class ContextualPerturber:
 
         # 計算遮蔽數量
         num_masks = max(1, int(len(maskable_positions) * mask_prob))
-        positions_to_mask = random.sample(maskable_positions, min(num_masks, len(maskable_positions)))
+        positions_to_mask = random.sample(
+            maskable_positions, min(num_masks, len(maskable_positions))
+        )
 
         # 逐個位置進行遮蔽和預測
         result_words = words.copy()
@@ -152,7 +167,7 @@ class ContextualPerturber:
             if predicted_word and predicted_word != words[pos]:
                 result_words[pos] = predicted_word
 
-        return ''.join(result_words)
+        return "".join(result_words)
 
     def _get_maskable_positions(self, words: List[str]) -> List[int]:
         """獲取可遮蔽的詞位置"""
@@ -167,7 +182,7 @@ class ContextualPerturber:
     def _is_maskable(self, word: str) -> bool:
         """判斷詞是否可遮蔽"""
         # 過濾標點符號
-        if word in ['，', '。', '！', '？', '；', '：', '"', '"', ''', ''', '（', '）', '【', '】']:
+        if word in ["，", "。", "！", "？", "；", "：", '"', '"', """, """, "（", "）", "【", "】"]:
             return False
 
         # 過濾過短的詞
@@ -188,8 +203,8 @@ class ContextualPerturber:
     def _create_masked_text(self, words: List[str], mask_position: int) -> str:
         """創建遮蔽文本"""
         masked_words = words.copy()
-        masked_words[mask_position] = '[MASK]'
-        return ''.join(masked_words)
+        masked_words[mask_position] = "[MASK]"
+        return "".join(masked_words)
 
     def _predict_masked_word(self, masked_text: str, original_position: int) -> Optional[str]:
         """預測遮蔽位置的詞"""
@@ -200,7 +215,7 @@ class ContextualPerturber:
 
             # 找到 [MASK] 標記的位置
             mask_token_id = self.tokenizer.mask_token_id
-            mask_positions = (inputs['input_ids'] == mask_token_id).nonzero(as_tuple=True)
+            mask_positions = (inputs["input_ids"] == mask_token_id).nonzero(as_tuple=True)
 
             if len(mask_positions[1]) == 0:
                 return None
@@ -248,12 +263,12 @@ class ContextualPerturber:
             return False
 
         # 過濾特殊標記
-        special_tokens = ['[CLS]', '[SEP]', '[PAD]', '[UNK]', '[MASK]']
+        special_tokens = ["[CLS]", "[SEP]", "[PAD]", "[UNK]", "[MASK]"]
         if token in special_tokens:
             return False
 
         # 過濾空白和標點
-        if not token.strip() or token in ['，', '。', '！', '？']:
+        if not token.strip() or token in ["，", "。", "！", "？"]:
             return False
 
         # 過濾英文字母 (主要處理中文)
@@ -262,11 +277,7 @@ class ContextualPerturber:
 
         return True
 
-    def batch_augment(
-        self,
-        texts: List[str],
-        num_augmented: int = 1
-    ) -> List[List[str]]:
+    def batch_augment(self, texts: List[str], num_augmented: int = 1) -> List[List[str]]:
         """批量上下文擾動"""
         results = []
         for text in texts:
@@ -304,7 +315,7 @@ class ContextualPerturber:
             "device": str(self.device),
             "vocab_size": len(self.tokenizer),
             "mask_token": self.tokenizer.mask_token,
-            "model_type": type(self.model).__name__
+            "model_type": type(self.model).__name__,
         }
 
     def get_stats(self) -> Dict[str, any]:
@@ -315,7 +326,7 @@ class ContextualPerturber:
             "max_predictions": self.max_predictions,
             "min_similarity_threshold": self.min_similarity_threshold,
             "preserve_keywords_count": len(self.preserve_keywords),
-            "device": str(self.device)
+            "device": str(self.device),
         }
 
 
@@ -337,7 +348,7 @@ class LightweightPerturber:
             "大": ["巨大", "龐大", "寬廣"],
             "小": ["微小", "細小", "迷你"],
             "快": ["迅速", "敏捷", "急速"],
-            "慢": ["緩慢", "遲緩", "徐緩"]
+            "慢": ["緩慢", "遲緩", "徐緩"],
         }
 
         logger.info("輕量級擾動器初始化完成")
@@ -358,7 +369,7 @@ class LightweightPerturber:
                 if word in self.replacement_rules and random.random() < 0.3:
                     new_words[i] = random.choice(self.replacement_rules[word])
 
-            augmented_texts.append(''.join(new_words))
+            augmented_texts.append("".join(new_words))
 
         return augmented_texts
 
@@ -371,12 +382,7 @@ if __name__ == "__main__":
     print("使用輕量級擾動器:")
     lightweight_perturber = LightweightPerturber()
 
-    test_texts = [
-        "你說話很難聽",
-        "這個想法不錯",
-        "我覺得很好",
-        "看起來不太對"
-    ]
+    test_texts = ["你說話很難聽", "這個想法不錯", "我覺得很好", "看起來不太對"]
 
     for text in test_texts:
         print(f"原文: {text}")

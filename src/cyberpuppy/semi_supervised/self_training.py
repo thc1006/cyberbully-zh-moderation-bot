@@ -4,18 +4,21 @@ Self-training Framework 實作
 教師-學生模型架構與知識蒸餾機制
 """
 
+import copy
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
 from loguru import logger
-import copy
+
 
 @dataclass
 class SelfTrainingConfig:
     """Self-training 配置"""
+
     teacher_update_frequency: int = 500
     student_teacher_ratio: float = 0.7  # 學生損失 vs 教師損失的比例
     distillation_temperature: float = 4.0
@@ -25,10 +28,11 @@ class SelfTrainingConfig:
     max_epochs: int = 10
     warmup_steps: int = 1000
 
+
 class TeacherStudentTrainer:
     """教師-學生訓練器"""
 
-    def __init__(self, config: SelfTrainingConfig, device: str = 'cuda'):
+    def __init__(self, config: SelfTrainingConfig, device: str = "cuda"):
         self.config = config
         self.device = device
         self.step_count = 0
@@ -54,43 +58,34 @@ class TeacherStudentTrainer:
             for teacher_param, student_param in zip(
                 teacher_model.parameters(), student_model.parameters()
             ):
-                teacher_param.data = (
-                    alpha * teacher_param.data +
-                    (1 - alpha) * student_param.data
-                )
+                teacher_param.data = alpha * teacher_param.data + (1 - alpha) * student_param.data
 
     def knowledge_distillation_loss(
-        self,
-        student_logits: torch.Tensor,
-        teacher_logits: torch.Tensor,
-        temperature: float = None
+        self, student_logits: torch.Tensor, teacher_logits: torch.Tensor, temperature: float = None
     ) -> torch.Tensor:
         """知識蒸餾損失"""
         if temperature is None:
             temperature = self.config.distillation_temperature
 
         # 軟化機率分佈
-        student_probs = F.softmax(student_logits / temperature, dim=-1)
+        F.softmax(student_logits / temperature, dim=-1)
         teacher_probs = F.softmax(teacher_logits / temperature, dim=-1)
 
         # KL 散度損失
         kl_loss = F.kl_div(
             F.log_softmax(student_logits / temperature, dim=-1),
             teacher_probs,
-            reduction='batchmean'
+            reduction="batchmean",
         )
 
-        return kl_loss * (temperature ** 2)
+        return kl_loss * (temperature**2)
 
     def consistency_loss(
-        self,
-        logits1: torch.Tensor,
-        logits2: torch.Tensor,
-        mask: Optional[torch.Tensor] = None
+        self, logits1: torch.Tensor, logits2: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """一致性損失"""
         # MSE 損失
-        loss = F.mse_loss(logits1, logits2, reduction='none')
+        loss = F.mse_loss(logits1, logits2, reduction="none")
 
         if mask is not None:
             loss = loss * mask.unsqueeze(-1)
@@ -101,9 +96,7 @@ class TeacherStudentTrainer:
         return loss
 
     def compute_confidence_mask(
-        self,
-        teacher_logits: torch.Tensor,
-        threshold: float = None
+        self, teacher_logits: torch.Tensor, threshold: float = None
     ) -> torch.Tensor:
         """計算高信心樣本遮罩"""
         if threshold is None:
@@ -121,7 +114,7 @@ class TeacherStudentTrainer:
         labeled_batch: Dict[str, torch.Tensor],
         unlabeled_batch: Dict[str, torch.Tensor],
         optimizer: torch.optim.Optimizer,
-        criterion: nn.Module
+        criterion: nn.Module,
     ) -> Dict[str, float]:
         """單步訓練"""
         student_model.train()
@@ -132,20 +125,26 @@ class TeacherStudentTrainer:
 
         # 有標籤資料的監督損失
         if labeled_batch:
-            labeled_inputs = {k: v.to(self.device) for k, v in labeled_batch.items()
-                            if k not in ['text', 'labels']}
-            labeled_labels = labeled_batch['labels'].to(self.device)
+            labeled_inputs = {
+                k: v.to(self.device)
+                for k, v in labeled_batch.items()
+                if k not in ["text", "labels"]
+            }
+            labeled_labels = labeled_batch["labels"].to(self.device)
 
             student_outputs = student_model(**labeled_inputs)
             supervised_loss = criterion(student_outputs.logits, labeled_labels)
 
             total_loss += supervised_loss
-            losses['supervised'] = supervised_loss.item()
+            losses["supervised"] = supervised_loss.item()
 
         # 無標籤資料的自監督損失
         if unlabeled_batch:
-            unlabeled_inputs = {k: v.to(self.device) for k, v in unlabeled_batch.items()
-                              if k not in ['text', 'labels']}
+            unlabeled_inputs = {
+                k: v.to(self.device)
+                for k, v in unlabeled_batch.items()
+                if k not in ["text", "labels"]
+            }
 
             with torch.no_grad():
                 teacher_outputs = teacher_model(**unlabeled_inputs)
@@ -160,8 +159,7 @@ class TeacherStudentTrainer:
             if confidence_mask.sum() > 0:
                 # 知識蒸餾損失
                 distillation_loss = self.knowledge_distillation_loss(
-                    student_logits[confidence_mask],
-                    teacher_logits[confidence_mask]
+                    student_logits[confidence_mask], teacher_logits[confidence_mask]
                 )
 
                 # 一致性損失
@@ -170,14 +168,13 @@ class TeacherStudentTrainer:
                 )
 
                 unsupervised_loss = (
-                    distillation_loss +
-                    self.config.consistency_weight * consistency_loss
+                    distillation_loss + self.config.consistency_weight * consistency_loss
                 )
 
                 total_loss += self.config.student_teacher_ratio * unsupervised_loss
-                losses['distillation'] = distillation_loss.item()
-                losses['consistency'] = consistency_loss.item()
-                losses['confidence_ratio'] = confidence_mask.float().mean().item()
+                losses["distillation"] = distillation_loss.item()
+                losses["consistency"] = consistency_loss.item()
+                losses["confidence_ratio"] = confidence_mask.float().mean().item()
 
         # 反向傳播
         optimizer.zero_grad()
@@ -189,21 +186,20 @@ class TeacherStudentTrainer:
         if self.step_count % self.config.teacher_update_frequency == 0:
             self.update_teacher_model(teacher_model, student_model)
 
-        losses['total'] = total_loss.item()
+        losses["total"] = total_loss.item()
         return losses
+
 
 class SelfTrainingFramework:
     """Self-training 框架"""
 
-    def __init__(self, config: SelfTrainingConfig, device: str = 'cuda'):
+    def __init__(self, config: SelfTrainingConfig, device: str = "cuda"):
         self.config = config
         self.device = device
         self.trainer = TeacherStudentTrainer(config, device)
 
     def create_augmented_data(
-        self,
-        batch: Dict[str, torch.Tensor],
-        augmentation_strength: float = 0.1
+        self, batch: Dict[str, torch.Tensor], augmentation_strength: float = 0.1
     ) -> Dict[str, torch.Tensor]:
         """資料增強（可選）"""
         # 這裡可以實作文字增強策略
@@ -219,19 +215,19 @@ class SelfTrainingFramework:
         validation_dataloader: torch.utils.data.DataLoader,
         optimizer: torch.optim.Optimizer,
         criterion: nn.Module,
-        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None
+        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
     ) -> Dict[str, List[float]]:
         """完整訓練流程"""
         # 創建教師模型
         teacher_model = self.trainer.create_teacher_model(student_model)
 
         history = {
-            'train_losses': [],
-            'val_accuracies': [],
-            'supervised_losses': [],
-            'distillation_losses': [],
-            'consistency_losses': [],
-            'confidence_ratios': []
+            "train_losses": [],
+            "val_accuracies": [],
+            "supervised_losses": [],
+            "distillation_losses": [],
+            "consistency_losses": [],
+            "confidence_ratios": [],
         }
 
         best_val_accuracy = 0
@@ -241,11 +237,11 @@ class SelfTrainingFramework:
         for epoch in range(self.config.max_epochs):
             student_model.train()
             epoch_losses = {
-                'total': [],
-                'supervised': [],
-                'distillation': [],
-                'consistency': [],
-                'confidence_ratio': []
+                "total": [],
+                "supervised": [],
+                "distillation": [],
+                "consistency": [],
+                "confidence_ratio": [],
             }
 
             # 創建資料迭代器
@@ -271,9 +267,12 @@ class SelfTrainingFramework:
 
                 # 訓練步驟
                 losses = self.trainer.train_step(
-                    student_model, teacher_model,
-                    labeled_batch, unlabeled_batch,
-                    optimizer, criterion
+                    student_model,
+                    teacher_model,
+                    labeled_batch,
+                    unlabeled_batch,
+                    optimizer,
+                    criterion,
                 )
 
                 # 記錄損失
@@ -286,28 +285,32 @@ class SelfTrainingFramework:
 
                 # 定期印出進度
                 if batch_idx % 100 == 0:
-                    logger.info(f"Epoch {epoch+1}, Batch {batch_idx}: "
-                               f"Loss = {losses['total']:.4f}")
+                    logger.info(
+                        f"Epoch {epoch+1}, Batch {batch_idx}: " f"Loss = {losses['total']:.4f}"
+                    )
 
             # 計算平均損失
-            avg_losses = {key: np.mean(values) if values else 0
-                         for key, values in epoch_losses.items()}
+            avg_losses = {
+                key: np.mean(values) if values else 0 for key, values in epoch_losses.items()
+            }
 
             # 驗證
             val_accuracy = self.validate(student_model, validation_dataloader)
 
             # 記錄歷史
-            history['train_losses'].append(avg_losses['total'])
-            history['val_accuracies'].append(val_accuracy)
-            history['supervised_losses'].append(avg_losses['supervised'])
-            history['distillation_losses'].append(avg_losses['distillation'])
-            history['consistency_losses'].append(avg_losses['consistency'])
-            history['confidence_ratios'].append(avg_losses['confidence_ratio'])
+            history["train_losses"].append(avg_losses["total"])
+            history["val_accuracies"].append(val_accuracy)
+            history["supervised_losses"].append(avg_losses["supervised"])
+            history["distillation_losses"].append(avg_losses["distillation"])
+            history["consistency_losses"].append(avg_losses["consistency"])
+            history["confidence_ratios"].append(avg_losses["confidence_ratio"])
 
-            logger.info(f"Epoch {epoch+1}/{self.config.max_epochs}: "
-                       f"Train Loss = {avg_losses['total']:.4f}, "
-                       f"Val Acc = {val_accuracy:.4f}, "
-                       f"Confidence Ratio = {avg_losses['confidence_ratio']:.3f}")
+            logger.info(
+                f"Epoch {epoch+1}/{self.config.max_epochs}: "
+                f"Train Loss = {avg_losses['total']:.4f}, "
+                f"Val Acc = {val_accuracy:.4f}, "
+                f"Confidence Ratio = {avg_losses['confidence_ratio']:.3f}"
+            )
 
             # 早停檢查
             if val_accuracy > best_val_accuracy:
@@ -315,13 +318,16 @@ class SelfTrainingFramework:
                 patience_counter = 0
 
                 # 保存最佳模型
-                torch.save({
-                    'student_model': student_model.state_dict(),
-                    'teacher_model': teacher_model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'epoch': epoch,
-                    'val_accuracy': val_accuracy
-                }, 'best_self_training_model.pt')
+                torch.save(
+                    {
+                        "student_model": student_model.state_dict(),
+                        "teacher_model": teacher_model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "epoch": epoch,
+                        "val_accuracy": val_accuracy,
+                    },
+                    "best_self_training_model.pt",
+                )
             else:
                 patience_counter += 1
                 if patience_counter >= max_patience:
@@ -331,9 +337,7 @@ class SelfTrainingFramework:
         return history
 
     def validate(
-        self,
-        model: nn.Module,
-        validation_dataloader: torch.utils.data.DataLoader
+        self, model: nn.Module, validation_dataloader: torch.utils.data.DataLoader
     ) -> float:
         """驗證模型"""
         model.eval()
@@ -342,9 +346,10 @@ class SelfTrainingFramework:
 
         with torch.no_grad():
             for batch in validation_dataloader:
-                inputs = {k: v.to(self.device) for k, v in batch.items()
-                         if k not in ['text', 'labels']}
-                labels = batch['labels'].to(self.device)
+                inputs = {
+                    k: v.to(self.device) for k, v in batch.items() if k not in ["text", "labels"]
+                }
+                labels = batch["labels"].to(self.device)
 
                 outputs = model(**inputs)
                 predictions = torch.argmax(outputs.logits, dim=-1)
@@ -359,7 +364,7 @@ class SelfTrainingFramework:
         self,
         model: nn.Module,
         dataloader: torch.utils.data.DataLoader,
-        num_forward_passes: int = 10
+        num_forward_passes: int = 10,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """使用 Monte Carlo Dropout 預測不確定性"""
         model.train()  # 啟用 dropout
@@ -371,8 +376,11 @@ class SelfTrainingFramework:
                 batch_predictions = []
 
                 for batch in dataloader:
-                    inputs = {k: v.to(self.device) for k, v in batch.items()
-                             if k not in ['text', 'labels']}
+                    inputs = {
+                        k: v.to(self.device)
+                        for k, v in batch.items()
+                        if k not in ["text", "labels"]
+                    }
 
                     outputs = model(**inputs)
                     probabilities = F.softmax(outputs.logits, dim=-1)

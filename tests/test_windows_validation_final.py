@@ -4,12 +4,13 @@
 Final validation test for Windows encoding and path issues
 """
 
-import sys
 import os
 import platform
-import pytest
+import sys
 import tempfile
 from pathlib import Path
+
+import pytest
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -138,13 +139,10 @@ class TestWindowsFinalValidation:
             "模組": {
                 "毒性檢測": "檢測有毒內容",
                 "情緒分析": "分析情緒狀態",
-                "角色識別": "識別霸凌角色"
+                "角色識別": "識別霸凌角色",
             },
             "標籤": ["正常", "有毒", "嚴重"],
-            "測試文本": [
-                "這是正常的中文句子。",
-                "這可能包含問題內容。"
-            ]
+            "測試文本": ["這是正常的中文句子。", "這可能包含問題內容。"],
         }
 
         # Test serialization
@@ -223,10 +221,7 @@ class TestWindowsFinalValidation:
     def test_environment_variables_encoding(self):
         """Test encoding-related environment variables"""
         # These should be set for proper Unicode handling
-        recommended_vars = {
-            "PYTHONIOENCODING": "utf-8",
-            "PYTHONUTF8": "1"
-        }
+        recommended_vars = {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
 
         missing_vars = []
         for var, expected in recommended_vars.items():

@@ -9,10 +9,9 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from cyberpuppy.arbiter.perspective import (PerspectiveAPI,
-                                                PerspectiveResult,
-                                                UncertaintyDetector,
-                                                UncertaintyReason)
+from cyberpuppy.arbiter.perspective import (PerspectiveAPI, PerspectiveResult,
+                                            UncertaintyDetector,
+                                            UncertaintyReason)
 
 
 class TestUncertaintyDetector:
@@ -21,8 +20,7 @@ class TestUncertaintyDetector:
     @pytest.fixture
     def detector(self):
         return UncertaintyDetector(
-            uncertainty_threshold=0.4, confidence_threshold=0.6,
-                min_confidence_gap=0.1
+            uncertainty_threshold=0.4, confidence_threshold=0.6, min_confidence_gap=0.1
         )
 
     def test_borderline_score_detection(self, detector):
@@ -30,12 +28,12 @@ class TestUncertaintyDetector:
         prediction_scores = {
             "scores": {
                 "toxicity": {"none": 0.45, "toxic": 0.55},
-                "emotion": {"pos": 0.3, "neu": 0.4, "neg": 0.3}
+                "emotion": {"pos": 0.3, "neu": 0.4, "neg": 0.3},
             },
             "predictions": {
                 "toxicity": "none",
                 "emotion": "neu",
-            }
+            },
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -49,12 +47,12 @@ class TestUncertaintyDetector:
         prediction_scores = {
             "scores": {
                 "toxicity": {"none": 0.9, "toxic": 0.1},
-                "emotion": {"pos": 0.1, "neu": 0.8, "neg": 0.1}
+                "emotion": {"pos": 0.1, "neu": 0.8, "neg": 0.1},
             },
             "predictions": {
                 "toxicity": "none",
                 "emotion": "neu",
-            }
+            },
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -68,13 +66,13 @@ class TestUncertaintyDetector:
         prediction_scores = {
             "scores": {
                 "toxicity": {"none": 0.6, "toxic": 0.4},
-                "emotion": {"pos": 0.1, "neu": 0.2, "neg": 0.7}
+                "emotion": {"pos": 0.1, "neu": 0.2, "neg": 0.7},
             },
             "predictions": {
                 "toxicity": "none",
                 "emotion": "neg",
                 "emotion_strength": 4,
-            }
+            },
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -88,12 +86,12 @@ class TestUncertaintyDetector:
         prediction_scores = {
             "scores": {
                 "toxicity": {"none": 0.52, "toxic": 0.48},
-                "emotion": {"pos": 0.33, "neu": 0.34, "neg": 0.33}
+                "emotion": {"pos": 0.33, "neu": 0.34, "neg": 0.33},
             },
             "predictions": {
                 "toxicity": "none",
                 "emotion": "neu",
-            }
+            },
         }
 
         should_use, analysis = detector.should_use_perspective(prediction_scores)
@@ -116,28 +114,40 @@ class TestPerspectiveAPI:
             "attributeScores": {
                 "TOXICITY": {
                     "summaryScore": {"value": 0.75, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.75, "type": "PROBABILITY"}}]
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.75, "type": "PROBABILITY"}}
+                    ],
                 },
                 "SEVERE_TOXICITY": {
                     "summaryScore": {"value": 0.25, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.25, "type": "PROBABILITY"}}]
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.25, "type": "PROBABILITY"}}
+                    ],
                 },
                 "IDENTITY_ATTACK": {
                     "summaryScore": {"value": 0.15, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.15, "type": "PROBABILITY"}}]
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.15, "type": "PROBABILITY"}}
+                    ],
                 },
                 "INSULT": {
                     "summaryScore": {"value": 0.35, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.35, "type": "PROBABILITY"}}]
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.35, "type": "PROBABILITY"}}
+                    ],
                 },
                 "PROFANITY": {
                     "summaryScore": {"value": 0.45, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.45, "type": "PROBABILITY"}}]
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.45, "type": "PROBABILITY"}}
+                    ],
                 },
                 "THREAT": {
                     "summaryScore": {"value": 0.20, "type": "PROBABILITY"},
-                    "spanScores": [{"begin": 0, "end": 10, "score": {"value": 0.20, "type": "PROBABILITY"}}]
-                }
+                    "spanScores": [
+                        {"begin": 0, "end": 10, "score": {"value": 0.20, "type": "PROBABILITY"}}
+                    ],
+                },
             },
             "detectedLanguages": ["zh"],
             "clientToken": "cyberpuppy-test",
@@ -178,10 +188,7 @@ class TestPerspectiveAPI:
             mock_response.raise_for_status.return_value = None
             mock_post.return_value = mock_response
 
-            async with PerspectiveAPI(
-                api_key=mock_api_key,
-                rate_limit=rate_limit
-            ) as api:
+            async with PerspectiveAPI(api_key=mock_api_key, rate_limit=rate_limit) as api:
                 # 第一次請求應該立即執行
                 start_time = asyncio.get_event_loop().time()
                 await api.analyze_comment("測試文本1")
@@ -249,11 +256,7 @@ class TestPerspectiveAPI:
                 assert quota["daily_requests_limit"] == 1000
 
     @pytest.mark.asyncio
-    async def test_long_text_truncation(
-        self,
-        mock_api_key,
-        mock_response_data
-    ):
+    async def test_long_text_truncation(self, mock_api_key, mock_response_data):
         """測試長文本截斷"""
         with patch.object(httpx.AsyncClient, "post") as mock_post:
             mock_response = MagicMock()
@@ -278,10 +281,7 @@ class TestPerspectiveAPI:
 class TestPerspectiveIntegration:
     """Perspective API 整合測試（需要實際 API Key）"""
 
-    @pytest.mark.skipif(
-        not os.getenv("PERSPECTIVE_API_KEY"),
-        reason="PERSPECTIVE_API_KEY not set"
-    )
+    @pytest.mark.skipif(not os.getenv("PERSPECTIVE_API_KEY"), reason="PERSPECTIVE_API_KEY not set")
     @pytest.mark.asyncio
     async def test_real_api_call(self):
         """測試實際 API 呼叫"""

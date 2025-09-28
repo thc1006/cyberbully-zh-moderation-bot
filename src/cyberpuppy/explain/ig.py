@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-
 # Captum imports
 # 參考: https://captum.ai/api/integrated_gradients.html
 from captum.attr import IntegratedGradients, TokenReferenceBase
@@ -76,9 +75,7 @@ class IntegratedGradientsExplainer:
             device: 計算設備
         """
         self.model = model
-        self.device = device or torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         self.model.eval()
 
@@ -197,9 +194,7 @@ class IntegratedGradientsExplainer:
         # #captum.attr.IntegratedGradients.attribute
         try:
             # 毒性attribution
-            toxicity_target = (
-                target_class if target_class is not None else toxicity_pred
-            )
+            toxicity_target = target_class if target_class is not None else toxicity_pred
             toxicity_attributions = self.ig_toxicity.attribute(
                 inputs=(input_ids, attention_mask),
                 baselines=(reference_indices, torch.zeros_like(attention_mask)),
@@ -265,9 +260,7 @@ class IntegratedGradientsExplainer:
             },
         )
 
-        logger.info(
-            f"Attribution computed. Convergenc" "e delta: {convergence_delta:.4f}"
-        )
+        logger.info("Attribution computed. Convergenc" "e delta: {convergence_delta:.4f}")
         return result
 
 
@@ -368,12 +361,9 @@ class BiasAnalyzer:
                                 "token_position": j,
                                 "bias_category": bias_category[0],
                                 "bias_subcategory": bias_category[1],
-                                "toxicity_a"
-                                "ttribution": result.toxicity_attributions[j],
-                                "emotion_a"
-                                "ttribution": result.emotion_attributions[j],
-                                "bullying_a"
-                                "ttribution": result.bullying_attributions[j],
+                                "toxicity_a" "ttribution": result.toxicity_attributions[j],
+                                "emotion_a" "ttribution": result.emotion_attributions[j],
+                                "bullying_a" "ttribution": result.bullying_attributions[j],
                                 "toxicity_pred": result.toxicity_pred,
                                 "toxicity_prob": result.toxicity_prob,
                                 "emotion_pred": result.emotion_pred,
@@ -400,7 +390,7 @@ class BiasAnalyzer:
         if output_csv:
             self.save_bias_report(df, output_csv, top_k)
 
-        logger.info(f"Bias analysis completed. Found" " {len(df)} bias-related tokens.")
+        logger.info("Bias analysis completed. Found" " {len(df)} bias-related tokens.")
         return df
 
     def _classify_bias_term(self, token: str) -> Optional[Tuple[str, str]]:
@@ -513,11 +503,7 @@ class BiasAnalyzer:
                             f"{row.total_importance:.4f}",
                             frequency,
                             f"{row.toxicity_prob:.3f}",
-                            (
-                                row.text[:50] + "." ".."
-                                if len(row.text) > 50
-                                else row.text
-                            ),
+                            (row.text[:50] + "." ".." if len(row.text) > 50 else row.text),
                         ]
                     )
 
@@ -772,11 +758,13 @@ IGExplainer = IntegratedGradientsExplainer
 TokenAttributionResult = ExplanationResult
 ExplanationAnalyzer = BiasAnalyzer
 
+
 # Mock configs for compatibility
 class IGConfig:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+
 
 class VisualizationConfig:
     def __init__(self, **kwargs):

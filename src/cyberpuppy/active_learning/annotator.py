@@ -2,12 +2,12 @@
 Interactive Annotator for Active Learning
 """
 
-import os
-import json
 import csv
-from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
+import json
 import logging
+import os
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class InteractiveAnnotator:
     Command-line interface for interactive annotation
     """
 
-    def __init__(self, save_dir: str = './annotations'):
+    def __init__(self, save_dir: str = "./annotations"):
         """
         Initialize interactive annotator
 
@@ -30,28 +30,28 @@ class InteractiveAnnotator:
 
         # Label mappings for CyberPuppy
         self.toxicity_labels = {
-            '0': ('none', 'Non-toxic content'),
-            '1': ('toxic', 'Mildly toxic content'),
-            '2': ('severe', 'Severely toxic content')
+            "0": ("none", "Non-toxic content"),
+            "1": ("toxic", "Mildly toxic content"),
+            "2": ("severe", "Severely toxic content"),
         }
 
         self.bullying_labels = {
-            '0': ('none', 'No bullying behavior'),
-            '1': ('harassment', 'Harassment behavior'),
-            '2': ('threat', 'Threatening behavior')
+            "0": ("none", "No bullying behavior"),
+            "1": ("harassment", "Harassment behavior"),
+            "2": ("threat", "Threatening behavior"),
         }
 
         self.role_labels = {
-            '0': ('none', 'No specific role'),
-            '1': ('perpetrator', 'Initiating harmful behavior'),
-            '2': ('victim', 'Target of harmful behavior'),
-            '3': ('bystander', 'Witnessing the situation')
+            "0": ("none", "No specific role"),
+            "1": ("perpetrator", "Initiating harmful behavior"),
+            "2": ("victim", "Target of harmful behavior"),
+            "3": ("bystander", "Witnessing the situation"),
         }
 
         self.emotion_labels = {
-            '0': ('negative', 'Negative emotion'),
-            '1': ('neutral', 'Neutral emotion'),
-            '2': ('positive', 'Positive emotion')
+            "0": ("negative", "Negative emotion"),
+            "1": ("neutral", "Neutral emotion"),
+            "2": ("positive", "Positive emotion"),
         }
 
         # Create save directory
@@ -59,10 +59,12 @@ class InteractiveAnnotator:
 
         logger.info(f"Initialized InteractiveAnnotator, saving to {save_dir}")
 
-    def annotate_samples(self,
-                        samples: List[Dict[str, Any]],
-                        sample_indices: List[int],
-                        show_predictions: bool = True) -> List[Dict[str, Any]]:
+    def annotate_samples(
+        self,
+        samples: List[Dict[str, Any]],
+        sample_indices: List[int],
+        show_predictions: bool = True,
+    ) -> List[Dict[str, Any]]:
         """
         Annotate a list of samples interactively
 
@@ -75,7 +77,7 @@ class InteractiveAnnotator:
             List of annotation dictionaries
         """
         print(f"\n{'='*60}")
-        print(f"Interactive Annotation Session")
+        print("Interactive Annotation Session")
         print(f"Samples to annotate: {len(samples)}")
         print(f"Session started: {self.session_start.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'='*60}")
@@ -88,48 +90,48 @@ class InteractiveAnnotator:
             print(f"{'-'*40}")
 
             # Display the text
-            text = sample.get('text', sample.get('content', ''))
+            text = sample.get("text", sample.get("content", ""))
             print(f"Text: {text}")
 
             # Show metadata if available
-            if 'metadata' in sample:
+            if "metadata" in sample:
                 print(f"Metadata: {sample['metadata']}")
 
             # Show model predictions if requested
-            if show_predictions and 'predictions' in sample:
-                self._display_predictions(sample['predictions'])
+            if show_predictions and "predictions" in sample:
+                self._display_predictions(sample["predictions"])
 
             # Get annotations for different tasks
             annotation = {
-                'original_index': original_idx,
-                'text': text,
-                'timestamp': datetime.now().isoformat(),
-                'annotator': 'human_interactive'
+                "original_index": original_idx,
+                "text": text,
+                "timestamp": datetime.now().isoformat(),
+                "annotator": "human_interactive",
             }
 
             # Get toxicity annotation
-            annotation['toxicity'] = self._get_toxicity_annotation()
+            annotation["toxicity"] = self._get_toxicity_annotation()
 
             # Get bullying annotation
-            annotation['bullying'] = self._get_bullying_annotation()
+            annotation["bullying"] = self._get_bullying_annotation()
 
             # Get role annotation (if bullying is present)
-            if annotation['bullying'] != 'none':
-                annotation['role'] = self._get_role_annotation()
+            if annotation["bullying"] != "none":
+                annotation["role"] = self._get_role_annotation()
             else:
-                annotation['role'] = 'none'
+                annotation["role"] = "none"
 
             # Get emotion annotation
-            annotation['emotion'] = self._get_emotion_annotation()
+            annotation["emotion"] = self._get_emotion_annotation()
 
             # Get emotion strength (0-4)
-            annotation['emotion_strength'] = self._get_emotion_strength()
+            annotation["emotion_strength"] = self._get_emotion_strength()
 
             # Ask for confidence rating
-            annotation['confidence'] = self._get_confidence_rating()
+            annotation["confidence"] = self._get_confidence_rating()
 
             # Ask for optional comments
-            annotation['comments'] = self._get_comments()
+            annotation["comments"] = self._get_comments()
 
             annotations.append(annotation)
 
@@ -139,10 +141,10 @@ class InteractiveAnnotator:
             # Ask if user wants to continue or save and exit
             if i < len(samples) - 1:  # Not the last sample
                 choice = input("\nContinue to next sample? [y/n/s(ave and exit)]: ").strip().lower()
-                if choice == 's':
+                if choice == "s":
                     print("Saving annotations and exiting...")
                     break
-                elif choice == 'n':
+                elif choice == "n":
                     print("Annotation session stopped by user")
                     break
 
@@ -150,7 +152,7 @@ class InteractiveAnnotator:
         self._save_annotations(annotations)
 
         print(f"\n{'='*60}")
-        print(f"Annotation session completed!")
+        print("Annotation session completed!")
         print(f"Annotated samples: {len(annotations)}")
         print(f"Saved to: {self.save_dir}")
         print(f"{'='*60}")
@@ -162,7 +164,7 @@ class InteractiveAnnotator:
         print("\nModel Predictions:")
         for task, pred in predictions.items():
             if isinstance(pred, dict):
-                if 'label' in pred and 'confidence' in pred:
+                if "label" in pred and "confidence" in pred:
                     print(f"  {task}: {pred['label']} (confidence: {pred['confidence']:.3f})")
             else:
                 print(f"  {task}: {pred}")
@@ -257,31 +259,41 @@ class InteractiveAnnotator:
 
     def _display_annotation_summary(self, annotation: Dict[str, Any]):
         """Display summary of the annotation"""
-        print(f"\nAnnotation Summary:")
+        print("\nAnnotation Summary:")
         print(f"  Toxicity: {annotation['toxicity']}")
         print(f"  Bullying: {annotation['bullying']}")
         print(f"  Role: {annotation['role']}")
         print(f"  Emotion: {annotation['emotion']} (strength: {annotation['emotion_strength']})")
         print(f"  Confidence: {annotation['confidence']:.2f}")
-        if annotation['comments']:
+        if annotation["comments"]:
             print(f"  Comments: {annotation['comments']}")
 
     def _save_annotations(self, annotations: List[Dict[str, Any]]):
         """Save annotations to files"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # Save as JSON
-        json_path = os.path.join(self.save_dir, f'annotations_{timestamp}.json')
-        with open(json_path, 'w', encoding='utf-8') as f:
+        json_path = os.path.join(self.save_dir, f"annotations_{timestamp}.json")
+        with open(json_path, "w", encoding="utf-8") as f:
             json.dump(annotations, f, indent=2, ensure_ascii=False)
 
         # Save as CSV for easy viewing
-        csv_path = os.path.join(self.save_dir, f'annotations_{timestamp}.csv')
+        csv_path = os.path.join(self.save_dir, f"annotations_{timestamp}.csv")
         if annotations:
-            fieldnames = ['original_index', 'text', 'toxicity', 'bullying', 'role',
-                         'emotion', 'emotion_strength', 'confidence', 'comments', 'timestamp']
+            fieldnames = [
+                "original_index",
+                "text",
+                "toxicity",
+                "bullying",
+                "role",
+                "emotion",
+                "emotion_strength",
+                "confidence",
+                "comments",
+                "timestamp",
+            ]
 
-            with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            with open(csv_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for annotation in annotations:
@@ -291,7 +303,7 @@ class InteractiveAnnotator:
 
     def load_annotations(self, file_path: str) -> List[Dict[str, Any]]:
         """Load annotations from file"""
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             annotations = json.load(f)
 
         logger.info(f"Loaded {len(annotations)} annotations from {file_path}")
@@ -303,81 +315,84 @@ class InteractiveAnnotator:
             return {}
 
         stats = {
-            'total_annotations': len(annotations),
-            'toxicity_distribution': {},
-            'bullying_distribution': {},
-            'role_distribution': {},
-            'emotion_distribution': {},
-            'avg_confidence': 0.0,
-            'avg_emotion_strength': 0.0
+            "total_annotations": len(annotations),
+            "toxicity_distribution": {},
+            "bullying_distribution": {},
+            "role_distribution": {},
+            "emotion_distribution": {},
+            "avg_confidence": 0.0,
+            "avg_emotion_strength": 0.0,
         }
 
         # Count distributions
         for annotation in annotations:
             # Toxicity
-            tox = annotation.get('toxicity', 'unknown')
-            stats['toxicity_distribution'][tox] = stats['toxicity_distribution'].get(tox, 0) + 1
+            tox = annotation.get("toxicity", "unknown")
+            stats["toxicity_distribution"][tox] = stats["toxicity_distribution"].get(tox, 0) + 1
 
             # Bullying
-            bully = annotation.get('bullying', 'unknown')
-            stats['bullying_distribution'][bully] = stats['bullying_distribution'].get(bully, 0) + 1
+            bully = annotation.get("bullying", "unknown")
+            stats["bullying_distribution"][bully] = stats["bullying_distribution"].get(bully, 0) + 1
 
             # Role
-            role = annotation.get('role', 'unknown')
-            stats['role_distribution'][role] = stats['role_distribution'].get(role, 0) + 1
+            role = annotation.get("role", "unknown")
+            stats["role_distribution"][role] = stats["role_distribution"].get(role, 0) + 1
 
             # Emotion
-            emotion = annotation.get('emotion', 'unknown')
-            stats['emotion_distribution'][emotion] = stats['emotion_distribution'].get(emotion, 0) + 1
+            emotion = annotation.get("emotion", "unknown")
+            stats["emotion_distribution"][emotion] = (
+                stats["emotion_distribution"].get(emotion, 0) + 1
+            )
 
         # Calculate averages
-        confidences = [a.get('confidence', 0) for a in annotations]
-        stats['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
+        confidences = [a.get("confidence", 0) for a in annotations]
+        stats["avg_confidence"] = sum(confidences) / len(confidences) if confidences else 0
 
-        strengths = [a.get('emotion_strength', 0) for a in annotations]
-        stats['avg_emotion_strength'] = sum(strengths) / len(strengths) if strengths else 0
+        strengths = [a.get("emotion_strength", 0) for a in annotations]
+        stats["avg_emotion_strength"] = sum(strengths) / len(strengths) if strengths else 0
 
         return stats
 
     def validate_annotations(self, annotations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Validate annotation consistency and quality"""
-        validation_results = {
-            'total_samples': len(annotations),
-            'valid_samples': 0,
-            'issues': []
-        }
+        validation_results = {"total_samples": len(annotations), "valid_samples": 0, "issues": []}
 
         for i, annotation in enumerate(annotations):
             issues = []
 
             # Check required fields
-            required_fields = ['toxicity', 'bullying', 'role', 'emotion', 'emotion_strength']
+            required_fields = ["toxicity", "bullying", "role", "emotion", "emotion_strength"]
             for field in required_fields:
                 if field not in annotation:
                     issues.append(f"Missing required field: {field}")
 
             # Check value consistency
-            if annotation.get('bullying') == 'none' and annotation.get('role') not in ['none', None]:
+            if annotation.get("bullying") == "none" and annotation.get("role") not in [
+                "none",
+                None,
+            ]:
                 issues.append("Role specified but no bullying behavior")
 
             # Check confidence range
-            confidence = annotation.get('confidence', 0)
+            confidence = annotation.get("confidence", 0)
             if not (0 <= confidence <= 1):
                 issues.append(f"Confidence out of range: {confidence}")
 
             # Check emotion strength range
-            emotion_strength = annotation.get('emotion_strength', 0)
+            emotion_strength = annotation.get("emotion_strength", 0)
             if not (0 <= emotion_strength <= 4):
                 issues.append(f"Emotion strength out of range: {emotion_strength}")
 
             if not issues:
-                validation_results['valid_samples'] += 1
+                validation_results["valid_samples"] += 1
             else:
-                validation_results['issues'].append({
-                    'sample_index': i,
-                    'original_index': annotation.get('original_index'),
-                    'issues': issues
-                })
+                validation_results["issues"].append(
+                    {
+                        "sample_index": i,
+                        "original_index": annotation.get("original_index"),
+                        "issues": issues,
+                    }
+                )
 
         return validation_results
 
@@ -394,10 +409,9 @@ class BatchAnnotator:
         """
         self.annotator = annotator
 
-    def process_batch(self,
-                     samples: List[Dict[str, Any]],
-                     batch_size: int = 10,
-                     save_frequency: int = 5) -> List[Dict[str, Any]]:
+    def process_batch(
+        self, samples: List[Dict[str, Any]], batch_size: int = 10, save_frequency: int = 5
+    ) -> List[Dict[str, Any]]:
         """
         Process samples in batches with periodic saving
 
@@ -415,7 +429,7 @@ class BatchAnnotator:
         print(f"Processing {len(samples)} samples in {total_batches} batches of {batch_size}")
 
         for batch_idx in range(0, len(samples), batch_size):
-            batch_samples = samples[batch_idx:batch_idx + batch_size]
+            batch_samples = samples[batch_idx : batch_idx + batch_size]
             batch_indices = list(range(batch_idx, min(batch_idx + batch_size, len(samples))))
 
             current_batch = (batch_idx // batch_size) + 1
@@ -424,9 +438,7 @@ class BatchAnnotator:
             print(f"{'='*50}")
 
             try:
-                batch_annotations = self.annotator.annotate_samples(
-                    batch_samples, batch_indices
-                )
+                batch_annotations = self.annotator.annotate_samples(batch_samples, batch_indices)
                 all_annotations.extend(batch_annotations)
 
                 # Periodic save
@@ -434,7 +446,7 @@ class BatchAnnotator:
                     self._save_progress(all_annotations, current_batch)
 
             except KeyboardInterrupt:
-                print(f"\nBatch annotation interrupted. Saving progress...")
+                print("\nBatch annotation interrupted. Saving progress...")
                 self._save_progress(all_annotations, current_batch)
                 break
 
@@ -442,13 +454,12 @@ class BatchAnnotator:
 
     def _save_progress(self, annotations: List[Dict[str, Any]], batch_num: int):
         """Save progress during batch processing"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         progress_file = os.path.join(
-            self.annotator.save_dir,
-            f'progress_batch_{batch_num}_{timestamp}.json'
+            self.annotator.save_dir, f"progress_batch_{batch_num}_{timestamp}.json"
         )
 
-        with open(progress_file, 'w', encoding='utf-8') as f:
+        with open(progress_file, "w", encoding="utf-8") as f:
             json.dump(annotations, f, indent=2, ensure_ascii=False)
 
         print(f"Progress saved: {len(annotations)} annotations in {progress_file}")

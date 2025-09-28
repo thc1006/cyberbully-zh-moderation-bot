@@ -12,58 +12,27 @@ CyberPuppy 評估模組
 """
 
 # 核心評估模組
-from .metrics import (
-    CSVExporter,
-    EvaluationReport,
-    MetricsCalculator,
-    OnlineMonitor,
-    PrometheusExporter,
-    SessionContext,
-)
 # ModelEvaluator is actually in models.baselines
 from ..models.baselines import ModelEvaluator
 from .continuous_eval import ContinuousEvaluator
-
 # 錯誤分析模組
-from .error_analysis import (
-    ErrorAnalyzer,
-    ErrorCase,
-    ErrorPattern,
-    FalsePositiveAnalyzer,
-    FalseNegativeAnalyzer
-)
-
+from .error_analysis import (ErrorAnalyzer, ErrorCase, ErrorPattern,
+                             FalseNegativeAnalyzer, FalsePositiveAnalyzer)
 # 可解釋性分析模組
-from .explainability import (
-    ExplainabilityAnalyzer,
-    ExplanationResult,
-    SHAPExplainer,
-    LIMEExplainer,
-    compare_explanations
-)
-
-# 穩健性測試模組
-from .robustness import (
-    RobustnessTestSuite,
-    AdversarialTester,
-    RobustnessTestResult,
-    AdversarialAttackResult
-)
-
-# 視覺化模組
-from .visualization import (
-    ResultVisualizer,
-    ConfusionMatrixPlotter,
-    AttentionVisualizer
-)
-
+from .explainability import (ExplainabilityAnalyzer, ExplanationResult,
+                             LIMEExplainer, SHAPExplainer,
+                             compare_explanations)
+from .metrics import (CSVExporter, EvaluationReport, MetricsCalculator,
+                      OnlineMonitor, PrometheusExporter, SessionContext)
 # 報告生成模組
-from .reports import (
-    ReportGenerator,
-    ReportConfig,
-    HTMLReportGenerator,
-    PDFReportGenerator
-)
+from .reports import (HTMLReportGenerator, PDFReportGenerator, ReportConfig,
+                      ReportGenerator)
+# 穩健性測試模組
+from .robustness import (AdversarialAttackResult, AdversarialTester,
+                         RobustnessTestResult, RobustnessTestSuite)
+# 視覺化模組
+from .visualization import (AttentionVisualizer, ConfusionMatrixPlotter,
+                            ResultVisualizer)
 
 __all__ = [
     # 核心評估
@@ -75,43 +44,39 @@ __all__ = [
     "PrometheusExporter",
     "CSVExporter",
     "EvaluationReport",
-
     # 錯誤分析
     "ErrorAnalyzer",
     "ErrorCase",
     "ErrorPattern",
     "FalsePositiveAnalyzer",
     "FalseNegativeAnalyzer",
-
     # 可解釋性
     "ExplainabilityAnalyzer",
     "ExplanationResult",
     "SHAPExplainer",
     "LIMEExplainer",
     "compare_explanations",
-
     # 穩健性測試
     "RobustnessTestSuite",
     "AdversarialTester",
     "RobustnessTestResult",
     "AdversarialAttackResult",
-
     # 視覺化
     "ResultVisualizer",
     "ConfusionMatrixPlotter",
     "AttentionVisualizer",
-
     # 報告生成
     "ReportGenerator",
     "ReportConfig",
     "HTMLReportGenerator",
-    "PDFReportGenerator"
+    "PDFReportGenerator",
 ]
 
 # 版本信息
 __version__ = "1.0.0"
 __author__ = "CyberPuppy Team"
 __description__ = "霸凌偵測系統的全面評估與驗證工具"
+
 
 # 快捷函數
 def quick_evaluate(y_true, y_pred, output_dir="evaluation_results"):
@@ -131,12 +96,13 @@ def quick_evaluate(y_true, y_pred, output_dir="evaluation_results"):
     calculator = MetricsCalculator()
 
     results = {
-        'basic_metrics': calculator.calculate_basic_metrics(y_true, y_pred),
-        'per_class_metrics': calculator.calculate_per_class_metrics(y_true, y_pred),
-        'confusion_matrix': calculator.calculate_confusion_matrix(y_true, y_pred).tolist()
+        "basic_metrics": calculator.calculate_basic_metrics(y_true, y_pred),
+        "per_class_metrics": calculator.calculate_per_class_metrics(y_true, y_pred),
+        "confusion_matrix": calculator.calculate_confusion_matrix(y_true, y_pred).tolist(),
     }
 
     return results
+
 
 def comprehensive_evaluate(model, tokenizer, test_data, output_dir="evaluation_results"):
     """
@@ -152,6 +118,7 @@ def comprehensive_evaluate(model, tokenizer, test_data, output_dir="evaluation_r
         全面評估結果
     """
     import os
+
     os.makedirs(output_dir, exist_ok=True)
 
     # 初始化各種評估器
@@ -167,13 +134,13 @@ def comprehensive_evaluate(model, tokenizer, test_data, output_dir="evaluation_r
 
     # 暫時返回結構
     return {
-        'message': '全面評估功能需要實現模型預測邏輯',
-        'available_evaluators': {
-            'metrics_calculator': type(metrics_calc).__name__,
-            'error_analyzer': type(error_analyzer).__name__,
-            'explainability_analyzer': type(explainer).__name__,
-            'robustness_tester': type(robustness_tester).__name__,
-            'visualizer': type(visualizer).__name__,
-            'report_generator': type(report_gen).__name__
-        }
+        "message": "全面評估功能需要實現模型預測邏輯",
+        "available_evaluators": {
+            "metrics_calculator": type(metrics_calc).__name__,
+            "error_analyzer": type(error_analyzer).__name__,
+            "explainability_analyzer": type(explainer).__name__,
+            "robustness_tester": type(robustness_tester).__name__,
+            "visualizer": type(visualizer).__name__,
+            "report_generator": type(report_gen).__name__,
+        },
     }

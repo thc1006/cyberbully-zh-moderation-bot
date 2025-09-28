@@ -5,21 +5,22 @@ This module provides utilities for loading trained models, GPU/CPU detection,
 model caching, and warm-up operations for the FastAPI application.
 """
 
-import os
 import json
 import logging
-import time
-import torch
-from typing import Dict, Any, Optional
-from pathlib import Path
-import warnings
-
+import os
 # Import CyberPuppy components
 import sys
+import time
+import warnings
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import torch
 
 sys.path.append(str(Path(__file__).parent.parent))
+from src.cyberpuppy.models.baselines import (BaselineModel,  # noqa: E402
+                                             ModelConfig)
 from src.cyberpuppy.models.detector import CyberPuppyDetector  # noqa: E402
-from src.cyberpuppy.models.baselines import BaselineModel, ModelConfig  # noqa: E402
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -213,9 +214,7 @@ class ModelLoader:
 
             if toxicity_model_path.exists():
                 logger.info("Found toxicity specialist model")
-                model_paths["toxicity_specialist"] = str(
-                    toxicity_model_path / "best.ckpt"
-                )
+                model_paths["toxicity_specialist"] = str(toxicity_model_path / "best.ckpt")
 
             if multitask_model_path.exists():
                 logger.info("Found multitask model")
@@ -255,9 +254,7 @@ class ModelLoader:
             # For now, load only the baseline model to avoid complexity
             # We'll use a simplified approach with the toxicity specialist
             model_path_to_use = (
-                toxicity_model_path
-                if toxicity_model_path.exists()
-                else multitask_model_path
+                toxicity_model_path if toxicity_model_path.exists() else multitask_model_path
             )
             detector = SimplifiedDetector(
                 device=self.device, model_path=model_path_to_use, config=detector_config
@@ -339,9 +336,7 @@ class ModelLoader:
                 else self.detector is not None
             ),
             "gpu_available": torch.cuda.is_available(),
-            "gpu_memory": (
-                self._get_gpu_memory_info() if torch.cuda.is_available() else None
-            ),
+            "gpu_memory": (self._get_gpu_memory_info() if torch.cuda.is_available() else None),
         }
 
     def _get_gpu_memory_info(self) -> Dict[str, float]:
@@ -358,9 +353,7 @@ class ModelLoader:
                 "allocated_gb": round(memory_allocated, 2),
                 "cached_gb": round(memory_cached, 2),
                 "total_gb": round(memory_total, 2),
-                "utilization_percent": round(
-                    (memory_allocated / memory_total) * 100, 1
-                ),
+                "utilization_percent": round((memory_allocated / memory_total) * 100, 1),
             }
         except Exception as e:
             logger.warning(f"Failed to get GPU memory info: {e}")
@@ -393,9 +386,7 @@ class SimplifiedDetector:
 
             # Create model config
             model_config = ModelConfig(
-                model_name=model_config_dict.get(
-                    "model_name", "hfl/chinese-macbert-base"
-                ),
+                model_name=model_config_dict.get("model_name", "hfl/chinese-macbert-base"),
                 num_toxicity_classes=model_config_dict.get("num_toxicity_classes", 3),
                 num_emotion_classes=model_config_dict.get("num_emotion_classes", 3),
                 num_bullying_classes=model_config_dict.get("num_bullying_classes", 3),
@@ -518,18 +509,12 @@ class SimplifiedDetector:
             result["scores"]["emotion"] = {"pos": 0.33, "neu": 0.34, "neg": 0.33}
 
         # Generate simple explanations based on keywords
-        result["explanations"]["important_words"] = self._generate_simple_explanations(
-            text, result
-        )
-        result["explanations"]["confidence"] = overall_confidence / max(
-            confidence_count, 1
-        )
+        result["explanations"]["important_words"] = self._generate_simple_explanations(text, result)
+        result["explanations"]["confidence"] = overall_confidence / max(confidence_count, 1)
 
         return result
 
-    def _generate_simple_explanations(
-        self, text: str, predictions: Dict[str, Any]
-    ) -> list:
+    def _generate_simple_explanations(self, text: str, predictions: Dict[str, Any]) -> list:
         """Generate simple explanations based on keyword matching."""
         # Simple keyword-based explanations
         toxic_keywords = ["笨蛋", "白痴", "去死", "滚", "废物", "蠢", "傻"]
