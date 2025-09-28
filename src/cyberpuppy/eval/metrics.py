@@ -14,18 +14,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-
 # 評估指標相關
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    classification_report,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, average_precision_score,
+                             classification_report, confusion_matrix, f1_score,
+                             precision_score, recall_score, roc_auc_score)
 
 logger = logging.getLogger(__name__)
 
@@ -172,9 +164,7 @@ class MetricsCalculator:
         try:
             if y_prob.shape[1] > 2:
                 # 多類別 AUC
-                auc_roc = roc_auc_score(
-                    y_true, y_prob, multi_class="ovr", average="weighted"
-                )
+                auc_roc = roc_auc_score(y_true, y_prob, multi_class="ovr", average="weighted")
             else:
                 # 二元分類
                 if len(y_true.shape) > 1:
@@ -196,14 +186,7 @@ class MetricsCalculator:
                 # 多類別 AP
                 aucpr_scores = []
                 for i in range(y_prob.shape[1]):
-                    if (
-                        len(
-                            np.unique(
-                                y_true[:, i] if len(y_true.shape) > 1 else (y_true == i)
-                            )
-                        )
-                        > 1
-                    ):
+                    if len(np.unique(y_true[:, i] if len(y_true.shape) > 1 else (y_true == i))) > 1:
                         ap = average_precision_score(
                             y_true[:, i] if len(y_true.shape) > 1 else (y_true == i),
                             y_prob[:, i],
@@ -247,9 +230,7 @@ class MetricsCalculator:
         # 會話統計
         total_sessions = len(sessions)
         total_messages = sum(len(s.messages) for s in sessions)
-        avg_messages_per_session = (
-            total_messages / total_sessions if total_sessions > 0 else 0
-        )
+        avg_messages_per_session = total_messages / total_sessions if total_sessions > 0 else 0
 
         metrics["total_sessions"] = MetricResult(
             name="total_sessions",
@@ -316,9 +297,7 @@ class MetricsCalculator:
                     intervention_total += 1
                     # 檢查下一條訊息的毒性是否降低
                     current_score = msg.get("scores", {}).get(task_name, 0)
-                    next_score = (
-                        session.messages[i + 1].get("sco" "res", {}).get(task_name, 0)
-                    )
+                    next_score = session.messages[i + 1].get("sco" "res", {}).get(task_name, 0)
 
                     if isinstance(current_score, dict):
                         current_score = max(current_score.values())
@@ -330,11 +309,7 @@ class MetricsCalculator:
 
         metrics["intervention_success_rate"] = MetricResult(
             name="intervention_success_rate",
-            value=(
-                intervention_success / intervention_total
-                if intervention_total > 0
-                else 0.0
-            ),
+            value=(intervention_success / intervention_total if intervention_total > 0 else 0.0),
             metadata={
                 "successful_interventions": intervention_success,
                 "total_interventions": intervention_total,
@@ -420,8 +395,7 @@ class OnlineMonitor:
             "f1_avg": np.mean(self.f1_window),
             "learning_rate": learning_rate,
             "converged": converged,
-            "improvem"
-            "ent_count": self.convergence_patience - self.no_improvement_count,
+            "improvem" "ent_count": self.convergence_patience - self.no_improvement_count,
             "elapsed_time": time.time() - self.start_time,
         }
 
@@ -482,9 +456,7 @@ class PrometheusExporter:
         self.instance = instance
         self.metrics = {}
 
-    def update_metric(
-        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
-    ):
+    def update_metric(self, name: str, value: float, labels: Optional[Dict[str, str]] = None):
         """更新指標"""
         key = self._generate_key(name, labels)
         self.metrics[key] = {
@@ -517,12 +489,10 @@ class PrometheusExporter:
         # 添加說明
         lines.append("# HELP cyberpuppy_info CyberPuppy service information")
         lines.append("# TYPE cyberpuppy_info gauge")
-        lines.append(
-            f'cyberpuppy_info{{job="{self.job_name}",instance="{self.instance_name}"}} 1'
-        )
+        lines.append(f'cyberpuppy_info{{job="{self.job_name}",instance="{self.instance_name}"}} 1')
 
         # 匯出所有指標
-        for key, metric in self.metrics.items():
+        for _key, metric in self.metrics.items():
             name = metric["name"]
             value = metric["value"]
             labels = metric["labels"]
@@ -599,7 +569,7 @@ class CSVExporter:
         filepath = self.output_dir / filename
 
         lines = ["metric_name,value,metadata"]
-        for name, result in metrics.items():
+        for _name, result in metrics.items():
             metadata_str = json.dumps(result.metadata) if result.metadata else ""
             lines.append(f'{result.name},{result.value},"{metadata_str}"')
 
@@ -683,9 +653,7 @@ class EvaluationReport:
 
         # 計算機率指標
         if y_prob is not None:
-            prob_metrics = self.calculator.calculate_probability_metrics(
-                y_true, y_prob, task_name
-            )
+            prob_metrics = self.calculator.calculate_probability_metrics(y_true, y_prob, task_name)
             self.results[f"{task_name}_probability"] = prob_metrics
 
     def add_session(self, session: SessionContext):
@@ -741,7 +709,7 @@ class EvaluationReport:
         """儲存報告到檔案"""
         report = self.generate_report()
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dumps(report, f, ensure_ascii=False, indent=2)
+            json.dump(report, f, ensure_ascii=False, indent=2)
         logger.info(f"報告已儲存到: {filepath}")
 
 
@@ -790,9 +758,7 @@ def example_usage():
 
     # Prometheus 格式
     prometheus = PrometheusExporter()
-    prometheus.update_metric(
-        "toxicity_f1_score", 0.78, {"model": "baseline", "dataset": "test"}
-    )
+    prometheus.update_metric("toxicity_f1_score", 0.78, {"model": "baseline", "dataset": "test"})
     prometheus.update_metric("accuracy", 0.85, {"dataset": "test"})
     print("Prometheus 格式:")
     print(prometheus.export()[:200] + "...")
