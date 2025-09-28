@@ -80,13 +80,18 @@ notebooks/
 
 **來源**: `models/bullying_a100_best/final_results.json`
 
-### ✅ 可用模型（含權重檔案）
+### ⚠️ 模型性能驗證結果（2025-09-29）
 
-| 模型 | 位置 | F1 (霸凌) | 狀態 | 備註 |
-|------|------|-----------|------|------|
-| `gpu_trained_model` | models/gpu_trained_model/ | 0.56 | ⚠️ 未達標 | 有完整權重但效果不佳 |
-| `toxicity_only_demo` | models/toxicity_only_demo/ | 0.783 | ✅ 可用 | 毒性專用，單任務 |
-| `macbert_base_demo` | models/macbert_base_demo/ | 0.773 | ✅ 可用 | 多任務，早期版本 |
+**驗證報告**: `docs/MODEL_VERIFICATION_REPORT.md`
+
+| 模型 | 位置 | 聲稱 F1 | **實際 F1** | 狀態 | 問題 |
+|------|------|---------|-------------|------|------|
+| `gpu_trained_model` | models/gpu_trained_model/ | 0.77 | **0.28** | ❌ **不可用** | 實際性能僅 28%，幾乎無法檢測毒性內容 |
+| `working_toxicity_model` | models/working_toxicity_model/ | - | **無法載入** | ❌ 不可用 | config.json 格式錯誤 |
+| `bullying_a100_best` | models/bullying_a100_best/ | 0.82 | **未驗證** | ⚠️ 缺少權重 | 只有評估結果，無 .safetensors/.bin |
+| `local_training/macbert_aggressive` | models/local_training/macbert_aggressive/ | - | **0.34** | ❌ 不可用 | 訓練未收斂，過擬合 |
+
+**結論**: ❌ **目前沒有可用的生產級模型**（所有測試模型均未達 F1≥0.75 目標）
 
 ### 🔄 下一步行動
 
