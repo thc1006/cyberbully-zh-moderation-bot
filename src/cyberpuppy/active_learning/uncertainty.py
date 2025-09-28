@@ -2,11 +2,11 @@
 Uncertainty sampling strategies for active learning
 """
 
+from typing import List, Optional
+
 import numpy as np
 import torch
-import torch.nn.functional as F
-from typing import List, Optional
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from .base import ActiveLearner
 
@@ -14,10 +14,9 @@ from .base import ActiveLearner
 class EntropySampling(ActiveLearner):
     """Entropy-based uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with highest prediction entropy
 
@@ -44,10 +43,9 @@ class EntropySampling(ActiveLearner):
 class LeastConfidenceSampling(ActiveLearner):
     """Least confidence uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with lowest confidence (lowest max probability)
 
@@ -73,10 +71,9 @@ class LeastConfidenceSampling(ActiveLearner):
 class MarginSampling(ActiveLearner):
     """Margin-based uncertainty sampling"""
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with smallest margin between top two predictions
 
@@ -105,7 +102,7 @@ class MarginSampling(ActiveLearner):
 class BayesianUncertaintySampling(ActiveLearner):
     """Bayesian uncertainty using Monte Carlo Dropout"""
 
-    def __init__(self, model, device: str = 'cpu', n_mc_samples: int = 10):
+    def __init__(self, model, device: str = "cpu", n_mc_samples: int = 10):
         """
         Initialize Bayesian uncertainty sampler
 
@@ -138,8 +135,8 @@ class BayesianUncertaintySampling(ActiveLearner):
 
             with torch.no_grad():
                 for batch in dataloader:
-                    inputs = batch['input_ids'].to(self.device)
-                    attention_mask = batch['attention_mask'].to(self.device)
+                    inputs = batch["input_ids"].to(self.device)
+                    attention_mask = batch["attention_mask"].to(self.device)
 
                     outputs = self.model(input_ids=inputs, attention_mask=attention_mask)
                     probs = torch.softmax(outputs.logits, dim=-1)
@@ -152,7 +149,7 @@ class BayesianUncertaintySampling(ActiveLearner):
 
         # Calculate mean and variance
         mean_predictions = np.mean(predictions_stack, axis=0)
-        var_predictions = np.var(predictions_stack, axis=0)
+        np.var(predictions_stack, axis=0)
 
         # Calculate uncertainty as mutual information
         # H[y|x] = E[H[y|x,θ]] where expectation is over posterior of θ
@@ -167,10 +164,9 @@ class BayesianUncertaintySampling(ActiveLearner):
 
         return mean_predictions, mutual_information
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with highest Bayesian uncertainty
 
@@ -194,7 +190,7 @@ class BayesianUncertaintySampling(ActiveLearner):
 class EnsembleUncertaintySampling(ActiveLearner):
     """Uncertainty sampling using model ensemble"""
 
-    def __init__(self, models: List, device: str = 'cpu'):
+    def __init__(self, models: List, device: str = "cpu"):
         """
         Initialize ensemble uncertainty sampler
 
@@ -224,8 +220,8 @@ class EnsembleUncertaintySampling(ActiveLearner):
 
             with torch.no_grad():
                 for batch in dataloader:
-                    inputs = batch['input_ids'].to(self.device)
-                    attention_mask = batch['attention_mask'].to(self.device)
+                    inputs = batch["input_ids"].to(self.device)
+                    attention_mask = batch["attention_mask"].to(self.device)
 
                     outputs = model(input_ids=inputs, attention_mask=attention_mask)
                     probs = torch.softmax(outputs.logits, dim=-1)
@@ -245,10 +241,9 @@ class EnsembleUncertaintySampling(ActiveLearner):
 
         return mean_predictions, uncertainty
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples with highest ensemble disagreement
 

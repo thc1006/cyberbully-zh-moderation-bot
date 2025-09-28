@@ -4,14 +4,15 @@ Core module tests to improve coverage for critical components
 Focusing on modules with minimal external dependencies
 """
 
-import unittest
-import torch
-import numpy as np
-import tempfile
 import json
-from pathlib import Path
+import tempfile
+import unittest
 from datetime import datetime
+from pathlib import Path
+
+import numpy as np
 import pytest
+import torch
 
 # Import core modules that should work
 from cyberpuppy.config import Settings, get_config
@@ -33,22 +34,16 @@ class TestConfigModule(unittest.TestCase):
             )
 
         with self.assertRaises(ValueError):
-            Settings(
-                model_name="test", confidence_threshold=1.5  # Invalid threshold > 1
-            )
+            Settings(model_name="test", confidence_threshold=1.5)  # Invalid threshold > 1
 
         with self.assertRaises(ValueError):
-            Settings(
-                model_name="", confidence_threshold=0.5  # Invalid empty model name
-            )
+            Settings(model_name="", confidence_threshold=0.5)  # Invalid empty model name
 
     def test_settings_path_validation(self):
         """Test path validation in settings"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Valid paths
-            settings = Settings(
-                model_name="test", data_dir=temp_dir, model_dir=temp_dir
-            )
+            settings = Settings(model_name="test", data_dir=temp_dir, model_dir=temp_dir)
 
             # Check that paths are resolved correctly
             self.assertTrue(Path(settings.data_dir).exists())
@@ -79,9 +74,7 @@ class TestConfigModule(unittest.TestCase):
 
     def test_settings_serialization(self):
         """Test settings serialization methods"""
-        settings = Settings(
-            model_name="test_model", confidence_threshold=0.75, debug=True
-        )
+        settings = Settings(model_name="test_model", confidence_threshold=0.75, debug=True)
 
         # Test to_dict
         settings_dict = settings.to_dict()
@@ -116,9 +109,7 @@ class TestConfigModule(unittest.TestCase):
 
     def test_settings_path_methods(self):
         """Test path helper methods"""
-        settings = Settings(
-            model_name="test_model", data_dir="data", model_dir="models"
-        )
+        settings = Settings(model_name="test_model", data_dir="data", model_dir="models")
 
         # Test path getter methods
         data_path = settings.get_data_path("dataset.json")

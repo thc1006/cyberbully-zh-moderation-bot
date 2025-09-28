@@ -4,30 +4,32 @@
 這是一個獨立的測試腳本，不是 pytest 測試。
 直接運行：python tests/api_tests/test_model_directly.py
 """
-import sys
 import os
+import sys
 
 
 def main():
     """主測試函數"""
     # 添加路徑
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api'))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "api"))
     sys.path.insert(0, os.path.dirname(__file__))
 
-    print("="*60)
+    print("=" * 60)
     print("直接測試模型載入器")
-    print("="*60)
+    print("=" * 60)
 
     # 測試 import
     try:
         print("\n1. 測試 import model_loader_fixed...")
         from api.model_loader_fixed import get_model_loader
+
         print("   [OK] import 成功")
     except ImportError as e:
         print(f"   [ERROR] import 失敗: {e}")
         print("\n2. 嘗試 import model_loader_simple...")
         try:
             from api.model_loader_simple import get_model_loader
+
             print("   [OK] 使用 simple 版本")
         except ImportError as e2:
             print(f"   [ERROR] 兩個版本都失敗: {e2}")
@@ -46,11 +48,7 @@ def main():
         print(f"   準備就緒: {status.get('warmup_complete', False)}")
 
         print("\n5. 測試預測功能...")
-        test_texts = [
-            "你好世界",
-            "今天天氣很好",
-            "你這個笨蛋"
-        ]
+        test_texts = ["你好世界", "今天天氣很好", "你這個笨蛋"]
 
         for text in test_texts:
             print(f"\n   測試文本: '{text}'")
@@ -64,16 +62,18 @@ def main():
             except Exception as e:
                 print(f"   [ERROR] 預測失敗: {str(e)[:100]}")
                 import traceback
+
                 print("   詳細錯誤:")
                 traceback.print_exc()
 
     except Exception as e:
         print(f"\n[ERROR] 測試失敗: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     return 0
 
 

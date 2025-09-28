@@ -5,8 +5,9 @@ This module follows London School TDD principles with comprehensive
 behavior verification using mocks and outside-in development.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
 import torch
 
 # Mock the imports since we're testing before implementation
@@ -39,24 +40,21 @@ def mock_detection_result():
                 "text": self.text,
                 "toxicity": {
                     "prediction": self.toxicity_prediction,
-                    "confidence": self.toxicity_confidence
+                    "confidence": self.toxicity_confidence,
                 },
                 "emotion": {
                     "prediction": self.emotion_prediction,
                     "confidence": self.emotion_confidence,
-                    "strength": self.emotion_strength
+                    "strength": self.emotion_strength,
                 },
                 "bullying": {
                     "prediction": self.bullying_prediction,
-                    "confidence": self.bullying_confidence
+                    "confidence": self.bullying_confidence,
                 },
-                "role": {
-                    "prediction": self.role_prediction,
-                    "confidence": self.role_confidence
-                },
+                "role": {"prediction": self.role_prediction, "confidence": self.role_confidence},
                 "explanations": self.explanations,
                 "attribution_scores": self.attribution_scores,
-                "processing_time": self.processing_time
+                "processing_time": self.processing_time,
             }
 
     return MockDetectionResult
@@ -72,40 +70,40 @@ def mock_models():
 
     # Configure baseline model mock
     baseline_model.predict.return_value = {
-        'toxicity': torch.tensor([0.1, 0.8, 0.1]),  # toxic
-        'emotion': torch.tensor([0.2, 0.7, 0.1]),   # neutral
-        'bullying': torch.tensor([0.9, 0.1, 0.0]),  # none
-        'role': torch.tensor([0.8, 0.1, 0.1])       # none
+        "toxicity": torch.tensor([0.1, 0.8, 0.1]),  # toxic
+        "emotion": torch.tensor([0.2, 0.7, 0.1]),  # neutral
+        "bullying": torch.tensor([0.9, 0.1, 0.0]),  # none
+        "role": torch.tensor([0.8, 0.1, 0.1]),  # none
     }
 
     # Configure contextual model mock
     contextual_model.predict.return_value = {
-        'toxicity': torch.tensor([0.2, 0.7, 0.1]),
-        'emotion': torch.tensor([0.3, 0.6, 0.1]),
-        'bullying': torch.tensor([0.8, 0.2, 0.0]),
-        'role': torch.tensor([0.7, 0.2, 0.1])
+        "toxicity": torch.tensor([0.2, 0.7, 0.1]),
+        "emotion": torch.tensor([0.3, 0.6, 0.1]),
+        "bullying": torch.tensor([0.8, 0.2, 0.0]),
+        "role": torch.tensor([0.7, 0.2, 0.1]),
     }
 
     # Configure weak supervision model mock
     weak_supervision_model.predict.return_value = {
-        'toxicity': torch.tensor([0.15, 0.75, 0.1]),
-        'emotion': torch.tensor([0.25, 0.65, 0.1]),
-        'bullying': torch.tensor([0.85, 0.15, 0.0]),
-        'role': torch.tensor([0.75, 0.15, 0.1])
+        "toxicity": torch.tensor([0.15, 0.75, 0.1]),
+        "emotion": torch.tensor([0.25, 0.65, 0.1]),
+        "bullying": torch.tensor([0.85, 0.15, 0.0]),
+        "role": torch.tensor([0.75, 0.15, 0.1]),
     }
 
     # Configure explainer mock
     explainer.explain.return_value = {
-        'attributions': [0.1, 0.3, -0.2, 0.4, -0.1],
-        'tokens': ['這', '是', '很', '糟糕', '的'],
-        'explanation': "Word '糟糕' contributes most to toxicity detection"
+        "attributions": [0.1, 0.3, -0.2, 0.4, -0.1],
+        "tokens": ["這", "是", "很", "糟糕", "的"],
+        "explanation": "Word '糟糕' contributes most to toxicity detection",
     }
 
     return {
-        'baseline': baseline_model,
-        'contextual': contextual_model,
-        'weak_supervision': weak_supervision_model,
-        'explainer': explainer
+        "baseline": baseline_model,
+        "contextual": contextual_model,
+        "weak_supervision": weak_supervision_model,
+        "explainer": explainer,
     }
 
 
@@ -113,33 +111,24 @@ def mock_models():
 def detector_config():
     """Mock detector configuration."""
     return {
-        'model_paths': {
-            'baseline': 'models/baseline_model.pt',
-            'contextual': 'models/contextual_model.pt',
-            'weak_supervision': 'models/weak_supervision_model.pt'
+        "model_paths": {
+            "baseline": "models/baseline_model.pt",
+            "contextual": "models/contextual_model.pt",
+            "weak_supervision": "models/weak_supervision_model.pt",
         },
-        'ensemble_weights': {
-            'baseline': 0.4,
-            'contextual': 0.35,
-            'weak_supervision': 0.25
+        "ensemble_weights": {"baseline": 0.4, "contextual": 0.35, "weak_supervision": 0.25},
+        "confidence_thresholds": {
+            "toxicity": {"none": 0.6, "toxic": 0.7, "severe": 0.8},
+            "emotion": {"pos": 0.6, "neu": 0.5, "neg": 0.6},
+            "bullying": {"none": 0.6, "harassment": 0.7, "threat": 0.8},
+            "role": {"none": 0.5, "perpetrator": 0.7, "victim": 0.6, "bystander": 0.6},
         },
-        'confidence_thresholds': {
-            'toxicity': {'none': 0.6, 'toxic': 0.7, 'severe': 0.8},
-            'emotion': {'pos': 0.6, 'neu': 0.5, 'neg': 0.6},
-            'bullying': {'none': 0.6, 'harassment': 0.7, 'threat': 0.8},
-            'role': {'none': 0.5, 'perpetrator': 0.7, 'victim': 0.6,
-                'bystander': 0.6}
+        "preprocessing": {
+            "max_length": 512,
+            "normalize_unicode": True,
+            "convert_traditional": True,
         },
-        'preprocessing': {
-            'max_length': 512,
-            'normalize_unicode': True,
-            'convert_traditional': True
-        },
-        'explanation': {
-            'method': 'integrated_gradients',
-            'n_steps': 50,
-            'internal_batch_size': 8
-        }
+        "explanation": {"method": "integrated_gradients", "n_steps": 50, "internal_batch_size": 8},
     }
 
 
@@ -166,10 +155,7 @@ class TestDetectionResult:
         assert isinstance(result.ensemble_weights, dict)
         assert isinstance(result.processing_time, float)
 
-    def test_detection_result_to_dict_serialization(
-        self,
-        mock_detection_result
-    ):
+    def test_detection_result_to_dict_serialization(self, mock_detection_result):
         """Test DetectionResult can be serialized to dictionary."""
         result = mock_detection_result("測試文本")
         result_dict = result.to_dict()
@@ -188,10 +174,7 @@ class TestDetectionResult:
         assert result_dict["toxicity"]["confidence"] == 0.85
         assert result_dict["emotion"]["strength"] == 2
 
-    def test_detection_result_confidence_validation(
-        self,
-        mock_detection_result
-    ):
+    def test_detection_result_confidence_validation(self, mock_detection_result):
         """Test detection result confidence validation."""
         result = mock_detection_result("測試文本")
 
@@ -201,10 +184,7 @@ class TestDetectionResult:
         assert 0.0 <= result.bullying_confidence <= 1.0
         assert 0.0 <= result.role_confidence <= 1.0
 
-    def test_detection_result_emotion_strength_validation(
-        self,
-        mock_detection_result
-    ):
+    def test_detection_result_emotion_strength_validation(self, mock_detection_result):
         """Test detection result emotion strength validation."""
         result = mock_detection_result("測試文本")
 
@@ -217,14 +197,14 @@ class TestCyberPuppyDetector:
 
     def test_detector_initialization(self, detector_config):
         """Test CyberPuppyDetector initializes with proper configuration."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models') as mock_load:
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models") as mock_load:
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
 
             # Verify configuration is stored
             assert detector.config == detector_config
-            assert detector.ensemble_weights == detector_config['ensemble_weights']
+            assert detector.ensemble_weights == detector_config["ensemble_weights"]
             assert not detector._models_loaded
 
             # Verify _load_models was not called
@@ -232,7 +212,7 @@ class TestCyberPuppyDetector:
 
     def test_detector_model_loading_error_handling(self, detector_config):
         """Test CyberPuppyDetector handles model loading errors gracefully."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models') as mock_load:
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models") as mock_load:
             mock_load.side_effect = FileNotFoundError("Model file not found")
 
             from cyberpuppy.models.detector import CyberPuppyDetector
@@ -242,7 +222,7 @@ class TestCyberPuppyDetector:
 
     def test_text_preprocessing_pipeline(self, detector_config):
         """Test text preprocessing handles various input formats."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
@@ -260,7 +240,7 @@ class TestCyberPuppyDetector:
             for text in test_cases:
                 preprocessed = detector._preprocess_text(text)
                 assert isinstance(preprocessed, str)
-                assert len(preprocessed) <= detector_config['preprocessing']['max_length']
+                assert len(preprocessed) <= detector_config["preprocessing"]["max_length"]
 
             # Test empty text raises error
             with pytest.raises(ValueError):
@@ -268,7 +248,7 @@ class TestCyberPuppyDetector:
 
     def test_ensemble_prediction_logic(self, detector_config):
         """Test ensemble prediction combines model outputs correctly."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config, load_models=False)
@@ -277,33 +257,33 @@ class TestCyberPuppyDetector:
 
             # Mock model predictions
             model_predictions = {
-                'baseline': {
-                    'predictions': {
-                        'toxicity': torch.tensor([0.1, 0.8, 0.1]),
-                        'emotion': torch.tensor([0.2, 0.7, 0.1]),
-                        'bullying': torch.tensor([0.9, 0.1, 0.0]),
-                        'role': torch.tensor([0.8, 0.1, 0.1, 0.0])
+                "baseline": {
+                    "predictions": {
+                        "toxicity": torch.tensor([0.1, 0.8, 0.1]),
+                        "emotion": torch.tensor([0.2, 0.7, 0.1]),
+                        "bullying": torch.tensor([0.9, 0.1, 0.0]),
+                        "role": torch.tensor([0.8, 0.1, 0.1, 0.0]),
                     },
-                    'processing_time': 0.1
+                    "processing_time": 0.1,
                 },
-                'contextual': {
-                    'predictions': {
-                        'toxicity': torch.tensor([0.2, 0.7, 0.1]),
-                        'emotion': torch.tensor([0.3, 0.6, 0.1]),
-                        'bullying': torch.tensor([0.8, 0.2, 0.0]),
-                        'role': torch.tensor([0.7, 0.2, 0.1, 0.0])
+                "contextual": {
+                    "predictions": {
+                        "toxicity": torch.tensor([0.2, 0.7, 0.1]),
+                        "emotion": torch.tensor([0.3, 0.6, 0.1]),
+                        "bullying": torch.tensor([0.8, 0.2, 0.0]),
+                        "role": torch.tensor([0.7, 0.2, 0.1, 0.0]),
                     },
-                    'processing_time': 0.15
-                }
+                    "processing_time": 0.15,
+                },
             }
 
             result = detector._ensemble_predict(text, model_predictions)
 
             # Verify ensemble logic is applied
-            assert 'toxicity' in result
-            assert 'emotion' in result
-            assert 'bullying' in result
-            assert 'role' in result
+            assert "toxicity" in result
+            assert "emotion" in result
+            assert "bullying" in result
+            assert "role" in result
 
             # Verify predictions are torch tensors
             for task_result in result.values():
@@ -311,7 +291,7 @@ class TestCyberPuppyDetector:
 
     def test_confidence_calibration(self, mock_models, detector_config):
         """Test confidence scores are properly calibrated."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
@@ -321,14 +301,8 @@ class TestCyberPuppyDetector:
             high_confidence_logits = torch.tensor([0.1, 0.9, 0.0])
             low_confidence_logits = torch.tensor([0.4, 0.3, 0.3])
 
-            high_conf = detector._calibrate_confidence(
-                high_confidence_logits,
-                'toxicity'
-            )
-            low_conf = detector._calibrate_confidence(
-                low_confidence_logits,
-                'toxicity'
-            )
+            high_conf = detector._calibrate_confidence(high_confidence_logits, "toxicity")
+            low_conf = detector._calibrate_confidence(low_confidence_logits, "toxicity")
 
             assert high_conf > low_conf
             assert 0.0 <= high_conf <= 1.0
@@ -336,7 +310,7 @@ class TestCyberPuppyDetector:
 
     def test_explanation_generation(self, mock_models, detector_config):
         """Test explanation generation with attribution scores."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
@@ -344,33 +318,25 @@ class TestCyberPuppyDetector:
 
             text = "這是很糟糕的評論"
             predictions = {
-                'toxicity': torch.tensor([0.1, 0.8, 0.1]),
-                'emotion': torch.tensor([0.2, 0.1, 0.7])
+                "toxicity": torch.tensor([0.1, 0.8, 0.1]),
+                "emotion": torch.tensor([0.2, 0.1, 0.7]),
             }
 
             explanations = detector._generate_explanations(text, predictions)
 
             # Verify explainer was called
-            mock_models['explainer'].explain.assert_called()
+            mock_models["explainer"].explain.assert_called()
 
             # Verify explanation structure
             assert isinstance(explanations, dict)
-            assert 'attributions' in explanations
-            assert 'tokens' in explanations
-            assert 'explanation' in explanations
+            assert "attributions" in explanations
+            assert "tokens" in explanations
+            assert "explanation" in explanations
 
-    def test_full_analysis_pipeline(
-        self,
-        mock_models,
-        detector_config,
-        mock_detection_result
-    ):
+    def test_full_analysis_pipeline(self, mock_models, detector_config, mock_detection_result):
         """Test complete text analysis pipeline integration."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            with patch(
-                'src.cyberpuppy.models.detector.DetectionResult',
-                mock_detection_result
-            ):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
+            with patch("src.cyberpuppy.models.detector.DetectionResult", mock_detection_result):
                 from cyberpuppy.models.detector import CyberPuppyDetector
 
                 detector = CyberPuppyDetector(detector_config)
@@ -380,41 +346,29 @@ class TestCyberPuppyDetector:
                 result = detector.analyze(text)
 
                 # Verify all models were called
-                mock_models['baseline'].predict.assert_called_once()
-                mock_models['contextual'].predict.assert_called_once()
-                mock_models['weak_supervision'].predict.assert_called_once()
-                mock_models['explainer'].explain.assert_called_once()
+                mock_models["baseline"].predict.assert_called_once()
+                mock_models["contextual"].predict.assert_called_once()
+                mock_models["weak_supervision"].predict.assert_called_once()
+                mock_models["explainer"].explain.assert_called_once()
 
                 # Verify result structure
                 assert result.text == text
-                assert hasattr(result, 'toxicity_prediction')
-                assert hasattr(result, 'emotion_prediction')
-                assert hasattr(result, 'bullying_prediction')
-                assert hasattr(result, 'role_prediction')
-                assert hasattr(result, 'explanations')
+                assert hasattr(result, "toxicity_prediction")
+                assert hasattr(result, "emotion_prediction")
+                assert hasattr(result, "bullying_prediction")
+                assert hasattr(result, "role_prediction")
+                assert hasattr(result, "explanations")
 
-    def test_batch_analysis(
-        self,
-        mock_models,
-        detector_config,
-        mock_detection_result
-    ):
+    def test_batch_analysis(self, mock_models, detector_config, mock_detection_result):
         """Test batch processing of multiple texts."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            with patch(
-                'src.cyberpuppy.models.detector.DetectionResult',
-                mock_detection_result
-            ):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
+            with patch("src.cyberpuppy.models.detector.DetectionResult", mock_detection_result):
                 from cyberpuppy.models.detector import CyberPuppyDetector
 
                 detector = CyberPuppyDetector(detector_config)
                 detector.models = mock_models
 
-                texts = [
-                    "第一個文本",
-                    "第二個文本",
-                    "第三個文本"
-                ]
+                texts = ["第一個文本", "第二個文本", "第三個文本"]
 
                 results = detector.analyze_batch(texts)
 
@@ -424,7 +378,7 @@ class TestCyberPuppyDetector:
 
     def test_invalid_input_handling(self, mock_models, detector_config):
         """Test error handling for invalid inputs."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
@@ -444,9 +398,10 @@ class TestCyberPuppyDetector:
 
     def test_timeout_handling(self, mock_models, detector_config):
         """Test timeout handling for long-running predictions."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from cyberpuppy.models.detector import CyberPuppyDetector
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             import time
+
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -454,18 +409,19 @@ class TestCyberPuppyDetector:
             # Mock slow model prediction
             def slow_predict(*args, **kwargs):
                 time.sleep(2)  # Simulate slow prediction
-                return mock_models['baseline'].predict.return_value
+                return mock_models["baseline"].predict.return_value
 
-            mock_models['baseline'].predict.side_effect = slow_predict
+            mock_models["baseline"].predict.side_effect = slow_predict
 
             with pytest.raises(TimeoutError):
                 detector.analyze("測試文本", timeout=1.0)
 
     def test_performance_requirements(self, mock_models, detector_config):
         """Test performance requirements are met."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
-            from cyberpuppy.models.detector import CyberPuppyDetector
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             import time
+
+            from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
@@ -484,29 +440,26 @@ class TestCyberPuppyDetector:
 
     def test_context_handling(self, mock_models, detector_config):
         """Test contextual information handling."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
             detector.models = mock_models
 
             text = "你好嗎？"
-            context = [
-                "昨天的對話內容",
-                "今天的心情不好"
-            ]
+            context = ["昨天的對話內容", "今天的心情不好"]
 
             result = detector.analyze(text, context=context)
 
             # Verify contextual model was called with context
-            mock_models['contextual'].predict.assert_called_once()
+            mock_models["contextual"].predict.assert_called_once()
 
             # Context should influence predictions
-            assert hasattr(result, 'model_predictions')
+            assert hasattr(result, "model_predictions")
 
     def test_memory_usage_optimization(self, mock_models, detector_config):
         """Test memory usage is optimized for large inputs."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             detector = CyberPuppyDetector(detector_config)
@@ -524,34 +477,30 @@ class TestCyberPuppyDetector:
                 # This is more of a conceptual test - actual memory monitoring
                 # would require memory profiling tools
 
-    def test_model_ensemble_weights_configuration(
-        self,
-        mock_models,
-        detector_config
-    ):
+    def test_model_ensemble_weights_configuration(self, mock_models, detector_config):
         """Test ensemble weights can be configured and applied correctly."""
-        with patch('src.cyberpuppy.models.detector.CyberPuppyDetector._load_models'):
+        with patch("src.cyberpuppy.models.detector.CyberPuppyDetector._load_models"):
             from cyberpuppy.models.detector import CyberPuppyDetector
 
             # Custom weights configuration
             custom_config = detector_config.copy()
-            custom_config['ensemble_weights'] = {
-                'baseline': 0.5,
-                'contextual': 0.3,
-                'weak_supervision': 0.2
+            custom_config["ensemble_weights"] = {
+                "baseline": 0.5,
+                "contextual": 0.3,
+                "weak_supervision": 0.2,
             }
 
             detector = CyberPuppyDetector(custom_config)
             detector.models = mock_models
 
-            assert detector.ensemble_weights == custom_config['ensemble_weights']
+            assert detector.ensemble_weights == custom_config["ensemble_weights"]
 
             # Test weight validation
             invalid_config = detector_config.copy()
-            invalid_config['ensemble_weights'] = {
-                'baseline': 0.5,
-                'contextual': 0.3,
-                'weak_supervision': 0.3  # Sums to 1.1, should be normalized
+            invalid_config["ensemble_weights"] = {
+                "baseline": 0.5,
+                "contextual": 0.3,
+                "weak_supervision": 0.3,  # Sums to 1.1, should be normalized
             }
 
             detector_invalid = CyberPuppyDetector(invalid_config)

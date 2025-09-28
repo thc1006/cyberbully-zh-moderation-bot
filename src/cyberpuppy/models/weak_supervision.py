@@ -26,7 +26,6 @@ Key Features:
 
 import json
 import logging
-import pickle
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -171,9 +170,7 @@ class ChineseLabelingFunction:
     It includes utilities for Chinese text preprocessing and pattern matching.
     """
 
-    def __init__(
-        self, name: str, function: Callable[[str], int], description: str = ""
-    ):
+    def __init__(self, name: str, function: Callable[[str], int], description: str = ""):
         """Initialize labeling function.
 
         Args:
@@ -267,9 +264,7 @@ class ChineseLabelingFunction:
         return cls(name, profanity_function, description)
 
     @classmethod
-    def create_threat_pattern_lf(
-        cls, name: str, patterns: List[str]
-    ) -> "ChineseLabelingFunction":
+    def create_threat_pattern_lf(cls, name: str, patterns: List[str]) -> "ChineseLabelingFunction":
         """Create a threat pattern-based labeling function.
 
         Args:
@@ -375,9 +370,7 @@ class ChineseLabelingFunction:
             text_lower = text.lower()
 
             # Count negative emotions
-            emotion_count = sum(
-                1 for emotion in negative_emotions if emotion in text_lower
-            )
+            emotion_count = sum(1 for emotion in negative_emotions if emotion in text_lower)
 
             # Look for intensity amplifiers
             amplifiers = ["非常", "极其", "特别", "超级", "很", "太", "十分"]
@@ -442,9 +435,7 @@ class LabelingFunctionSet:
 
         return label_matrix
 
-    def get_coverage(
-        self, label_matrix: Optional[np.ndarray] = None
-    ) -> Dict[str, float]:
+    def get_coverage(self, label_matrix: Optional[np.ndarray] = None) -> Dict[str, float]:
         """Calculate coverage statistics for labeling functions.
 
         Args:
@@ -478,9 +469,7 @@ class WeakSupervisionDataset(Dataset):
         self.texts = texts
         self.labels_matrix = labels_matrix
 
-        assert (
-            len(texts) == labels_matrix.shape[0]
-        ), "Number of texts must match label matrix rows"
+        assert len(texts) == labels_matrix.shape[0], "Number of texts must match label matrix rows"
 
     def __len__(self) -> int:
         """Return dataset size."""
@@ -676,9 +665,7 @@ class WeakSupervisionModel:
         )
 
         self.lf_set.add_function(
-            ChineseLabelingFunction.create_threat_pattern_lf(
-                "threat_patterns", threat_patterns
-            )
+            ChineseLabelingFunction.create_threat_pattern_lf("threat_patterns", threat_patterns)
         )
 
         self.lf_set.add_function(
@@ -719,8 +706,7 @@ class WeakSupervisionModel:
 
         if len(self.lf_set.functions) == 0:
             raise ValueError(
-                "No labeling functions available. Call s"
-                "etup_default_labeling_functions() first."
+                "No labeling functions available. Call s" "etup_default_labeling_functions() first."
             )
 
         logger.info(f"Fitting weak supervision model on {len(texts)} texts")
@@ -743,9 +729,7 @@ class WeakSupervisionModel:
         if self.config.label_model_type == "MajorityLabelVoter":
             self.label_model = MajorityLabelVoter()
         else:
-            self.label_model = LabelModel(
-                cardinality=self.config.cardinality, verbose=verbose
-            )
+            self.label_model = LabelModel(cardinality=self.config.cardinality, verbose=verbose)
 
             # Fit the model
             self.label_model.fit(
@@ -767,9 +751,7 @@ class WeakSupervisionModel:
 
         logger.info("Weak supervision model fitting completed")
 
-    def predict(
-        self, texts: List[str], use_ensemble: bool = False
-    ) -> Dict[str, np.ndarray]:
+    def predict(self, texts: List[str], use_ensemble: bool = False) -> Dict[str, np.ndarray]:
         """Make predictions on new texts.
 
         Args:
@@ -811,9 +793,7 @@ class WeakSupervisionModel:
         # Ensemble with baseline model if requested
         if use_ensemble and self.baseline_model is not None:
             baseline_results = self._get_baseline_predictions(texts)
-            ensemble_probs = self._compute_ensemble_probabilities(
-                probs, baseline_results
-            )
+            ensemble_probs = self._compute_ensemble_probabilities(probs, baseline_results)
 
             results["ensemble_probs"] = ensemble_probs
             results["ensemble_pred"] = np.argmax(ensemble_probs, axis=1)
@@ -884,9 +864,7 @@ class WeakSupervisionModel:
         uncertainty_scores = ws_results["uncertainty_scores"]
 
         # Identify high uncertainty samples
-        high_uncertainty = self.uncertainty_quantifier.get_high_uncertainty_mask(
-            uncertainty_scores
-        )
+        high_uncertainty = self.uncertainty_quantifier.get_high_uncertainty_mask(uncertainty_scores)
 
         # Get baseline predictions for high uncertainty samples
         fallback_used = np.zeros(len(texts), dtype=bool)
@@ -897,12 +875,8 @@ class WeakSupervisionModel:
             baseline_results = self._get_baseline_predictions(texts)
 
             # Replace high uncertainty predictions with baseline predictions
-            final_preds[high_uncertainty] = baseline_results["toxicity_pred"][
-                high_uncertainty
-            ]
-            final_probs[high_uncertainty] = baseline_results["toxicity_probs"][
-                high_uncertainty
-            ]
+            final_preds[high_uncertainty] = baseline_results["toxicity_pred"][high_uncertainty]
+            final_probs[high_uncertainty] = baseline_results["toxicity_probs"][high_uncertainty]
             fallback_used[high_uncertainty] = True
 
         return {
@@ -1125,14 +1099,10 @@ def create_default_chinese_labeling_functions() -> List[ChineseLabelingFunction]
     )
 
     functions.append(
-        ChineseLabelingFunction.create_threat_pattern_lf(
-            "severe_threats", severe_threats
-        )
+        ChineseLabelingFunction.create_threat_pattern_lf("severe_threats", severe_threats)
     )
 
-    functions.append(
-        ChineseLabelingFunction.create_threat_pattern_lf("mild_threats", mild_threats)
-    )
+    functions.append(ChineseLabelingFunction.create_threat_pattern_lf("mild_threats", mild_threats))
 
     functions.append(
         ChineseLabelingFunction.create_harassment_context_lf(

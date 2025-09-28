@@ -10,24 +10,23 @@ Tests cover:
 - Export functionality
 """
 
-import json
-import pytest
 import tempfile
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 import torch
 import torch.nn as nn
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-from datetime import datetime
 
-from src.cyberpuppy.training.checkpoint_manager import (
-    CheckpointManager,
-    TrainingMetrics,
-    CheckpointInfo
-)
+from src.cyberpuppy.training.checkpoint_manager import (CheckpointInfo,
+                                                        CheckpointManager,
+                                                        TrainingMetrics)
 
 
 class SimpleModel(nn.Module):
     """Simple model for testing."""
+
     def __init__(self, input_size=10, hidden_size=20, output_size=3):
         super().__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
@@ -69,7 +68,7 @@ def sample_metrics():
         val_metrics={"accuracy": 0.85, "f1": 0.82},
         learning_rate=0.001,
         timestamp=datetime.now().isoformat(),
-        duration_seconds=120.5
+        duration_seconds=120.5,
     )
 
 
@@ -81,7 +80,7 @@ def checkpoint_manager(temp_dir):
         model_name="test_model",
         keep_last_n=3,
         monitor_metric="val_loss",
-        mode="min"
+        mode="min",
     )
 
 
@@ -95,7 +94,7 @@ class TestCheckpointManager:
             model_name="test_model",
             keep_last_n=2,
             monitor_metric="val_accuracy",
-            mode="max"
+            mode="max",
         )
 
         assert manager.checkpoint_dir == temp_dir / "test_checkpoints"
@@ -115,11 +114,11 @@ class TestCheckpointManager:
         assert "epoch_1" in str(checkpoint_path)
 
         # Verify checkpoint contents
-        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-        assert checkpoint['epoch'] == 1
-        assert 'model_state_dict' in checkpoint
-        assert 'optimizer_state_dict' in checkpoint
-        assert 'metrics' in checkpoint
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        assert checkpoint["epoch"] == 1
+        assert "model_state_dict" in checkpoint
+        assert "optimizer_state_dict" in checkpoint
+        assert "metrics" in checkpoint
 
         # Verify training history was saved
         assert len(checkpoint_manager.training_history) == 1
@@ -127,9 +126,7 @@ class TestCheckpointManager:
 
     def test_save_best_checkpoint(self, checkpoint_manager, model, optimizer, sample_metrics):
         """Test saving best checkpoint."""
-        checkpoint_manager.save_checkpoint(
-            model, optimizer, sample_metrics, is_best=True
-        )
+        checkpoint_manager.save_checkpoint(model, optimizer, sample_metrics, is_best=True)
 
         assert checkpoint_manager.best_model_path.exists()
 
@@ -159,8 +156,7 @@ class TestCheckpointManager:
 
         # Check that at least one parameter matches (indicating successful load)
         params_match = any(
-            torch.allclose(orig, loaded)
-            for orig, loaded in zip(original_params, loaded_params)
+            torch.allclose(orig, loaded) for orig, loaded in zip(original_params, loaded_params)
         )
         assert params_match
 
@@ -169,21 +165,20 @@ class TestCheckpointManager:
         # Save multiple checkpoints
         for i in range(3):
             metrics = TrainingMetrics(
-                epoch=i+1,
-                train_loss=0.5 - i*0.1,
-                val_loss=0.4 - i*0.05,
-                train_metrics={"accuracy": 0.8 + i*0.05},
-                val_metrics={"accuracy": 0.85 + i*0.03},
+                epoch=i + 1,
+                train_loss=0.5 - i * 0.1,
+                val_loss=0.4 - i * 0.05,
+                train_metrics={"accuracy": 0.8 + i * 0.05},
+                val_metrics={"accuracy": 0.85 + i * 0.03},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             checkpoint_manager.save_checkpoint(model, optimizer, metrics)
 
         # Create new manager instance
         new_manager = CheckpointManager(
-            checkpoint_dir=checkpoint_manager.checkpoint_dir,
-            model_name="test_model"
+            checkpoint_dir=checkpoint_manager.checkpoint_dir, model_name="test_model"
         )
 
         assert len(new_manager.training_history) == 3
@@ -194,14 +189,14 @@ class TestCheckpointManager:
         # Save more checkpoints than keep_last_n
         for i in range(5):
             metrics = TrainingMetrics(
-                epoch=i+1,
+                epoch=i + 1,
                 train_loss=0.5,
                 val_loss=0.4,
                 train_metrics={},
                 val_metrics={},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             checkpoint_manager.save_checkpoint(model, optimizer, metrics)
 
@@ -210,24 +205,20 @@ class TestCheckpointManager:
         assert len(checkpoint_files) <= checkpoint_manager.keep_last_n
 
         # Latest checkpoints should still exist
-        latest_epochs = sorted([
-            int(f.stem.split('_')[-1]) for f in checkpoint_files
-        ], reverse=True)
+        latest_epochs = sorted([int(f.stem.split("_")[-1]) for f in checkpoint_files], reverse=True)
         expected_epochs = [5, 4, 3]  # Last 3 epochs
         assert latest_epochs == expected_epochs
 
     def test_checkpoint_validation(self, checkpoint_manager, model, optimizer, sample_metrics):
         """Test checkpoint integrity validation."""
         # Save valid checkpoint
-        checkpoint_path = checkpoint_manager.save_checkpoint(
-            model, optimizer, sample_metrics
-        )
+        checkpoint_path = checkpoint_manager.save_checkpoint(model, optimizer, sample_metrics)
 
         # Valid checkpoint should pass validation
         assert checkpoint_manager._validate_checkpoint(checkpoint_path)
 
         # Corrupt the checkpoint
-        with open(checkpoint_path, 'w') as f:
+        with open(checkpoint_path, "w") as f:
             f.write("corrupted data")
 
         # Corrupted checkpoint should fail validation
@@ -249,26 +240,30 @@ class TestCheckpointManager:
         assert epoch == 1
         assert checkpoint_path.exists()
 
-    @patch('builtins.input')
-    def test_prompt_for_resume_yes(self, mock_input, checkpoint_manager, model, optimizer, sample_metrics):
+    @patch("builtins.input")
+    def test_prompt_for_resume_yes(
+        self, mock_input, checkpoint_manager, model, optimizer, sample_metrics
+    ):
         """Test user prompt for resume - yes response."""
         # Save a checkpoint
         checkpoint_manager.save_checkpoint(model, optimizer, sample_metrics)
 
         # Mock user input - yes
-        mock_input.return_value = 'y'
+        mock_input.return_value = "y"
 
         result = checkpoint_manager.prompt_for_resume()
         assert result is True
 
-    @patch('builtins.input')
-    def test_prompt_for_resume_no(self, mock_input, checkpoint_manager, model, optimizer, sample_metrics):
+    @patch("builtins.input")
+    def test_prompt_for_resume_no(
+        self, mock_input, checkpoint_manager, model, optimizer, sample_metrics
+    ):
         """Test user prompt for resume - no response."""
         # Save a checkpoint
         checkpoint_manager.save_checkpoint(model, optimizer, sample_metrics)
 
         # Mock user input - no
-        mock_input.return_value = 'n'
+        mock_input.return_value = "n"
 
         result = checkpoint_manager.prompt_for_resume()
         assert result is False
@@ -285,13 +280,13 @@ class TestCheckpointManager:
         assert "deployment" in str(export_path)
 
         # Verify export contents
-        deployment_data = torch.load(export_path, map_location='cpu')
-        assert 'model_state_dict' in deployment_data
-        assert 'export_timestamp' in deployment_data
-        assert deployment_data['epoch'] == 1
+        deployment_data = torch.load(export_path, map_location="cpu")
+        assert "model_state_dict" in deployment_data
+        assert "export_timestamp" in deployment_data
+        assert deployment_data["epoch"] == 1
 
         # Should not contain training-specific data
-        assert 'optimizer_state_dict' not in deployment_data
+        assert "optimizer_state_dict" not in deployment_data
 
     def test_get_training_summary(self, checkpoint_manager, model, optimizer):
         """Test getting training summary."""
@@ -302,14 +297,14 @@ class TestCheckpointManager:
         # Add some training history
         for i in range(3):
             metrics = TrainingMetrics(
-                epoch=i+1,
-                train_loss=0.5 - i*0.1,
-                val_loss=0.4 - i*0.05,
+                epoch=i + 1,
+                train_loss=0.5 - i * 0.1,
+                val_loss=0.4 - i * 0.05,
                 train_metrics={},
                 val_metrics={},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             checkpoint_manager.save_checkpoint(model, optimizer, metrics)
 
@@ -324,17 +319,17 @@ class TestCheckpointManager:
         metrics_list = []
         for i in range(3):
             metrics = TrainingMetrics(
-                epoch=i+1,
-                train_loss=0.5 - i*0.1,
-                val_loss=0.4 - i*0.05,
+                epoch=i + 1,
+                train_loss=0.5 - i * 0.1,
+                val_loss=0.4 - i * 0.05,
                 train_metrics={},
                 val_metrics={},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             metrics_list.append(metrics)
-            is_best = (i == 2)  # Last one has best val_loss
+            is_best = i == 2  # Last one has best val_loss
             checkpoint_manager.save_checkpoint(model, optimizer, metrics, is_best=is_best)
 
         checkpoints = checkpoint_manager.list_checkpoints()
@@ -354,7 +349,7 @@ class TestCheckpointManager:
         test_file = temp_dir / "test.txt"
         test_content = "Hello, World!"
 
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write(test_content)
 
         checksum1 = checkpoint_manager._calculate_checksum(test_file)
@@ -365,7 +360,7 @@ class TestCheckpointManager:
         assert len(checksum1) == 64  # SHA256 hex length
 
         # Different content should have different checksum
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("Different content")
 
         checksum3 = checkpoint_manager._calculate_checksum(test_file)
@@ -374,9 +369,7 @@ class TestCheckpointManager:
     def test_best_model_selection_min_mode(self, temp_dir):
         """Test best model selection in min mode."""
         manager = CheckpointManager(
-            checkpoint_dir=temp_dir / "checkpoints",
-            monitor_metric="val_loss",
-            mode="min"
+            checkpoint_dir=temp_dir / "checkpoints", monitor_metric="val_loss", mode="min"
         )
 
         model = SimpleModel()
@@ -387,14 +380,14 @@ class TestCheckpointManager:
 
         for i, val_loss in enumerate(val_losses):
             metrics = TrainingMetrics(
-                epoch=i+1,
+                epoch=i + 1,
                 train_loss=0.5,
                 val_loss=val_loss,
                 train_metrics={},
                 val_metrics={},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             manager.save_checkpoint(model, optimizer, metrics)
 
@@ -404,9 +397,7 @@ class TestCheckpointManager:
     def test_best_model_selection_max_mode(self, temp_dir):
         """Test best model selection in max mode."""
         manager = CheckpointManager(
-            checkpoint_dir=temp_dir / "checkpoints",
-            monitor_metric="val_accuracy",
-            mode="max"
+            checkpoint_dir=temp_dir / "checkpoints", monitor_metric="val_accuracy", mode="max"
         )
 
         model = SimpleModel()
@@ -417,14 +408,14 @@ class TestCheckpointManager:
 
         for i, val_acc in enumerate(val_accuracies):
             metrics = TrainingMetrics(
-                epoch=i+1,
+                epoch=i + 1,
                 train_loss=0.5,
                 val_loss=0.4,
                 train_metrics={},
                 val_metrics={"val_accuracy": val_acc},
                 learning_rate=0.001,
                 timestamp=datetime.now().isoformat(),
-                duration_seconds=120.0
+                duration_seconds=120.0,
             )
             manager.save_checkpoint(model, optimizer, metrics)
 
@@ -445,7 +436,7 @@ class TestTrainingMetrics:
             val_metrics={"accuracy": 0.92, "f1": 0.89},
             learning_rate=0.0001,
             timestamp="2024-01-01T12:00:00",
-            duration_seconds=300.0
+            duration_seconds=300.0,
         )
 
         assert metrics.epoch == 5

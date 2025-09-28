@@ -113,13 +113,9 @@ class HumanReviewInterface:
 
         # 更新審核員工作量
         if assigned_to:
-            self.reviewer_workload[assigned_to] = (
-                self.reviewer_workload.get(assigned_to, 0) + 1
-            )
+            self.reviewer_workload[assigned_to] = self.reviewer_workload.get(assigned_to, 0) + 1
 
-        logger.info(
-            f"審核任務建立 - ID: {task_id}, 申訴: {appeal_id}, 優先級: {priority.value}"
-        )
+        logger.info(f"審核任務建立 - ID: {task_id}, 申訴: {appeal_id}, 優先級: {priority.value}")
 
         return task
 
@@ -232,9 +228,7 @@ class HumanReviewInterface:
                 task.priority = ReviewPriority.URGENT
                 # 重新分配給上級審核員
                 senior_reviewer = (
-                    additional_data.get("senior_" "reviewer")
-                    if additional_data
-                    else None
+                    additional_data.get("senior_" "reviewer") if additional_data else None
                 )
                 if senior_reviewer:
                     task.assigned_to = senior_reviewer
@@ -248,9 +242,7 @@ class HumanReviewInterface:
 
         elif action == ReviewAction.DEFER:
             # 延後處理
-            defer_days = (
-                additional_data.get("defer" "_days", 3) if additional_data else 3
-            )
+            defer_days = additional_data.get("defer" "_days", 3) if additional_data else 3
             task.due_date = datetime.now() + timedelta(days=defer_days)
             return True, f"已延後 {defer_days} 天處理"
 
@@ -386,9 +378,7 @@ class HumanReviewInterface:
                 AppealStatus.APPROVED,
                 AppealStatus.REJECTED,
             ]:
-                duration = (
-                    appeal.updated_at - appeal.created_at
-                ).total_seconds() / 3600
+                duration = (appeal.updated_at - appeal.created_at).total_seconds() / 3600
                 times.append(duration)
 
         return round(sum(times) / len(times), 2) if times else 0.0
@@ -415,21 +405,11 @@ class HumanReviewInterface:
 
         # 統計資料
         total_appeals_count = len(appeals_in_period)
-        approved_count = len(
-            [a for a in appeals_in_period if a.status == AppealStatus.APPROVED]
-        )
-        rejected_count = len(
-            [a for a in appeals_in_period if a.status == AppealStatus.REJECTED]
-        )
-        pending_count = len(
-            [a for a in appeals_in_period if a.status == AppealStatus.PENDING]
-        )
-        escalated_count = len(
-            [a for a in appeals_in_period if a.status == AppealStatus.ESCALATED]
-        )
-        reviewers_list = list(
-            set(a.reviewer for a in appeals_in_period if a.reviewer)
-        )
+        approved_count = len([a for a in appeals_in_period if a.status == AppealStatus.APPROVED])
+        rejected_count = len([a for a in appeals_in_period if a.status == AppealStatus.REJECTED])
+        pending_count = len([a for a in appeals_in_period if a.status == AppealStatus.PENDING])
+        escalated_count = len([a for a in appeals_in_period if a.status == AppealStatus.ESCALATED])
+        reviewers_list = list(set(a.reviewer for a in appeals_in_period if a.reviewer))
 
         stats = {
             "period": {
@@ -451,9 +431,7 @@ class HumanReviewInterface:
 
         # 計算批准率
         reviewed = approved_count + rejected_count
-        stats["approval_rate"] = round(
-            approved_count / reviewed * 100 if reviewed > 0 else 0, 1
-        )
+        stats["approval_rate"] = round(approved_count / reviewed * 100 if reviewed > 0 else 0, 1)
 
         if format == "json":
             return json.dumps(stats, ensure_ascii=False, indent=2)
@@ -513,9 +491,7 @@ def example_human_review():
     print("\n待審核案件:")
     pending = review_interface.get_pending_reviews(reviewer_id="reviewer_001")
     for task, appeal in pending:
-        print(
-            f"  - 任務: {task.task_id}, 申訴: {appeal.appeal_id}, 截止: {task.due_date}"
-        )
+        print(f"  - 任務: {task.task_id}, 申訴: {appeal.appeal_id}, 截止: {task.due_date}")
 
     # 處理審核
     print("\n處理審核:")
@@ -557,7 +533,7 @@ def example_human_review():
         action=ReviewAction.DEFER,
         notes="需要更多時間調查",
     )
-    for task_id, (success, message) in results.items():
+    for task_id, (_success, message) in results.items():
         print(f"  {task_id}: {message}")
 
     # 查看儀表板

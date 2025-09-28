@@ -2,22 +2,20 @@
 """
 測試上下文感知模型
 """
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import torch
 import torch.nn as nn
 
 from cyberpuppy.labeling.label_map import (BullyingLevel, EmotionType,
-                                               RoleType, ToxicityLevel,
-                                               UnifiedLabel)
+                                           RoleType, ToxicityLevel,
+                                           UnifiedLabel)
 from cyberpuppy.models.contextual import (ContextualInput, ContextualModel,
-                                              ContextualOutput,
-                                              ContrastiveLearningModule,
-                                              EventFeatureExtractor,
-                                              HierarchicalThreadEncoder)
+                                          ContextualOutput,
+                                          ContrastiveLearningModule,
+                                          EventFeatureExtractor,
+                                          HierarchicalThreadEncoder)
 
 
 class TestContextualInput:
@@ -441,7 +439,7 @@ class TestContextualModel:
         assert "total" in losses
 
         # 檢查損失值
-        for key, loss in losses.items():
+        for _key, loss in losses.items():
             assert loss.requires_grad
             assert loss.item() >= 0
 
@@ -525,10 +523,7 @@ class TestIntegration:
 
         # 模擬編碼器輸出
         with patch.object(model.thread_encoder, "forward") as mock_thread:
-            mock_thread.return_value = (
-                torch.randn(1, 768),
-                torch.randn(1, 1, 3)
-            )
+            mock_thread.return_value = (torch.randn(1, 768), torch.randn(1, 1, 3))
 
             output = model.forward([ctx_input])
 
@@ -558,14 +553,14 @@ class TestIntegration:
                 "severity": "high",
                 "participants": ["perpetrator", "victim"],
             },
-            temporal_info={"duration": 300, "frequency": 2}, 
+            temporal_info={"duration": 300, "frequency": 2},
         )
 
         # 模擬事件抽取器輸出
         with patch.object(model.event_extractor, "forward") as mock_event:
             mock_event.return_value = (
                 torch.randn(1, 768),
-                {"text": 0.4, "event": 0.3, "temporal": 0.3}
+                {"text": 0.4, "event": 0.3, "temporal": 0.3},
             )
 
             output = model.forward([ctx_input])

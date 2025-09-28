@@ -4,36 +4,20 @@ Advanced comprehensive unit tests for models module
 Focusing on improving coverage for cyberpuppy.models modules
 """
 
-import unittest
-from unittest.mock import Mock, patch, MagicMock
-import pytest
-import torch
-import torch.nn as nn
-import numpy as np
-from pathlib import Path
 import tempfile
-import json
+import unittest
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import torch
 
 # Import the modules under test
-from cyberpuppy.models.baselines import (
-    ModelConfig,
-    FocalLoss,
-    MultiTaskHead,
-    BaselineModel,
-    ModelEvaluator,
-    create_model_variants
-)
-from cyberpuppy.models.result import (
-    DetectionResult,
-    BatchResults,
-    ModelOutput,
-    ExplanationOutput
-)
-from cyberpuppy.models.detector import (
-    CyberPuppyDetector,
-    EnsembleConfig,
-    PreprocessingConfig
-)
+from cyberpuppy.models.baselines import (BaselineModel, FocalLoss, ModelConfig,
+                                         ModelEvaluator, MultiTaskHead,
+                                         create_model_variants)
+from cyberpuppy.models.detector import (CyberPuppyDetector, EnsembleConfig,
+                                        PreprocessingConfig)
+from cyberpuppy.models.result import BatchResults, DetectionResult
 
 
 class TestAdvancedModelConfig(unittest.TestCase):
@@ -47,7 +31,7 @@ class TestAdvancedModelConfig(unittest.TestCase):
             num_classes={"toxicity": 2, "emotion": 3, "bullying": 2},
             hidden_size=768,
             dropout_rate=0.3,
-            task_weights={"toxicity": 1.5, "emotion": 1.0, "bullying": 2.0}
+            task_weights={"toxicity": 1.5, "emotion": 1.0, "bullying": 2.0},
         )
 
         self.assertEqual(config.model_name, "hfl/chinese-macbert-base")
@@ -58,9 +42,7 @@ class TestAdvancedModelConfig(unittest.TestCase):
         """Test model config with invalid dropout rate"""
         with self.assertRaises(ValueError):
             ModelConfig(
-                model_name="test",
-                num_classes={"toxicity": 2},
-                dropout_rate=1.5  # Invalid: > 1.0
+                model_name="test", num_classes={"toxicity": 2}, dropout_rate=1.5  # Invalid: > 1.0
             )
 
     def test_model_config_negative_hidden_size(self):
@@ -69,23 +51,20 @@ class TestAdvancedModelConfig(unittest.TestCase):
             ModelConfig(
                 model_name="test",
                 num_classes={"toxicity": 2},
-                hidden_size=-100  # Invalid: negative
+                hidden_size=-100,  # Invalid: negative
             )
 
     def test_model_config_empty_num_classes(self):
         """Test model config with empty num_classes"""
         with self.assertRaises(ValueError):
-            ModelConfig(
-                model_name="test",
-                num_classes={}  # Invalid: empty
-            )
+            ModelConfig(model_name="test", num_classes={})  # Invalid: empty
 
     def test_model_config_mismatched_task_weights(self):
         """Test model config with mismatched task weights"""
         config = ModelConfig(
             model_name="test",
             num_classes={"toxicity": 2, "emotion": 3},
-            task_weights={"toxicity": 1.0}  # Missing emotion weight
+            task_weights={"toxicity": 1.0},  # Missing emotion weight
         )
 
         # Should auto-complete missing weights
@@ -97,7 +76,7 @@ class TestAdvancedModelConfig(unittest.TestCase):
             model_name="test-model",
             num_classes={"toxicity": 2, "emotion": 3},
             hidden_size=512,
-            dropout_rate=0.2
+            dropout_rate=0.2,
         )
 
         # Test to_dict
@@ -175,10 +154,7 @@ class TestAdvancedFocalLoss(unittest.TestCase):
 
         # Check that gradients are computed
         self.assertIsNotNone(logits.grad)
-        self.assertFalse(
-            torch.allclose(logits.grad,
-            torch.zeros_like(logits.grad))
-        )
+        self.assertFalse(torch.allclose(logits.grad, torch.zeros_like(logits.grad)))
 
 
 class TestAdvancedMultiTaskHead(unittest.TestCase):
@@ -189,14 +165,10 @@ class TestAdvancedMultiTaskHead(unittest.TestCase):
         task_configs = {
             "toxicity": {"type": "classification", "num_classes": 2},
             "emotion": {"type": "classification", "num_classes": 3},
-            "intensity": {"type": "regression", "output_size": 1}
+            "intensity": {"type": "regression", "output_size": 1},
         }
 
-        head = MultiTaskHead(
-            input_size=768,
-            task_configs=task_configs,
-            hidden_size=256
-        )
+        head = MultiTaskHead(input_size=768, task_configs=task_configs, hidden_size=256)
 
         # Test forward pass
         batch_size = 4
@@ -218,14 +190,14 @@ class TestAdvancedMultiTaskHead(unittest.TestCase):
         for num_shared_layers in [0, 1, 2, 3]:
             task_configs = {
                 "toxicity": {"type": "classification", "num_classes": 2},
-                "emotion": {"type": "classification", "num_classes": 3}
+                "emotion": {"type": "classification", "num_classes": 3},
             }
 
             head = MultiTaskHead(
                 input_size=768,
                 task_configs=task_configs,
                 hidden_size=256,
-                num_shared_layers=num_shared_layers
+                num_shared_layers=num_shared_layers,
             )
 
             # Test forward pass
@@ -233,33 +205,18 @@ class TestAdvancedMultiTaskHead(unittest.TestCase):
             outputs = head(input_features)
 
             self.assertEqual(len(outputs), 2)
-            for task_name, output in outputs.items():
+            for _task_name, output in outputs.items():
                 self.assertEqual(output.shape[0], 2)
 
     def test_multitask_head_custom_activations(self):
         """Test multi-task head with custom activation functions"""
         task_configs = {
-            "toxicity": {
-                "type": "classification",
-                "num_classes": 2,
-                "activation": "sigmoid"
-            },
-            "emotion": {
-                "type": "classification",
-                "num_classes": 3,
-                "activation": "softmax"
-            },
-            "score": {
-                "type": "regression",
-                "output_size": 1,
-                "activation": "tanh"
-            }
+            "toxicity": {"type": "classification", "num_classes": 2, "activation": "sigmoid"},
+            "emotion": {"type": "classification", "num_classes": 3, "activation": "softmax"},
+            "score": {"type": "regression", "output_size": 1, "activation": "tanh"},
         }
 
-        head = MultiTaskHead(
-            input_size=768,
-            task_configs=task_configs
-        )
+        head = MultiTaskHead(input_size=768, task_configs=task_configs)
 
         input_features = torch.randn(3, 768)
         outputs = head(input_features)
@@ -270,31 +227,22 @@ class TestAdvancedMultiTaskHead(unittest.TestCase):
         score_out = outputs["score"]
 
         # Sigmoid output should be in [0, 1]
-        self.assertTrue(torch.all(toxicity_out >= 0) and torch.all(toxicity_out
-            <= 1))
+        self.assertTrue(torch.all(toxicity_out >= 0) and torch.all(toxicity_out <= 1))
 
         # Softmax output should sum to 1
         emotion_sums = torch.sum(emotion_out, dim=1)
-        self.assertTrue(
-            torch.allclose(emotion_sums,
-            torch.ones_like(emotion_sums))
-        )
+        self.assertTrue(torch.allclose(emotion_sums, torch.ones_like(emotion_sums)))
 
         # Tanh output should be in [-1, 1]
-        self.assertTrue(torch.all(score_out >= -1) and torch.all(score_out <=
-            1))
+        self.assertTrue(torch.all(score_out >= -1) and torch.all(score_out <= 1))
 
 
 class TestAdvancedBaselineModel(unittest.TestCase):
     """Advanced tests for BaselineModel"""
 
-    @patch('transformers.AutoModel.from_pretrained')
-    @patch('transformers.AutoTokenizer.from_pretrained')
-    def test_baseline_model_initialization_with_pretrained(
-        self,
-        mock_tokenizer,
-        mock_model
-    ):
+    @patch("transformers.AutoModel.from_pretrained")
+    @patch("transformers.AutoTokenizer.from_pretrained")
+    def test_baseline_model_initialization_with_pretrained(self, mock_tokenizer, mock_model):
         """Test baseline model initialization with pretrained models"""
         # Mock the pretrained components
         mock_transformer = Mock()
@@ -305,8 +253,7 @@ class TestAdvancedBaselineModel(unittest.TestCase):
         mock_tokenizer.return_value = mock_tokenizer_instance
 
         config = ModelConfig(
-            model_name="hfl/chinese-macbert-base",
-            num_classes={"toxicity": 2, "emotion": 3}
+            model_name="hfl/chinese-macbert-base", num_classes={"toxicity": 2, "emotion": 3}
         )
 
         model = BaselineModel(config)
@@ -317,10 +264,7 @@ class TestAdvancedBaselineModel(unittest.TestCase):
 
     def test_baseline_model_forward_with_attention_mask(self):
         """Test baseline model forward pass with attention masks"""
-        config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2}
-        )
+        config = ModelConfig(model_name="test-model", num_classes={"toxicity": 2})
 
         # Create model with mocked transformer
         model = BaselineModel(config)
@@ -344,7 +288,7 @@ class TestAdvancedBaselineModel(unittest.TestCase):
         config = ModelConfig(
             model_name="test-model",
             num_classes={"toxicity": 2, "emotion": 3},
-            task_weights={"toxicity": 2.0, "emotion": 1.0}
+            task_weights={"toxicity": 2.0, "emotion": 1.0},
         )
 
         model = BaselineModel(config)
@@ -352,14 +296,10 @@ class TestAdvancedBaselineModel(unittest.TestCase):
         # Mock outputs
         outputs = {
             "toxicity": torch.tensor([[1.0, -1.0], [-1.0, 1.0]]),
-            "emo"
-                "tion": torch.tensor([[1.0, 0.0, -1.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 1.0]])
+            "emo" "tion": torch.tensor([[1.0, 0.0, -1.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 1.0]]),
         }
 
-        labels = {
-            "toxicity": torch.tensor([0, 1]),
-            "emotion": torch.tensor([0, 1, 2])
-        }
+        labels = {"toxicity": torch.tensor([0, 1]), "emotion": torch.tensor([0, 1, 2])}
 
         loss = model.compute_loss(outputs, labels)
 
@@ -368,18 +308,14 @@ class TestAdvancedBaselineModel(unittest.TestCase):
 
     def test_baseline_model_predict_with_thresholds(self):
         """Test prediction with custom thresholds"""
-        config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2}
-        )
+        config = ModelConfig(model_name="test-model", num_classes={"toxicity": 2})
 
         model = BaselineModel(config)
         model.eval()
 
         # Mock the model's forward pass
         original_forward = model.forward
-        model.forward = Mock(return_value={"toxi"
-            "city": torch.tensor([[0.3, 0.7], [0.8, 0.2]])})
+        model.forward = Mock(return_value={"toxi" "city": torch.tensor([[0.3, 0.7], [0.8, 0.2]])})
 
         input_ids = torch.randint(0, 1000, (2, 10))
 
@@ -392,18 +328,14 @@ class TestAdvancedBaselineModel(unittest.TestCase):
 
         # High threshold should be more conservative
         __default_positive = torch.sum(predictions_default["toxicity"]).item()
-        __high_thresh_positive = torch.sum(predictions_high_threshold["toxi"
-            "city"]).item()
+        __high_thresh_positive = torch.sum(predictions_high_threshold["toxi" "city"]).item()
 
         # Restore original forward
         model.forward = original_forward
 
     def test_baseline_model_save_and_load(self):
         """Test model saving and loading functionality"""
-        config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2}
-        )
+        config = ModelConfig(model_name="test-model", num_classes={"toxicity": 2})
 
         model = BaselineModel(config)
 
@@ -422,17 +354,12 @@ class TestAdvancedBaselineModel(unittest.TestCase):
 
             # Compare configurations
             self.assertEqual(loaded_model.config.model_name, config.model_name)
-            self.assertEqual(
-                loaded_model.config.num_classes,
-                config.num_classes
-            )
+            self.assertEqual(loaded_model.config.num_classes, config.num_classes)
 
     def test_baseline_model_gradient_checkpointing(self):
         """Test model with gradient checkpointing"""
         config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2},
-            gradient_checkpointing=True
+            model_name="test-model", num_classes={"toxicity": 2}, gradient_checkpointing=True
         )
 
         model = BaselineModel(config)
@@ -448,10 +375,7 @@ class TestAdvancedBaselineModel(unittest.TestCase):
 
     def test_baseline_model_freeze_layers(self):
         """Test selective layer freezing"""
-        config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2}
-        )
+        config = ModelConfig(model_name="test-model", num_classes={"toxicity": 2})
 
         model = BaselineModel(config)
 
@@ -486,7 +410,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
             emotion_confidence=0.75,
             bullying_label=0,
             bullying_confidence=0.15,
-            metadata={"model_version": "1.0", "timestamp": "2024-01-01"}
+            metadata={"model_version": "1.0", "timestamp": "2024-01-01"},
         )
 
         self.assertEqual(result.text, "測試文本")
@@ -504,7 +428,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
                 emotion_label=0,
                 emotion_confidence=0.5,
                 bullying_label=0,
-                bullying_confidence=0.2
+                bullying_confidence=0.2,
             )
 
         with self.assertRaises(ValueError):
@@ -515,7 +439,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
                 emotion_label=0,
                 emotion_confidence=-0.1,  # Invalid: < 0.0
                 bullying_label=0,
-                bullying_confidence=0.2
+                bullying_confidence=0.2,
             )
 
     def test_detection_result_serialization(self):
@@ -528,7 +452,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
             emotion_confidence=0.75,
             bullying_label=0,
             bullying_confidence=0.15,
-            explanation={"tokens": ["測", "試"], "attributions": [0.1, 0.9]}
+            explanation={"tokens": ["測", "試"], "attributions": [0.1, 0.9]},
         )
 
         # Test to_dict
@@ -555,7 +479,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.3,
             bullying_label=0,
-            bullying_confidence=0.1
+            bullying_confidence=0.1,
         )
 
         # Test privacy-safe representation
@@ -576,7 +500,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
                 emotion_label=i % 3,
                 emotion_confidence=0.4 + (i * 0.04),
                 bullying_label=0,
-                bullying_confidence=0.1
+                bullying_confidence=0.1,
             )
             results.append(result)
 
@@ -598,7 +522,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
             emotion_label=0,
             emotion_confidence=0.6,
             bullying_label=0,
-            bullying_confidence=0.1
+            bullying_confidence=0.1,
         )
 
         # Test confidence calibration
@@ -607,10 +531,7 @@ class TestAdvancedDetectionResult(unittest.TestCase):
         )
 
         # Calibrated confidence should be different
-        self.assertNotEqual(
-            calibrated_result.toxicity_confidence,
-            result.toxicity_confidence
-        )
+        self.assertNotEqual(calibrated_result.toxicity_confidence, result.toxicity_confidence)
 
 
 class TestAdvancedCyberPuppyDetector(unittest.TestCase):
@@ -625,7 +546,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
         self.mock_tokenizer.encode_plus.return_value = {
             "input_ids": torch.tensor([[101, 2523, 3221, 102]]),
             "attention_mask": torch.tensor([[1, 1, 1, 1]]),
-            "token_type_ids": torch.tensor([[0, 0, 0, 0]])
+            "token_type_ids": torch.tensor([[0, 0, 0, 0]]),
         }
 
         # Configure mock model output
@@ -640,13 +561,11 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
         ensemble_config = EnsembleConfig(
             models=["model1", "model2", "model3"],
             weights=[0.4, 0.4, 0.2],
-            voting_strategy="weighted"
+            voting_strategy="weighted",
         )
 
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            ensemble_config=ensemble_config
+            model=self.mock_model, tokenizer=self.mock_tokenizer, ensemble_config=ensemble_config
         )
 
         self.assertEqual(detector.ensemble_config.voting_strategy, "weighted")
@@ -659,13 +578,13 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
             remove_urls=True,
             remove_mentions=True,
             convert_traditional_to_simplified=True,
-            max_length=512
+            max_length=512,
         )
 
         detector = CyberPuppyDetector(
             model=self.mock_model,
             tokenizer=self.mock_tokenizer,
-            preprocessing_config=preprocessing_config
+            preprocessing_config=preprocessing_config,
         )
 
         # Test preprocessing different text types
@@ -674,7 +593,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
             "@用戶名 你好世界",
             "繁體中文測試",
             "Mixed 中文 and English 123 !@#",
-            "   多餘空白   "
+            "   多餘空白   ",
         ]
 
         for text in test_texts:
@@ -686,9 +605,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
     def test_detector_batch_processing_optimization(self):
         """Test batch processing optimization"""
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            batch_size=4
+            model=self.mock_model, tokenizer=self.mock_tokenizer, batch_size=4
         )
 
         # Test batch analysis
@@ -703,24 +620,23 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
     def test_detector_context_aware_analysis(self):
         """Test context-aware analysis"""
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            context_aware=True
+            model=self.mock_model, tokenizer=self.mock_tokenizer, context_aware=True
         )
 
         # Test with conversation context
         conversation_history = [
             {"role": "user", "text": "你好", "timestamp": "2024-01-01T10:00:00"},
-            {"role": "assistant", "text": "你好，有什麼可以幫助你的嗎？", "timestamp": "2024-01-01T10:01:00"},
-            {"role": "user", "text": "我覺得很難過", "timestamp": "2024-01-01T10:02:00"}
+            {
+                "role": "assistant",
+                "text": "你好，有什麼可以幫助你的嗎？",
+                "timestamp": "2024-01-01T10:01:00",
+            },
+            {"role": "user", "text": "我覺得很難過", "timestamp": "2024-01-01T10:02:00"},
         ]
 
         current_text = "我想要傷害自己"
 
-        result = detector.analyze(
-            text=current_text,
-            context=conversation_history
-        )
+        result = detector.analyze(text=current_text, context=conversation_history)
 
         self.assertIsInstance(result, DetectionResult)
         # Context should influence the analysis
@@ -729,9 +645,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
     def test_detector_performance_profiling(self):
         """Test performance profiling capabilities"""
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            enable_profiling=True
+            model=self.mock_model, tokenizer=self.mock_tokenizer, enable_profiling=True
         )
 
         text = "測試性能分析"
@@ -749,9 +663,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
         self.mock_model.predict.side_effect = Exception("Model error")
 
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            fallback_enabled=True
+            model=self.mock_model, tokenizer=self.mock_tokenizer, fallback_enabled=True
         )
 
         # Should handle errors gracefully with fallback
@@ -766,28 +678,26 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
         detector = CyberPuppyDetector(
             model=self.mock_model,
             tokenizer=self.mock_tokenizer,
-            confidence_thresholds={
-                "toxicity": 0.8,
-                "emotion": 0.7,
-                "bullying": 0.9
-            }
+            confidence_thresholds={"toxicity": 0.8, "emotion": 0.7, "bullying": 0.9},
         )
 
         # Configure model to return varying confidence levels
         mock_outputs = [
             {"toxicity": 0.75, "emotion": 0.8, "bullying": 0.6},
             {"toxicity": 0.85, "emotion": 0.7, "bullying": 0.8},
-            {"toxicity": 0.95, "emotion": 0.9, "bullying": 0.5}
+            {"toxicity": 0.95, "emotion": 0.9, "bullying": 0.5},
         ]
 
         for i, expected_confidences in enumerate(mock_outputs):
             # Mock the prediction to return expected values
             mock_output = Mock()
-            mock_output.toxicity = torch.tensor([[1-expected_confidences["toxicity"],
-                                                  expected_confidences["toxicity"]]])
+            mock_output.toxicity = torch.tensor(
+                [[1 - expected_confidences["toxicity"], expected_confidences["toxicity"]]]
+            )
             mock_output.emotion = torch.tensor([[expected_confidences["emotion"], 0.2, 0.1]])
-            mock_output.bullying = torch.tensor([[1-expected_confidences["bullying"],
-                                                 expected_confidences["bullying"]]])
+            mock_output.bullying = torch.tensor(
+                [[1 - expected_confidences["bullying"], expected_confidences["bullying"]]]
+            )
             self.mock_model.predict.return_value = mock_output
 
             result = detector.analyze(f"測試文本 {i}")
@@ -798,9 +708,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
     def test_detector_multilingual_support(self):
         """Test multilingual text analysis"""
         detector = CyberPuppyDetector(
-            model=self.mock_model,
-            tokenizer=self.mock_tokenizer,
-            multilingual=True
+            model=self.mock_model, tokenizer=self.mock_tokenizer, multilingual=True
         )
 
         # Test various languages and scripts
@@ -809,7 +717,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
             "This is English test",  # English
             "これは日本語のテストです",  # Japanese
             "이것은 한국어 테스트입니다",  # Korean
-            "Mixed 語言 test 文字"  # Mixed
+            "Mixed 語言 test 文字",  # Mixed
         ]
 
         for text in multilingual_texts:
@@ -823,7 +731,7 @@ class TestAdvancedCyberPuppyDetector(unittest.TestCase):
             model=self.mock_model,
             tokenizer=self.mock_tokenizer,
             memory_efficient=True,
-            max_memory_usage="1GB"
+            max_memory_usage="1GB",
         )
 
         # Test with large batch to trigger memory optimization
@@ -846,7 +754,7 @@ class TestModelIntegration(unittest.TestCase):
         config = ModelConfig(
             model_name="test-model",
             num_classes={"toxicity": 2, "emotion": 3},
-            task_weights={"toxicity": 1.5, "emotion": 1.0}
+            task_weights={"toxicity": 1.5, "emotion": 1.0},
         )
 
         # Create model
@@ -860,7 +768,7 @@ class TestModelIntegration(unittest.TestCase):
 
         labels = {
             "toxicity": torch.randint(0, 2, (batch_size,)),
-            "emotion": torch.randint(0, 3, (batch_size,))
+            "emotion": torch.randint(0, 3, (batch_size,)),
         }
 
         # Forward pass
@@ -873,27 +781,24 @@ class TestModelIntegration(unittest.TestCase):
         loss.backward()
 
         # Verify gradients
-        for name, param in model.named_parameters():
+        for _name, param in model.named_parameters():
             if param.requires_grad:
                 self.assertIsNotNone(param.grad)
 
     def test_model_evaluation_workflow(self):
         """Test complete model evaluation workflow"""
-        config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2}
-        )
+        config = ModelConfig(model_name="test-model", num_classes={"toxicity": 2})
 
         model = BaselineModel(config)
         evaluator = ModelEvaluator(model)
 
         # Mock evaluation data
         eval_data = []
-        for i in range(20):
+        for _i in range(20):
             sample = {
                 "input_ids": torch.randint(0, 1000, (10,)),
                 "attention_mask": torch.ones(10),
-                "labels": {"toxicity": torch.randint(0, 2, (1,))}
+                "labels": {"toxicity": torch.randint(0, 2, (1,))},
             }
             eval_data.append(sample)
 
@@ -907,8 +812,7 @@ class TestModelIntegration(unittest.TestCase):
     def test_model_variant_creation(self):
         """Test creation of different model variants"""
         base_config = ModelConfig(
-            model_name="test-model",
-            num_classes={"toxicity": 2, "emotion": 3}
+            model_name="test-model", num_classes={"toxicity": 2, "emotion": 3}
         )
 
         variants = create_model_variants(
@@ -916,8 +820,8 @@ class TestModelIntegration(unittest.TestCase):
             variant_configs=[
                 {"dropout_rate": 0.1, "hidden_size": 512},
                 {"dropout_rate": 0.3, "hidden_size": 256},
-                {"dropout_rate": 0.5, "hidden_size": 128}
-            ]
+                {"dropout_rate": 0.5, "hidden_size": 128},
+            ],
         )
 
         self.assertEqual(len(variants), 3)
@@ -925,11 +829,8 @@ class TestModelIntegration(unittest.TestCase):
             self.assertIsInstance(variant, BaselineModel)
 
         # Check that variants have different configurations
-        self.assertNotEqual(
-            variants[0].config.dropout_rate,
-            variants[1].config.dropout_rate
-        )
+        self.assertNotEqual(variants[0].config.dropout_rate, variants[1].config.dropout_rate)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

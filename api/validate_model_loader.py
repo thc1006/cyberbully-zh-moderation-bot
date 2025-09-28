@@ -3,10 +3,9 @@ Validation script for the fixed model loader.
 Handles encoding issues and provides comprehensive testing.
 """
 
-import sys
-import os
-import logging
 import json
+import logging
+import sys
 import time
 from pathlib import Path
 
@@ -18,11 +17,11 @@ from api.model_loader_fixed import get_fixed_loader
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('model_validation.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.FileHandler("model_validation.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -40,17 +39,17 @@ def validate_model_loading():
         print(f"Models directory: {status['models_dir']}")
         print(f"Available models: {len(status['available_models'])}")
 
-        if not status['available_models']:
+        if not status["available_models"]:
             print("FAIL: No models found")
             return False
 
         # Test loading each model
-        for model_name in status['available_models']:
+        for model_name in status["available_models"]:
             print(f"Loading {model_name}...")
             start_time = time.time()
 
             try:
-                model = loader.load_model(model_name)
+                loader.load_model(model_name)
                 load_time = time.time() - start_time
 
                 print(f"SUCCESS: {model_name} loaded in {load_time:.2f}s")
@@ -87,18 +86,18 @@ def validate_predictions():
             {
                 "text": "hello world",
                 "expected_toxicity": "none",
-                "description": "English neutral text"
+                "description": "English neutral text",
             },
             {
                 "text": "test message",
                 "expected_toxicity": "none",
-                "description": "English neutral test"
+                "description": "English neutral test",
             },
             {
                 "text": "stupid idiot fool",
                 "expected_toxicity": "toxic",  # Should detect toxic content
-                "description": "English toxic text"
-            }
+                "description": "English toxic text",
+            },
         ]
 
         success_count = 0
@@ -111,11 +110,21 @@ def validate_predictions():
                 prediction_time = time.time() - start_time
 
                 # Validate structure
-                required_keys = ["toxicity", "emotion", "emotion_strength", "scores", "explanations"]
+                required_keys = [
+                    "toxicity",
+                    "emotion",
+                    "emotion_strength",
+                    "scores",
+                    "explanations",
+                ]
                 if all(key in result for key in required_keys):
-                    print(f"Test {i}: SUCCESS - {test_case['description']} ({prediction_time:.3f}s)")
+                    print(
+                        f"Test {i}: SUCCESS - {test_case['description']} ({prediction_time:.3f}s)"
+                    )
                     print(f"  Toxicity: {result['toxicity']}")
-                    print(f"  Emotion: {result['emotion']} (strength: {result['emotion_strength']})")
+                    print(
+                        f"  Emotion: {result['emotion']} (strength: {result['emotion_strength']})"
+                    )
                     success_count += 1
                 else:
                     print(f"Test {i}: FAIL - Missing keys in result")
@@ -150,8 +159,8 @@ def validate_performance():
         # Run warmup test
         warmup_stats = loader.warm_up(model_name)
 
-        success_rate = warmup_stats['success_count'] / warmup_stats['warmup_samples']
-        avg_time = warmup_stats['average_time']
+        success_rate = warmup_stats["success_count"] / warmup_stats["warmup_samples"]
+        avg_time = warmup_stats["average_time"]
 
         print(f"Warmup success rate: {success_rate*100:.1f}%")
         print(f"Average prediction time: {avg_time:.3f}s")
@@ -228,10 +237,7 @@ def main():
 
     # Save results to file
     results_file = "model_validation_results.json"
-    results = {
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "tests": {}
-    }
+    results = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "tests": {}}
 
     tests = [
         ("Model Loading", validate_model_loading),
@@ -251,7 +257,7 @@ def main():
             success = test_func()
             results["tests"][test_name.lower().replace(" ", "_")] = {
                 "passed": success,
-                "error": None
+                "error": None,
             }
 
             if success:
@@ -264,7 +270,7 @@ def main():
             print(f"RESULT: {test_name} CRASHED - {e}")
             results["tests"][test_name.lower().replace(" ", "_")] = {
                 "passed": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     # Final summary
@@ -275,7 +281,7 @@ def main():
         "total_tests": total_tests,
         "passed_tests": passed_tests,
         "success_rate": success_rate,
-        "overall_status": "PASS" if success_rate >= 0.75 else "FAIL"
+        "overall_status": "PASS" if success_rate >= 0.75 else "FAIL",
     }
 
     print("\n" + "=" * 60)
@@ -290,7 +296,7 @@ def main():
         print("OVERALL RESULT: FAIL - Model loader needs fixes")
 
     # Save results
-    with open(results_file, 'w', encoding='utf-8') as f:
+    with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     print(f"\nDetailed results saved to: {results_file}")

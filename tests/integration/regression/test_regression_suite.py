@@ -9,21 +9,20 @@
 """
 
 import asyncio
+import hashlib
 import json
 import pickle
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-import hashlib
+from typing import Any, Dict, List, Optional
 
-import pytest
 import numpy as np
+import pytest
 from sklearn.metrics import accuracy_score
 
-from tests.integration.fixtures.chinese_toxicity_examples import (
+from tests.integration.fixtures.chinese_toxicity_examples import \
     get_balanced_test_set
-)
 
 
 @pytest.mark.regression
@@ -42,8 +41,9 @@ class TestRegressionBaseline:
         """標準回歸測試資料集"""
         return get_balanced_test_set(100)  # 100個平衡樣本
 
-    def test_create_prediction_baseline(self, api_server, http_client,
-                                       regression_test_data, baseline_dir):
+    def test_create_prediction_baseline(
+        self, api_server, http_client, regression_test_data, baseline_dir
+    ):
         """建立預測基準"""
         baseline_file = baseline_dir / "prediction_baseline.json"
 
@@ -58,25 +58,27 @@ class TestRegressionBaseline:
 
                 try:
                     response = await http_client.post(
-                        f"{api_server}/analyze",
-                        json=payload,
-                        timeout=30.0
+                        f"{api_server}/analyze", json=payload, timeout=30.0
                     )
 
                     if response.status_code == 200:
                         result = response.json()
-                        baseline_results.append({
-                            "text_hash": hashlib.sha256(example["text"].encode()).hexdigest()[:16],
-                            "expected": example["expected"],
-                            "prediction": {
-                                "toxicity": result["toxicity"],
-                                "bullying": result["bullying"],
-                                "emotion": result["emotion"],
-                                "role": result["role"]
-                            },
-                            "scores": result["scores"],
-                            "timestamp": datetime.now().isoformat()
-                        })
+                        baseline_results.append(
+                            {
+                                "text_hash": hashlib.sha256(example["text"].encode()).hexdigest()[
+                                    :16
+                                ],
+                                "expected": example["expected"],
+                                "prediction": {
+                                    "toxicity": result["toxicity"],
+                                    "bullying": result["bullying"],
+                                    "emotion": result["emotion"],
+                                    "role": result["role"],
+                                },
+                                "scores": result["scores"],
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
                 except Exception as e:
                     print(f"Failed to get prediction for text: {e}")
 
@@ -85,19 +87,24 @@ class TestRegressionBaseline:
 
         # 儲存基準
         with open(baseline_file, "w", encoding="utf-8") as f:
-            json.dump({
-                "version": "1.0",
-                "created_at": datetime.now().isoformat(),
-                "total_examples": len(baseline_results),
-                "results": baseline_results
-            }, f, indent=2, ensure_ascii=False)
+            json.dump(
+                {
+                    "version": "1.0",
+                    "created_at": datetime.now().isoformat(),
+                    "total_examples": len(baseline_results),
+                    "results": baseline_results,
+                },
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
 
-        print(f"Created prediction baseline with"
-            " {len(baseline_results)} examples")
+        print("Created prediction baseline with" " {len(baseline_results)} examples")
         assert len(baseline_results) > 50  # 至少要有足夠的基準資料
 
-    def test_create_performance_baseline(self, api_server, http_client,
-                                        regression_test_data, baseline_dir):
+    def test_create_performance_baseline(
+        self, api_server, http_client, regression_test_data, baseline_dir
+    ):
         """建立效能基準"""
         baseline_file = baseline_dir / "performance_baseline.json"
 
@@ -113,9 +120,7 @@ class TestRegressionBaseline:
                 start_time = time.time()
                 try:
                     response = await http_client.post(
-                        f"{api_server}/analyze",
-                        json=payload,
-                        timeout=30.0
+                        f"{api_server}/analyze", json=payload, timeout=30.0
                     )
                     end_time = time.time()
 
@@ -135,13 +140,11 @@ class TestRegressionBaseline:
                 "metrics": {
                     "mean_response_time": float(np.mean(response_times)),
                     "median_response_time": float(np.median(response_times)),
-                    "p95_resp"
-                        "onse_time": float(np.percentile(response_times, 95)),
-                    "p99_resp"
-                        "onse_time": float(np.percentile(response_times, 99)),
+                    "p95_resp" "onse_time": float(np.percentile(response_times, 95)),
+                    "p99_resp" "onse_time": float(np.percentile(response_times, 99)),
                     "max_response_time": float(np.max(response_times)),
-                    "std_response_time": float(np.std(response_times))
-                }
+                    "std_response_time": float(np.std(response_times)),
+                },
             }
 
             with open(baseline_file, "w", encoding="utf-8") as f:
@@ -154,11 +157,7 @@ class TestRegressionBaseline:
 class TestPredictionRegression:
     """預測結果回歸測試"""
 
-    def load_baseline(
-        self,
-        baseline_dir: Path,
-        baseline_name: str
-    ) -> Optional[Dict]:
+    def load_baseline(self, baseline_dir: Path, baseline_name: str) -> Optional[Dict]:
         """載入基準資料"""
         baseline_file = baseline_dir / baseline_name
         if not baseline_file.exists():
@@ -167,8 +166,9 @@ class TestPredictionRegression:
         with open(baseline_file, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    async def test_prediction_consistency(self, api_server, http_client,
-                                        regression_test_data, baseline_dir):
+    async def test_prediction_consistency(
+        self, api_server, http_client, regression_test_data, baseline_dir
+    ):
         """測試預測一致性"""
         baseline = self.load_baseline(baseline_dir, "prediction_baseline.json")
 
@@ -180,8 +180,7 @@ class TestPredictionRegression:
 
         # 收集當前預測結果
         for example in regression_test_data:
-            text_hash = hashlib.sha256(example["te"
-                "xt"].encode()).hexdigest()[:16]
+            text_hash = hashlib.sha256(example["te" "xt"].encode()).hexdigest()[:16]
 
             if text_hash not in baseline_lookup:
                 continue  # 跳過不在基準中的樣本
@@ -190,43 +189,44 @@ class TestPredictionRegression:
 
             try:
                 response = await http_client.post(
-                    f"{api_server}/analyze",
-                    json=payload,
-                    timeout=30.0
+                    f"{api_server}/analyze", json=payload, timeout=30.0
                 )
 
                 if response.status_code == 200:
                     result = response.json()
-                    current_results.append({
-                        "text_hash": text_hash,
-                        "prediction": {
-                            "toxicity": result["toxicity"],
-                            "bullying": result["bullying"],
-                            "emotion": result["emotion"],
-                            "role": result["role"]
+                    current_results.append(
+                        {
+                            "text_hash": text_hash,
+                            "prediction": {
+                                "toxicity": result["toxicity"],
+                                "bullying": result["bullying"],
+                                "emotion": result["emotion"],
+                                "role": result["role"],
+                            },
                         }
-                    })
+                    )
             except Exception as e:
                 print(f"Failed to get current prediction: {e}")
 
         # 比較預測結果
-        consistency_metrics = self._compare_predictions(
-            baseline["results"],
-            current_results
-        )
+        consistency_metrics = self._compare_predictions(baseline["results"], current_results)
 
         print(f"Prediction consistency metrics: {consistency_metrics}")
 
         # 一致性要求
-        assert consistency_metrics["toxicity_accuracy"] >= 0.9, \
-            f"毒性預測一致性不足: {consistency_metrics['toxicity_accuracy']:.3f}"
-        assert consistency_metrics["emotion_accuracy"] >= 0.85, \
-            f"情緒預測一致性不足: {consistency_metrics['emotion_accuracy']:.3f}"
-        assert consistency_metrics["overall_consistency"] >= 0.8, \
-            f"整體預測一致性不足: {consistency_metrics['overall_consistency']:.3f}"
+        assert (
+            consistency_metrics["toxicity_accuracy"] >= 0.9
+        ), f"毒性預測一致性不足: {consistency_metrics['toxicity_accuracy']:.3f}"
+        assert (
+            consistency_metrics["emotion_accuracy"] >= 0.85
+        ), f"情緒預測一致性不足: {consistency_metrics['emotion_accuracy']:.3f}"
+        assert (
+            consistency_metrics["overall_consistency"] >= 0.8
+        ), f"整體預測一致性不足: {consistency_metrics['overall_consistency']:.3f}"
 
-    def _compare_predictions(self, baseline_results: List[Dict],
-                           current_results: List[Dict]) -> Dict[str, float]:
+    def _compare_predictions(
+        self, baseline_results: List[Dict], current_results: List[Dict]
+    ) -> Dict[str, float]:
         """比較預測結果"""
         # 建立查找表
         current_lookup = {r["text_hash"]: r for r in current_results}
@@ -235,7 +235,7 @@ class TestPredictionRegression:
             "toxicity": {"baseline": [], "current": []},
             "bullying": {"baseline": [], "current": []},
             "emotion": {"baseline": [], "current": []},
-            "role": {"baseline": [], "current": []}
+            "role": {"baseline": [], "current": []},
         }
 
         for baseline_result in baseline_results:
@@ -270,11 +270,11 @@ class TestPredictionRegression:
 class TestPerformanceRegression:
     """效能回歸測試"""
 
-    async def test_response_time_regression(self, api_server, http_client,
-                                          regression_test_data, baseline_dir):
+    async def test_response_time_regression(
+        self, api_server, http_client, regression_test_data, baseline_dir
+    ):
         """測試回應時間回歸"""
-        baseline = self.load_baseline(baseline_dir, "performance_"
-            "baseline.json")
+        baseline = self.load_baseline(baseline_dir, "performance_" "baseline.json")
 
         if baseline is None:
             pytest.skip("未找到效能基準")
@@ -288,9 +288,7 @@ class TestPerformanceRegression:
             start_time = time.time()
             try:
                 response = await http_client.post(
-                    f"{api_server}/analyze",
-                    json=payload,
-                    timeout=30.0
+                    f"{api_server}/analyze", json=payload, timeout=30.0
                 )
                 end_time = time.time()
 
@@ -306,9 +304,8 @@ class TestPerformanceRegression:
         # 計算當前效能指標
         current_metrics = {
             "mean_response_time": float(np.mean(current_response_times)),
-            "p95_resp"
-                "onse_time": float(np.percentile(current_response_times, 95)),
-            "max_response_time": float(np.max(current_response_times))
+            "p95_resp" "onse_time": float(np.percentile(current_response_times, 95)),
+            "max_response_time": float(np.max(current_response_times)),
         }
 
         baseline_metrics = baseline["metrics"]
@@ -317,27 +314,26 @@ class TestPerformanceRegression:
         print(f"Current metrics: {current_metrics}")
 
         # 效能回歸檢查
-        mean_regression_ratio = current_metrics["mean_response_time"] / baseline_metrics["mean_response_time"]
-        p95_regression_ratio = current_metrics["p95_response_time"] / baseline_metrics["p95_response_time"]
+        mean_regression_ratio = (
+            current_metrics["mean_response_time"] / baseline_metrics["mean_response_time"]
+        )
+        p95_regression_ratio = (
+            current_metrics["p95_response_time"] / baseline_metrics["p95_response_time"]
+        )
 
         print(f"Mean response time regression ratio: {mean_regression_ratio:.3f}")
         print(f"P95 response time regression ratio: {p95_regression_ratio:.3f}")
 
         # 允許最多 20% 的效能退化
-        assert mean_regression_ratio <= 1.2, \
-            f"平均回應時間退化過多: {mean_regression_ratio:.3f}x"
-        assert p95_regression_ratio <= 1.3, \
-            f"P95 回應時間退化過多: {p95_regression_ratio:.3f}x"
+        assert mean_regression_ratio <= 1.2, f"平均回應時間退化過多: {mean_regression_ratio:.3f}x"
+        assert p95_regression_ratio <= 1.3, f"P95 回應時間退化過多: {p95_regression_ratio:.3f}x"
 
         # 絕對限制
-        assert current_metrics["mean_response_time"] <= 2.0, \
-            f"平均回應時間超過限制: {current_metrics['mean_response_time']:.3f}s"
+        assert (
+            current_metrics["mean_response_time"] <= 2.0
+        ), f"平均回應時間超過限制: {current_metrics['mean_response_time']:.3f}s"
 
-    def load_baseline(
-        self,
-        baseline_dir: Path,
-        baseline_name: str
-    ) -> Optional[Dict]:
+    def load_baseline(self, baseline_dir: Path, baseline_name: str) -> Optional[Dict]:
         """載入基準資料"""
         baseline_file = baseline_dir / baseline_name
         if not baseline_file.exists():
@@ -355,20 +351,19 @@ class TestAPIContractRegression:
         """測試回應結構穩定性"""
         test_payload = {"text": "API 契約測試"}
 
-        response = await http_client.post(
-            f"{api_server}/analyze",
-            json=test_payload,
-            timeout=30.0
-        )
+        response = await http_client.post(f"{api_server}/analyze", json=test_payload, timeout=30.0)
 
         assert response.status_code == 200
         data = response.json()
 
         # 驗證必要欄位存在
         required_fields = [
-            "toxicity", "bullying", "role", "emotion", "emotion_strength",
-            "sco"
-                "res", 
+            "toxicity",
+            "bullying",
+            "role",
+            "emotion",
+            "emotion_strength",
+            "sco" "res",
         ]
 
         for field in required_fields:
@@ -403,8 +398,7 @@ class TestAPIContractRegression:
 class TestModelOutputRegression:
     """模型輸出回歸測試"""
 
-    def test_prediction_distribution_stability(self, api_server, http_client,
-                                             regression_test_data):
+    def test_prediction_distribution_stability(self, api_server, http_client, regression_test_data):
         """測試預測分佈穩定性"""
         predictions = {"toxicity": [], "emotion": [], "bullying": []}
 
@@ -414,9 +408,7 @@ class TestModelOutputRegression:
 
                 try:
                     response = await http_client.post(
-                        f"{api_server}/analyze",
-                        json=payload,
-                        timeout=30.0
+                        f"{api_server}/analyze", json=payload, timeout=30.0
                     )
 
                     if response.status_code == 200:
@@ -462,9 +454,9 @@ class TestRegressionReporting:
                 "total_tests": 0,
                 "passed_tests": 0,
                 "failed_tests": 0,
-                "regression_detected": False
+                "regression_detected": False,
             },
-            "details": []
+            "details": [],
         }
 
         # 檢查是否有回歸問題
@@ -478,10 +470,7 @@ class TestRegressionReporting:
 
 
 # 輔助函數
-def calculate_prediction_drift(
-    baseline_scores: Dict,
-    current_scores: Dict
-) -> float:
+def calculate_prediction_drift(baseline_scores: Dict, current_scores: Dict) -> float:
     """計算預測漂移程度"""
     drift_scores = []
 
@@ -492,8 +481,7 @@ def calculate_prediction_drift(
 
             # 使用 KL 散度或簡單的歐氏距離
             if len(baseline_dist) == len(current_dist):
-                drift = np.sqrt(np.sum((np.array(baseline_dist) -
-                    np.array(current_dist)) ** 2))
+                drift = np.sqrt(np.sum((np.array(baseline_dist) - np.array(current_dist)) ** 2))
                 drift_scores.append(drift)
 
     return np.mean(drift_scores) if drift_scores else 0.0

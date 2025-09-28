@@ -8,21 +8,22 @@
 - 知識蒸餾機制
 """
 
-from .pseudo_labeling import PseudoLabelingPipeline, PseudoLabelConfig
-from .self_training import SelfTrainingFramework, TeacherStudentTrainer, SelfTrainingConfig
-from .co_training import CoTrainingStrategy, CoTrainingConfig
-from .consistency import ConsistencyRegularizer, ConsistencyConfig
+from .co_training import CoTrainingConfig, CoTrainingStrategy
+from .consistency import ConsistencyConfig, ConsistencyRegularizer
 from .memory_optimizer import MemoryOptimizer
+from .pseudo_labeling import PseudoLabelConfig, PseudoLabelingPipeline
+from .self_training import (SelfTrainingConfig, SelfTrainingFramework,
+                            TeacherStudentTrainer)
 
 __all__ = [
-    'PseudoLabelingPipeline',
-    'PseudoLabelConfig',
-    'SelfTrainingFramework',
-    'SelfTrainingConfig',
-    'TeacherStudentTrainer',
-    'CoTrainingStrategy',
-    'CoTrainingConfig',
-    'ConsistencyRegularizer',
-    'ConsistencyConfig',
-    'MemoryOptimizer'
+    "PseudoLabelingPipeline",
+    "PseudoLabelConfig",
+    "SelfTrainingFramework",
+    "SelfTrainingConfig",
+    "TeacherStudentTrainer",
+    "CoTrainingStrategy",
+    "CoTrainingConfig",
+    "ConsistencyRegularizer",
+    "ConsistencyConfig",
+    "MemoryOptimizer",
 ]

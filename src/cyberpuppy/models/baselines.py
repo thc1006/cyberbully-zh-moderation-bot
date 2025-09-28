@@ -14,22 +14,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    precision_recall_fscore_support,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, average_precision_score,
+                             precision_recall_fscore_support, roc_auc_score)
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer
 
-from ..labeling.label_map import (
-    BullyingLevel,
-    EmotionType,
-    RoleType,
-    ToxicityLevel,
-    UnifiedLabel,
-)
+from ..labeling.label_map import (BullyingLevel, EmotionType, RoleType,
+                                  ToxicityLevel, UnifiedLabel)
 
 logger = logging.getLogger(__name__)
 
@@ -252,9 +243,7 @@ class MultiTaskHead(nn.Module):
         }
 
         # 情緒強度回歸
-        if self.config.use_emotion_regression and hasattr(
-            self, "emotion_intensity_head"
-        ):
+        if self.config.use_emotion_regression and hasattr(self, "emotion_intensity_head"):
             outputs["emotion_intensity"] = (
                 self.emotion_intensity_head(shared_features) * 4.0
             )  # 0-4強度
@@ -313,9 +302,7 @@ class BaselineModel(nn.Module):
                         config.class_weights["bullying"], dtype=torch.float
                     )
                 if "role" in config.class_weights:
-                    role_weights = torch.tensor(
-                        config.class_weights["role"], dtype=torch.float
-                    )
+                    role_weights = torch.tensor(config.class_weights["role"], dtype=torch.float)
                 if "emotion" in config.class_weights:
                     emotion_weights = torch.tensor(
                         config.class_weights["emotion"], dtype=torch.float
@@ -363,9 +350,7 @@ class BaselineModel(nn.Module):
         backbone_outputs = self.backbone(**backbone_inputs)
 
         # 使用[CLS] token的表示
-        pooled_output = backbone_outputs.last_hidden_state[
-            :, 0, :
-        ]  # [batch_size, hidden_size]
+        pooled_output = backbone_outputs.last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
 
         # 多任務預測
         task_outputs = self.multi_task_head(pooled_output)
@@ -402,9 +387,7 @@ class BaselineModel(nn.Module):
                 else None
             )
             if mask is None or mask.sum() > 0:
-                toxicity_loss = self.toxicity_loss_fn(
-                    outputs["toxicity"], labels["toxicity_label"]
-                )
+                toxicity_loss = self.toxicity_loss_fn(outputs["toxicity"], labels["toxicity_label"])
                 if mask is not None:
                     toxicity_loss = (toxicity_loss * mask).sum() / mask.sum()
                 losses["toxicity"] = toxicity_loss * task_weights.get("toxicity", 1.0)
@@ -417,9 +400,7 @@ class BaselineModel(nn.Module):
                 else None
             )
             if mask is None or mask.sum() > 0:
-                bullying_loss = self.bullying_loss_fn(
-                    outputs["bullying"], labels["bullying_label"]
-                )
+                bullying_loss = self.bullying_loss_fn(outputs["bullying"], labels["bullying_label"])
                 if mask is not None:
                     bullying_loss = (bullying_loss * mask).sum() / mask.sum()
                 losses["bullying"] = bullying_loss * task_weights.get("bullying", 1.0)
@@ -445,9 +426,7 @@ class BaselineModel(nn.Module):
                 else None
             )
             if mask is None or mask.sum() > 0:
-                emotion_loss = self.emotion_loss_fn(
-                    outputs["emotion"], labels["emotion_label"]
-                )
+                emotion_loss = self.emotion_loss_fn(outputs["emotion"], labels["emotion_label"])
                 if mask is not None:
                     emotion_loss = (emotion_loss * mask).sum() / mask.sum()
                 losses["emotion"] = emotion_loss * task_weights.get("emotion", 1.0)
@@ -502,9 +481,7 @@ class BaselineModel(nn.Module):
 
                     predictions[f"{task}_pred"] = pred_labels.cpu().numpy()
                     predictions[f"{task}_probs"] = probs.cpu().numpy()
-                    predictions[f"{task}_confidence"] = (
-                        probs.max(dim=-1)[0].cpu().numpy()
-                    )
+                    predictions[f"{task}_confidence"] = probs.max(dim=-1)[0].cpu().numpy()
 
             # 情緒強度回歸
             if "emotion_intensity" in outputs:
@@ -554,9 +531,7 @@ class BaselineModel(nn.Module):
         load_path = Path(load_path)
 
         # 載入模型檢查點
-        checkpoint = torch.load(
-            load_path / "best.ckpt", map_location="cpu", weights_only=False
-        )
+        checkpoint = torch.load(load_path / "best.ckpt", map_location="cpu", weights_only=False)
         config = checkpoint["config"]
 
         # 建立模型
@@ -572,9 +547,7 @@ class ModelEvaluator:
 
     def __init__(self, model: BaselineModel, device: torch.device = None):
         self.model = model
-        self.device = device or torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
 
     def evaluate(
@@ -634,9 +607,7 @@ class ModelEvaluator:
                 # 情緒強度回歸
                 if "emotion_intensity" in outputs:
                     intensity_preds = outputs["emotion_intensity"].squeeze(-1)
-                    all_predictions["emotion_intensity"].extend(
-                        intensity_preds.cpu().numpy()
-                    )
+                    all_predictions["emotion_intensity"].extend(intensity_preds.cpu().numpy())
                     all_labels["emotion_intensity"].extend(batch["emotion_intensity"])
 
         # 計算指標
@@ -669,9 +640,7 @@ class ModelEvaluator:
                             if class_idx in y_true:  # 只計算存在的類別
                                 binary_labels = (y_true == class_idx).astype(int)
                                 if len(np.unique(binary_labels)) > 1:  # 確保有正負樣本
-                                    auc = roc_auc_score(
-                                        binary_labels, y_probs[:, class_idx]
-                                    )
+                                    auc = roc_auc_score(binary_labels, y_probs[:, class_idx])
                                     auc_scores.append(auc)
 
                         if auc_scores:
@@ -781,35 +750,23 @@ class ModelEvaluator:
         for task in ["toxicity", "bullying", "role", "emotion"]:
             if f"{task}_macro_f1" in metrics:
                 report_lines.append(f"\n{task.upper()}:")
-                report_lines.append(
-                    f"  Accuracy: {metrics.get(f'{task}_accuracy', 0):.4f}"
-                )
+                report_lines.append(f"  Accuracy: {metrics.get(f'{task}_accuracy', 0):.4f}")
                 # Fixed: avoid f-string line break issues by computing key first
-                macro_f1_key = f'{task}_macro_f1'
-                report_lines.append(
-                    f"  Macro F1: {metrics.get(macro_f1_key, 0):.4f}"
-                )
+                macro_f1_key = f"{task}_macro_f1"
+                report_lines.append(f"  Macro F1: {metrics.get(macro_f1_key, 0):.4f}")
                 # Fixed: avoid f-string line break issues by computing keys first
-                macro_precision_key = f'{task}_macro_precision'
-                macro_recall_key = f'{task}_macro_recall'
-                report_lines.append(
-                    f"  Macro Precision: {metrics.get(macro_precision_key, 0):.4f}"
-                )
-                report_lines.append(
-                    f"  Macro Recall: {metrics.get(macro_recall_key, 0):.4f}"
-                )
+                macro_precision_key = f"{task}_macro_precision"
+                macro_recall_key = f"{task}_macro_recall"
+                report_lines.append(f"  Macro Precision: {metrics.get(macro_precision_key, 0):.4f}")
+                report_lines.append(f"  Macro Recall: {metrics.get(macro_recall_key, 0):.4f}")
 
                 # Fixed: avoid backslash line continuation issues in f-strings
                 macro_auc_key = f"{task}_macro_auc"
                 macro_aucpr_key = f"{task}_macro_aucpr"
                 if macro_auc_key in metrics:
-                    report_lines.append(
-                        f"  Macro AUC: {metrics[macro_auc_key]:.4f}"
-                    )
+                    report_lines.append(f"  Macro AUC: {metrics[macro_auc_key]:.4f}")
                 if macro_aucpr_key in metrics:
-                    report_lines.append(
-                        f"  Macro AUCPR: {metrics[macro_aucpr_key]:.4f}"
-                    )
+                    report_lines.append(f"  Macro AUCPR: {metrics[macro_aucpr_key]:.4f}")
 
         # 情緒強度
         if "emotion_intensity_mse" in metrics:

@@ -16,7 +16,7 @@ import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,6 +28,7 @@ from transformers import AutoTokenizer
 # Conditional SHAP import to avoid numba/coverage conflicts
 try:
     import shap
+
     SHAP_AVAILABLE = True
 except (ImportError, AttributeError):
     SHAP_AVAILABLE = False
@@ -106,7 +107,7 @@ class SHAPModelWrapper:
                     max_length=self.model.config.max_length,
                     padding="max_length",
                     truncation=True,
-                    return_tensors="pt"
+                    return_tensors="pt",
                 )
 
                 input_ids = inputs["input_ids"].to(self.device)
@@ -122,9 +123,9 @@ class SHAPModelWrapper:
                 emotion_probs = F.softmax(outputs["emotion"], dim=-1)
 
                 # 合併所有任務的概率
-                combined_probs = torch.cat([
-                    toxicity_probs, bullying_probs, role_probs, emotion_probs
-                ], dim=-1)
+                combined_probs = torch.cat(
+                    [toxicity_probs, bullying_probs, role_probs, emotion_probs], dim=-1
+                )
 
                 all_probs.append(combined_probs.cpu().numpy())
 
@@ -162,8 +163,12 @@ class SHAPExplainer:
         self.task_configs = {
             "toxicity": {"start_idx": 0, "end_idx": 3, "labels": ["非毒性", "毒性", "嚴重毒性"]},
             "bullying": {"start_idx": 3, "end_idx": 6, "labels": ["非霸凌", "騷擾", "威脅"]},
-            "role": {"start_idx": 6, "end_idx": 10, "labels": ["無角色", "施暴者", "受害者", "旁觀者"]},
-            "emotion": {"start_idx": 10, "end_idx": 13, "labels": ["正面", "中性", "負面"]}
+            "role": {
+                "start_idx": 6,
+                "end_idx": 10,
+                "labels": ["無角色", "施暴者", "受害者", "旁觀者"],
+            },
+            "emotion": {"start_idx": 10, "end_idx": 13, "labels": ["正面", "中性", "負面"]},
         }
 
         logger.info(f"SHAP Explainer initialized on device: {self.device}")
@@ -204,7 +209,7 @@ class SHAPExplainer:
             max_length=self.model.config.max_length,
             padding="max_length",
             truncation=True,
-            return_tensors="pt"
+            return_tensors="pt",
         )
 
         tokens = self.tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
@@ -238,25 +243,55 @@ class SHAPExplainer:
             shap_values = self.explainer([text], max_evals=max_evals)
 
             # 提取各任務的SHAP值
-            if hasattr(shap_values, 'values'):
+            if hasattr(shap_values, "values"):
                 values = shap_values.values[0]  # 第一個（也是唯一的）樣本
-                base_values = shap_values.base_values[0] if hasattr(shap_values, 'base_values') else 0
+                base_values = (
+                    shap_values.base_values[0] if hasattr(shap_values, "base_values") else 0
+                )
             else:
                 values = shap_values[0]
                 base_values = 0
 
             # 分割各任務的SHAP值
-            toxicity_shap = values[self.task_configs["toxicity"]["start_idx"]:self.task_configs["toxicity"]["end_idx"]]
-            bullying_shap = values[self.task_configs["bullying"]["start_idx"]:self.task_configs["bullying"]["end_idx"]]
-            role_shap = values[self.task_configs["role"]["start_idx"]:self.task_configs["role"]["end_idx"]]
-            emotion_shap = values[self.task_configs["emotion"]["start_idx"]:self.task_configs["emotion"]["end_idx"]]
+            toxicity_shap = values[
+                self.task_configs["toxicity"]["start_idx"] : self.task_configs["toxicity"][
+                    "end_idx"
+                ]
+            ]
+            bullying_shap = values[
+                self.task_configs["bullying"]["start_idx"] : self.task_configs["bullying"][
+                    "end_idx"
+                ]
+            ]
+            role_shap = values[
+                self.task_configs["role"]["start_idx"] : self.task_configs["role"]["end_idx"]
+            ]
+            emotion_shap = values[
+                self.task_configs["emotion"]["start_idx"] : self.task_configs["emotion"]["end_idx"]
+            ]
 
             # 基線值
             if isinstance(base_values, (list, np.ndarray)):
-                toxicity_base = base_values[toxicity_pred] if len(base_values) > toxicity_pred else base_values[0]
-                bullying_base = base_values[bullying_pred + 3] if len(base_values) > bullying_pred + 3 else base_values[0]
-                role_base = base_values[role_pred + 6] if len(base_values) > role_pred + 6 else base_values[0]
-                emotion_base = base_values[emotion_pred + 10] if len(base_values) > emotion_pred + 10 else base_values[0]
+                toxicity_base = (
+                    base_values[toxicity_pred]
+                    if len(base_values) > toxicity_pred
+                    else base_values[0]
+                )
+                bullying_base = (
+                    base_values[bullying_pred + 3]
+                    if len(base_values) > bullying_pred + 3
+                    else base_values[0]
+                )
+                role_base = (
+                    base_values[role_pred + 6]
+                    if len(base_values) > role_pred + 6
+                    else base_values[0]
+                )
+                emotion_base = (
+                    base_values[emotion_pred + 10]
+                    if len(base_values) > emotion_pred + 10
+                    else base_values[0]
+                )
             else:
                 toxicity_base = bullying_base = role_base = emotion_base = base_values
 
@@ -275,7 +310,7 @@ class SHAPExplainer:
             "toxicity": np.abs(toxicity_shap).sum(),
             "bullying": np.abs(bullying_shap).sum(),
             "role": np.abs(role_shap).sum(),
-            "emotion": np.abs(emotion_shap).sum()
+            "emotion": np.abs(emotion_shap).sum(),
         }
 
         # 構建結果
@@ -302,12 +337,12 @@ class SHAPExplainer:
                 "toxicity": toxicity_probs[0, toxicity_pred].item(),
                 "bullying": bullying_probs[0, bullying_pred].item(),
                 "role": role_probs[0, role_pred].item(),
-                "emotion": emotion_probs[0, emotion_pred].item()
+                "emotion": emotion_probs[0, emotion_pred].item(),
             },
-            feature_importance=feature_importance
+            feature_importance=feature_importance,
         )
 
-        logger.info(f"SHAP explanation completed")
+        logger.info("SHAP explanation completed")
         return result
 
 
@@ -318,11 +353,12 @@ class SHAPVisualizer:
         self.explainer = explainer
 
         # 設定中文字體
-        plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
-        plt.rcParams['axes.unicode_minus'] = False
+        plt.rcParams["font.sans-serif"] = ["SimHei", "Arial Unicode MS", "DejaVu Sans"]
+        plt.rcParams["axes.unicode_minus"] = False
 
-    def create_force_plot(self, result: SHAPResult, task: str = "toxicity",
-                         save_path: Optional[str] = None) -> None:
+    def create_force_plot(
+        self, result: SHAPResult, task: str = "toxicity", save_path: Optional[str] = None
+    ) -> None:
         """
         創建SHAP force plot
 
@@ -355,65 +391,100 @@ class SHAPVisualizer:
                 features=valid_tokens,
                 out_names=task_config["labels"][pred_class],
                 show=False,
-                matplotlib=True
+                matplotlib=True,
             )
 
-            plt.title(f"SHAP Force Plot - {task.capitalize()}\n"
-                     f"Prediction: {task_config['labels'][pred_class]}\n"
-                     f"Text: {result.text[:60]}...")
+            plt.title(
+                f"SHAP Force Plot - {task.capitalize()}\n"
+                f"Prediction: {task_config['labels'][pred_class]}\n"
+                f"Text: {result.text[:60]}..."
+            )
 
             if save_path:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                plt.savefig(save_path, dpi=300, bbox_inches="tight")
                 logger.info(f"Force plot saved to {save_path}")
 
         except Exception as e:
             logger.error(f"Failed to create force plot: {e}")
             # 創建手動force plot
-            self._manual_force_plot(valid_tokens, valid_shap_values, base_value,
-                                  task_config["labels"][pred_class], result.text, save_path)
+            self._manual_force_plot(
+                valid_tokens,
+                valid_shap_values,
+                base_value,
+                task_config["labels"][pred_class],
+                result.text,
+                save_path,
+            )
 
-    def _manual_force_plot(self, tokens: List[str], shap_values: List[float],
-                          base_value: float, prediction: str, text: str, save_path: Optional[str] = None):
+    def _manual_force_plot(
+        self,
+        tokens: List[str],
+        shap_values: List[float],
+        base_value: float,
+        prediction: str,
+        text: str,
+        save_path: Optional[str] = None,
+    ):
         """手動創建force plot風格的可視化"""
         fig, ax = plt.subplots(figsize=(15, 8))
 
         # 計算位置
-        y_pos = 0
         x_pos = 0
 
         # 繪製基線
-        ax.axhline(y=base_value, color='gray', linestyle='--', alpha=0.5, label=f'Base value: {base_value:.3f}')
+        ax.axhline(
+            y=base_value,
+            color="gray",
+            linestyle="--",
+            alpha=0.5,
+            label=f"Base value: {base_value:.3f}",
+        )
 
         # 繪製SHAP值
-        colors = []
-        for i, (token, shap_val) in enumerate(zip(tokens, shap_values)):
-            color = 'red' if shap_val > 0 else 'blue'
+        for _i, (token, shap_val) in enumerate(zip(tokens, shap_values)):
+            color = "red" if shap_val > 0 else "blue"
             alpha = min(abs(shap_val) * 2, 1.0)
 
             # 繪製箭頭
-            ax.arrow(x_pos, base_value, 0, shap_val, head_width=0.5, head_length=abs(shap_val)*0.1,
-                    fc=color, ec=color, alpha=alpha)
+            ax.arrow(
+                x_pos,
+                base_value,
+                0,
+                shap_val,
+                head_width=0.5,
+                head_length=abs(shap_val) * 0.1,
+                fc=color,
+                ec=color,
+                alpha=alpha,
+            )
 
             # 標註token
-            ax.text(x_pos, base_value + shap_val + (0.1 if shap_val > 0 else -0.1),
-                   f"{token}\n{shap_val:.3f}", ha='center', va='bottom' if shap_val > 0 else 'top',
-                   fontsize=8, rotation=45)
+            ax.text(
+                x_pos,
+                base_value + shap_val + (0.1 if shap_val > 0 else -0.1),
+                f"{token}\n{shap_val:.3f}",
+                ha="center",
+                va="bottom" if shap_val > 0 else "top",
+                fontsize=8,
+                rotation=45,
+            )
 
             x_pos += 1
 
-        ax.set_xlabel('Tokens')
-        ax.set_ylabel('SHAP Value')
-        ax.set_title(f'SHAP Force Plot\nPrediction: {prediction}\nText: {text[:60]}...')
+        ax.set_xlabel("Tokens")
+        ax.set_ylabel("SHAP Value")
+        ax.set_title(f"SHAP Force Plot\nPrediction: {prediction}\nText: {text[:60]}...")
         ax.legend()
 
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
             logger.info(f"Manual force plot saved to {save_path}")
 
-    def create_waterfall_plot(self, result: SHAPResult, task: str = "toxicity",
-                             save_path: Optional[str] = None) -> plt.Figure:
+    def create_waterfall_plot(
+        self, result: SHAPResult, task: str = "toxicity", save_path: Optional[str] = None
+    ) -> plt.Figure:
         """
         創建SHAP waterfall plot
 
@@ -452,49 +523,69 @@ class SHAPVisualizer:
         values = []
         colors = []
 
-        for i, (feature, shap_val) in enumerate(zip(top_features, top_shap_values)):
+        for i, (_feature, shap_val) in enumerate(zip(top_features, top_shap_values)):
             positions.append(i)
             values.append(abs(shap_val))
-            colors.append('red' if shap_val > 0 else 'blue')
+            colors.append("red" if shap_val > 0 else "blue")
 
             # 繪製條形
-            ax.bar(i, abs(shap_val), bottom=cumulative if shap_val > 0 else cumulative - abs(shap_val),
-                  color=colors[-1], alpha=0.7, width=0.6)
+            ax.bar(
+                i,
+                abs(shap_val),
+                bottom=cumulative if shap_val > 0 else cumulative - abs(shap_val),
+                color=colors[-1],
+                alpha=0.7,
+                width=0.6,
+            )
 
             # 添加連接線
             if i > 0:
-                ax.plot([i-0.3, i-0.3], [prev_cumulative, cumulative], 'k--', alpha=0.3)
+                ax.plot([i - 0.3, i - 0.3], [prev_cumulative, cumulative], "k--", alpha=0.3)
 
             # 標註數值
-            ax.text(i, cumulative + shap_val/2, f'{shap_val:.3f}',
-                   ha='center', va='center', fontsize=8, rotation=90)
+            ax.text(
+                i,
+                cumulative + shap_val / 2,
+                f"{shap_val:.3f}",
+                ha="center",
+                va="center",
+                fontsize=8,
+                rotation=90,
+            )
 
             prev_cumulative = cumulative
             cumulative += shap_val
 
         # 設定標籤
         ax.set_xticks(range(len(top_features)))
-        ax.set_xticklabels(top_features, rotation=45, ha='right')
-        ax.set_ylabel('SHAP Value')
-        ax.set_title(f'SHAP Waterfall Plot - {task.capitalize()}\n'
-                    f'Prediction: {task_config["labels"][pred_class]}\n'
-                    f'Base: {base_value:.3f} → Final: {cumulative:.3f}')
+        ax.set_xticklabels(top_features, rotation=45, ha="right")
+        ax.set_ylabel("SHAP Value")
+        ax.set_title(
+            f"SHAP Waterfall Plot - {task.capitalize()}\n"
+            f'Prediction: {task_config["labels"][pred_class]}\n'
+            f"Base: {base_value:.3f} → Final: {cumulative:.3f}"
+        )
 
         # 添加基線和最終預測線
-        ax.axhline(y=base_value, color='gray', linestyle='--', alpha=0.5, label=f'Base: {base_value:.3f}')
-        ax.axhline(y=cumulative, color='green', linestyle='-', alpha=0.7, label=f'Final: {cumulative:.3f}')
+        ax.axhline(
+            y=base_value, color="gray", linestyle="--", alpha=0.5, label=f"Base: {base_value:.3f}"
+        )
+        ax.axhline(
+            y=cumulative, color="green", linestyle="-", alpha=0.7, label=f"Final: {cumulative:.3f}"
+        )
 
         ax.legend()
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
             logger.info(f"Waterfall plot saved to {save_path}")
 
         return fig
 
-    def create_text_plot(self, result: SHAPResult, task: str = "toxicity",
-                        save_path: Optional[str] = None) -> plt.Figure:
+    def create_text_plot(
+        self, result: SHAPResult, task: str = "toxicity", save_path: Optional[str] = None
+    ) -> plt.Figure:
         """
         創建SHAP text plot
 
@@ -531,36 +622,49 @@ class SHAPVisualizer:
         for (token, shap_val), color in zip(text_with_scores, colors):
             # 繪製文本背景
             bbox = dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.7)
-            ax.text(x_pos, 0.5, token, fontsize=12, bbox=bbox, ha='left', va='center')
+            ax.text(x_pos, 0.5, token, fontsize=12, bbox=bbox, ha="left", va="center")
 
             # 添加SHAP值標註
-            ax.text(x_pos, 0.2, f'{shap_val:.3f}', fontsize=8, ha='left', va='center')
+            ax.text(x_pos, 0.2, f"{shap_val:.3f}", fontsize=8, ha="left", va="center")
 
             x_pos += len(token) + 1
 
         # 設定圖表
         ax.set_xlim(-1, x_pos)
         ax.set_ylim(0, 1)
-        ax.set_title(f'SHAP Text Plot - {task.capitalize()}\n'
-                    f'Prediction: {task_config["labels"][pred_class]}\n'
-                    f'Red: Positive Contribution, Blue: Negative Contribution')
-        ax.axis('off')
+        ax.set_title(
+            f"SHAP Text Plot - {task.capitalize()}\n"
+            f'Prediction: {task_config["labels"][pred_class]}\n'
+            f"Red: Positive Contribution, Blue: Negative Contribution"
+        )
+        ax.axis("off")
 
         # 添加顏色說明
-        ax.text(0.02, 0.98, 'Color intensity represents SHAP value magnitude',
-               transform=ax.transAxes, fontsize=10, verticalalignment='top',
-               bbox=dict(boxstyle="round", facecolor='wheat', alpha=0.7))
+        ax.text(
+            0.02,
+            0.98,
+            "Color intensity represents SHAP value magnitude",
+            transform=ax.transAxes,
+            fontsize=10,
+            verticalalignment="top",
+            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.7),
+        )
 
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
             logger.info(f"Text plot saved to {save_path}")
 
         return fig
 
-    def create_summary_plot(self, results: List[SHAPResult], task: str = "toxicity",
-                           max_features: int = 20, save_path: Optional[str] = None) -> plt.Figure:
+    def create_summary_plot(
+        self,
+        results: List[SHAPResult],
+        task: str = "toxicity",
+        max_features: int = 20,
+        save_path: Optional[str] = None,
+    ) -> plt.Figure:
         """
         創建SHAP summary plot
 
@@ -587,18 +691,19 @@ class SHAPVisualizer:
                     all_shap_values.append(shap_values[i])
 
         # 創建DataFrame並分析
-        df = pd.DataFrame({
-            'feature': all_features,
-            'shap_value': all_shap_values
-        })
+        df = pd.DataFrame({"feature": all_features, "shap_value": all_shap_values})
 
         # 計算特徵重要性統計
-        feature_stats = df.groupby('feature').agg({
-            'shap_value': ['mean', 'std', 'count', lambda x: np.abs(x).mean()]
-        }).round(4)
+        feature_stats = (
+            df.groupby("feature")
+            .agg({"shap_value": ["mean", "std", "count", lambda x: np.abs(x).mean()]})
+            .round(4)
+        )
 
-        feature_stats.columns = ['mean_shap', 'std_shap', 'count', 'abs_mean_shap']
-        feature_stats = feature_stats.sort_values('abs_mean_shap', ascending=True).tail(max_features)
+        feature_stats.columns = ["mean_shap", "std_shap", "count", "abs_mean_shap"]
+        feature_stats = feature_stats.sort_values("abs_mean_shap", ascending=True).tail(
+            max_features
+        )
 
         # 創建summary plot
         fig, ax = plt.subplots(figsize=(10, max_features * 0.5))
@@ -606,29 +711,44 @@ class SHAPVisualizer:
         y_pos = np.arange(len(feature_stats))
 
         # 繪製平均SHAP值
-        colors = ['red' if x > 0 else 'blue' for x in feature_stats['mean_shap']]
-        bars = ax.barh(y_pos, feature_stats['abs_mean_shap'], color=colors, alpha=0.7)
+        colors = ["red" if x > 0 else "blue" for x in feature_stats["mean_shap"]]
+        bars = ax.barh(y_pos, feature_stats["abs_mean_shap"], color=colors, alpha=0.7)
 
         # 添加誤差條
-        ax.errorbar(feature_stats['abs_mean_shap'], y_pos,
-                   xerr=feature_stats['std_shap'], fmt='none', color='black', alpha=0.5)
+        ax.errorbar(
+            feature_stats["abs_mean_shap"],
+            y_pos,
+            xerr=feature_stats["std_shap"],
+            fmt="none",
+            color="black",
+            alpha=0.5,
+        )
 
         # 設定標籤
         ax.set_yticks(y_pos)
         ax.set_yticklabels(feature_stats.index)
-        ax.set_xlabel('Mean |SHAP Value|')
-        ax.set_title(f'SHAP Summary Plot - {task.capitalize()}\n'
-                    f'Top {max_features} Most Important Features')
+        ax.set_xlabel("Mean |SHAP Value|")
+        ax.set_title(
+            f"SHAP Summary Plot - {task.capitalize()}\n"
+            f"Top {max_features} Most Important Features"
+        )
 
         # 添加數值標註
-        for i, (bar, mean_val, count) in enumerate(zip(bars, feature_stats['mean_shap'], feature_stats['count'])):
-            ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2,
-                   f'{mean_val:.3f} (n={count})', va='center', fontsize=8)
+        for i, (bar, mean_val, count) in enumerate(
+            zip(bars, feature_stats["mean_shap"], feature_stats["count"])
+        ):
+            ax.text(
+                bar.get_width() + 0.01,
+                bar.get_y() + bar.get_height() / 2,
+                f"{mean_val:.3f} (n={count})",
+                va="center",
+                fontsize=8,
+            )
 
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
             logger.info(f"Summary plot saved to {save_path}")
 
         return fig
@@ -640,8 +760,9 @@ class MisclassificationAnalyzer:
     def __init__(self, explainer: SHAPExplainer):
         self.explainer = explainer
 
-    def analyze_misclassifications(self, texts: List[str], true_labels: List[Dict[str, int]],
-                                  task: str = "toxicity") -> Dict:
+    def analyze_misclassifications(
+        self, texts: List[str], true_labels: List[Dict[str, int]], task: str = "toxicity"
+    ) -> Dict:
         """
         分析誤判案例
 
@@ -671,7 +792,7 @@ class MisclassificationAnalyzer:
                 "shap_values": getattr(result, f"{task}_shap_values"),
                 "base_value": getattr(result, f"{task}_base_value"),
                 "feature_importance": result.feature_importance[task],
-                "tokens": result.tokens
+                "tokens": result.tokens,
             }
 
             if true_label != pred_label:
@@ -686,10 +807,12 @@ class MisclassificationAnalyzer:
             "misclassified_cases": misclassified_cases,
             "correct_cases": correct_cases,
             "error_analysis": analysis,
-            "misclassification_rate": len(misclassified_cases) / len(texts) if texts else 0
+            "misclassification_rate": len(misclassified_cases) / len(texts) if texts else 0,
         }
 
-    def _analyze_error_patterns(self, misclassified: List[Dict], correct: List[Dict], task: str) -> Dict:
+    def _analyze_error_patterns(
+        self, misclassified: List[Dict], correct: List[Dict], task: str
+    ) -> Dict:
         """分析錯誤模式"""
         if not misclassified:
             return {"error_patterns": "No misclassifications found"}
@@ -717,7 +840,9 @@ class MisclassificationAnalyzer:
                         error_features[token] = error_features.get(token, 0) + 1
 
         # 排序錯誤特徵
-        sorted_error_features = sorted(error_features.items(), key=lambda x: x[1], reverse=True)[:10]
+        sorted_error_features = sorted(error_features.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]
 
         return {
             "avg_misclassified_confidence": np.mean(misc_confidences) if misc_confidences else 0,
@@ -725,7 +850,11 @@ class MisclassificationAnalyzer:
             "avg_misclassified_importance": np.mean(misc_importance) if misc_importance else 0,
             "avg_correct_importance": np.mean(correct_importance) if correct_importance else 0,
             "top_error_features": sorted_error_features,
-            "confidence_gap": (np.mean(correct_confidences) - np.mean(misc_confidences)) if (misc_confidences and correct_confidences) else 0
+            "confidence_gap": (
+                (np.mean(correct_confidences) - np.mean(misc_confidences))
+                if (misc_confidences and correct_confidences)
+                else 0
+            ),
         }
 
     def generate_misclassification_report(self, analysis_result: Dict, output_path: str):
@@ -733,32 +862,38 @@ class MisclassificationAnalyzer:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write("# 誤判分析報告\n\n")
 
             error_analysis = analysis_result["error_analysis"]
 
-            f.write(f"## 總體統計\n")
+            f.write("## 總體統計\n")
             f.write(f"- 誤判率: {analysis_result['misclassification_rate']:.2%}\n")
             f.write(f"- 誤判案例數: {len(analysis_result['misclassified_cases'])}\n")
             f.write(f"- 正確案例數: {len(analysis_result['correct_cases'])}\n\n")
 
             if isinstance(error_analysis, dict):
-                f.write(f"## 置信度分析\n")
-                f.write(f"- 誤判案例平均置信度: {error_analysis['avg_misclassified_confidence']:.3f}\n")
+                f.write("## 置信度分析\n")
+                f.write(
+                    f"- 誤判案例平均置信度: {error_analysis['avg_misclassified_confidence']:.3f}\n"
+                )
                 f.write(f"- 正確案例平均置信度: {error_analysis['avg_correct_confidence']:.3f}\n")
                 f.write(f"- 置信度差距: {error_analysis['confidence_gap']:.3f}\n\n")
 
-                f.write(f"## 特徵重要性分析\n")
-                f.write(f"- 誤判案例平均特徵重要性: {error_analysis['avg_misclassified_importance']:.3f}\n")
-                f.write(f"- 正確案例平均特徵重要性: {error_analysis['avg_correct_importance']:.3f}\n\n")
+                f.write("## 特徵重要性分析\n")
+                f.write(
+                    f"- 誤判案例平均特徵重要性: {error_analysis['avg_misclassified_importance']:.3f}\n"
+                )
+                f.write(
+                    f"- 正確案例平均特徵重要性: {error_analysis['avg_correct_importance']:.3f}\n\n"
+                )
 
-                f.write(f"## 高頻錯誤特徵\n")
-                for feature, count in error_analysis['top_error_features']:
+                f.write("## 高頻錯誤特徵\n")
+                for feature, count in error_analysis["top_error_features"]:
                     f.write(f"- {feature}: {count} 次\n")
 
-            f.write(f"\n## 誤判案例詳情\n")
-            for i, case in enumerate(analysis_result['misclassified_cases'][:10]):  # 顯示前10個
+            f.write("\n## 誤判案例詳情\n")
+            for i, case in enumerate(analysis_result["misclassified_cases"][:10]):  # 顯示前10個
                 f.write(f"\n### 案例 {i+1}\n")
                 f.write(f"- 文本: {case['text']}\n")
                 f.write(f"- 真實標籤: {case['true_label']}\n")
@@ -769,8 +904,9 @@ class MisclassificationAnalyzer:
         logger.info(f"Misclassification report saved to {output_path}")
 
 
-def compare_ig_shap_explanations(ig_result: ExplanationResult, shap_result: SHAPResult,
-                                task: str = "toxicity") -> Dict:
+def compare_ig_shap_explanations(
+    ig_result: ExplanationResult, shap_result: SHAPResult, task: str = "toxicity"
+) -> Dict:
     """
     比較IG和SHAP解釋結果
 
@@ -796,6 +932,7 @@ def compare_ig_shap_explanations(ig_result: ExplanationResult, shap_result: SHAP
 
     # 計算排序一致性（Spearman相關）
     from scipy.stats import spearmanr
+
     rank_correlation, _ = spearmanr(ig_attr, shap_attr) if min_len > 1 else (0, 1)
 
     # 找出最重要的特徵
@@ -812,7 +949,7 @@ def compare_ig_shap_explanations(ig_result: ExplanationResult, shap_result: SHAP
         "top_features_overlap": overlap_ratio,
         "ig_top_features": ig_top_indices.tolist(),
         "shap_top_features": shap_top_indices.tolist(),
-        "attribution_difference": np.mean(np.abs(ig_attr - shap_attr))
+        "attribution_difference": np.mean(np.abs(ig_attr - shap_attr)),
     }
 
 

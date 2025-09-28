@@ -232,9 +232,7 @@ class LabelMapper:
         )
 
     @classmethod
-    def from_sccd_to_unified(
-        cls, label: str, role: Optional[str] = None, **kwargs
-    ) -> UnifiedLabel:
+    def from_sccd_to_unified(cls, label: str, role: Optional[str] = None, **kwargs) -> UnifiedLabel:
         """
         將 SCCD 標籤轉換為統一格式
 
@@ -335,9 +333,7 @@ class LabelMapper:
             bullying=bullying,
             role=role_type,
             emotion=(
-                EmotionType.NEGATIVE
-                if toxicity != ToxicityLevel.NONE
-                else EmotionType.NEUTRAL
+                EmotionType.NEGATIVE if toxicity != ToxicityLevel.NONE else EmotionType.NEUTRAL
             ),
             emotion_intensity=emotion_intensity,
             source_dataset="chnci",
@@ -517,9 +513,7 @@ class LabelMapper:
         # 計算平均分數
         avg_toxicity_score = sum(label.toxicity_score for label in labels) / len(labels)
         avg_bullying_score = sum(label.bullying_score for label in labels) / len(labels)
-        avg_emotion_intensity = sum(label.emotion_intensity for label in labels) / len(
-            labels
-        )
+        avg_emotion_intensity = sum(label.emotion_intensity for label in labels) / len(labels)
         avg_confidence = sum(label.confidence for label in labels) / len(labels)
 
         # 投票決定類別
@@ -761,9 +755,7 @@ def from_cold_to_unified(label: int, **kwargs) -> UnifiedLabel:
     return LabelMapper.from_cold_to_unified(label, **kwargs)
 
 
-def from_sccd_to_unified(
-    label: str, role: Optional[str] = None, **kwargs
-) -> UnifiedLabel:
+def from_sccd_to_unified(label: str, role: Optional[str] = None, **kwargs) -> UnifiedLabel:
     """SCCD 到統一格式"""
     return LabelMapper.from_sccd_to_unified(label, role, **kwargs)
 
@@ -795,8 +787,6 @@ def to_chnci_label(unified: UnifiedLabel) -> Dict[str, Any]:
     return LabelMapper.to_chnci_label(unified)
 
 
-def to_sentiment_label(
-    unified: UnifiedLabel, format: str = "binary"
-) -> Union[int, float, str]:
+def to_sentiment_label(unified: UnifiedLabel, format: str = "binary") -> Union[int, float, str]:
     """統一格式到情感標籤"""
     return LabelMapper.to_sentiment_label(unified, format)

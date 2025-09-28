@@ -6,7 +6,7 @@ Placeholder implementation for CLI integration.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +37,10 @@ class ModelExporter:
             "export_timestamp": "2024-01-15T10:30:00Z",
         }
 
-        logger.info(
-            f"ONNX export completed: {output_path}"
-            " ({results['model_size_mb']:.1f} MB)"
-        )
+        logger.info(f"ONNX export completed: {output_path}" " ({results['model_size_mb']:.1f} MB)")
         return results
 
-    def export_to_torchscript(
-        self, model_path: str, output_path: str
-    ) -> Dict[str, Any]:
+    def export_to_torchscript(self, model_path: str, output_path: str) -> Dict[str, Any]:
         """Export model to TorchScript format."""
         model_file = Path(model_path)
         if not model_file.exists():
@@ -64,14 +59,11 @@ class ModelExporter:
         }
 
         logger.info(
-            f"TorchScript export completed: {output_path} "
-            f"({results['model_size_mb']:.1f} MB)"
+            f"TorchScript export completed: {output_path} " f"({results['model_size_mb']:.1f} MB)"
         )
         return results
 
-    def export_to_huggingface(
-        self, model_path: str, output_path: str
-    ) -> Dict[str, Any]:
+    def export_to_huggingface(self, model_path: str, output_path: str) -> Dict[str, Any]:
         """Export model to HuggingFace format."""
         model_file = Path(model_path)
         if not model_file.exists():

@@ -10,33 +10,26 @@ Tests all augmentation strategies and pipeline functionality:
 - Label consistency and quality validation
 """
 
-import pytest
-import unittest
-from unittest.mock import Mock, patch, MagicMock
 import random
-from typing import List, Dict, Any
-
-import pandas as pd
-import numpy as np
-
 import sys
+import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas as pd
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from cyberpuppy.data_augmentation import (
-    SynonymAugmenter,
-    BackTranslationAugmenter,
-    ContextualAugmenter,
-    EDAugmenter,
-    AugmentationPipeline,
-    AugmentationConfig,
-    PipelineConfig,
-    create_augmentation_pipeline,
-    validate_augmentation_quality,
-    calculate_text_similarity
-)
+from cyberpuppy.data_augmentation import (AugmentationConfig,
+                                          AugmentationPipeline,
+                                          BackTranslationAugmenter,
+                                          ContextualAugmenter, EDAugmenter,
+                                          PipelineConfig, SynonymAugmenter,
+                                          calculate_text_similarity,
+                                          create_augmentation_pipeline,
+                                          validate_augmentation_quality)
 
 
 class TestAugmentationConfig(unittest.TestCase):
@@ -55,10 +48,7 @@ class TestAugmentationConfig(unittest.TestCase):
 
     def test_custom_config(self):
         """Test custom configuration."""
-        config = AugmentationConfig(
-            synonym_prob=0.2,
-            quality_threshold=0.5
-        )
+        config = AugmentationConfig(synonym_prob=0.2, quality_threshold=0.5)
         self.assertEqual(config.synonym_prob, 0.2)
         self.assertEqual(config.quality_threshold, 0.5)
 
@@ -134,8 +124,8 @@ class TestBackTranslationAugmenter(unittest.TestCase):
         self.config = AugmentationConfig(backtrans_prob=1.0)  # Always translate for testing
         self.augmenter = BackTranslationAugmenter(self.config)
 
-    @patch('cyberpuppy.data_augmentation.augmenters.MarianMTModel')
-    @patch('cyberpuppy.data_augmentation.augmenters.MarianTokenizer')
+    @patch("cyberpuppy.data_augmentation.augmenters.MarianMTModel")
+    @patch("cyberpuppy.data_augmentation.augmenters.MarianTokenizer")
     def test_initialization(self, mock_tokenizer, mock_model):
         """Test augmenter initialization with mocked models."""
         augmenter = BackTranslationAugmenter()
@@ -145,8 +135,10 @@ class TestBackTranslationAugmenter(unittest.TestCase):
     def test_translate_text_mock(self):
         """Test translation with mocked models."""
         # Mock the translation models
-        with patch.object(self.augmenter, 'zh_en_model') as mock_zh_en, \
-             patch.object(self.augmenter, 'en_zh_model') as mock_en_zh:
+        with (
+            patch.object(self.augmenter, "zh_en_model") as mock_zh_en,
+            patch.object(self.augmenter, "en_zh_model"),
+        ):
 
             # Setup mocks
             mock_model = Mock()
@@ -162,7 +154,7 @@ class TestBackTranslationAugmenter(unittest.TestCase):
 
     def test_augment_with_mock(self):
         """Test augmentation with mocked translation."""
-        with patch.object(self.augmenter, '_translate_text') as mock_translate:
+        with patch.object(self.augmenter, "_translate_text") as mock_translate:
             mock_translate.side_effect = ["test text", "測試文本2"]
 
             text = "測試文本"
@@ -173,7 +165,9 @@ class TestBackTranslationAugmenter(unittest.TestCase):
 
     def test_translation_failure_handling(self):
         """Test handling of translation failures."""
-        with patch.object(self.augmenter, '_translate_text', side_effect=Exception("Translation failed")):
+        with patch.object(
+            self.augmenter, "_translate_text", side_effect=Exception("Translation failed")
+        ):
             text = "測試文本"
             augmented = self.augmenter.augment(text, num_augmentations=1)
 
@@ -188,8 +182,8 @@ class TestContextualAugmenter(unittest.TestCase):
         self.config = AugmentationConfig(contextual_prob=0.5)
         self.augmenter = ContextualAugmenter(self.config)
 
-    @patch('cyberpuppy.data_augmentation.augmenters.AutoModelForMaskedLM')
-    @patch('cyberpuppy.data_augmentation.augmenters.AutoTokenizer')
+    @patch("cyberpuppy.data_augmentation.augmenters.AutoModelForMaskedLM")
+    @patch("cyberpuppy.data_augmentation.augmenters.AutoTokenizer")
     def test_initialization(self, mock_tokenizer, mock_model):
         """Test augmenter initialization with mocked models."""
         augmenter = ContextualAugmenter()
@@ -198,17 +192,19 @@ class TestContextualAugmenter(unittest.TestCase):
 
     def test_augment_with_mock(self):
         """Test contextual augmentation with mocked model."""
-        with patch.object(self.augmenter, 'model') as mock_model_prop, \
-             patch.object(self.augmenter, '_get_masked_predictions') as mock_predictions:
+        with (
+            patch.object(self.augmenter, "model") as mock_model_prop,
+            patch.object(self.augmenter, "_get_masked_predictions") as mock_predictions,
+        ):
 
             # Setup mocks
             mock_model = Mock()
             mock_tokenizer = Mock()
             mock_model_prop.__get__ = Mock(return_value=(mock_model, mock_tokenizer))
 
-            mock_tokenizer.tokenize.return_value = ['我', '很', '好']
+            mock_tokenizer.tokenize.return_value = ["我", "很", "好"]
             mock_tokenizer.convert_tokens_to_string.return_value = "我很棒"
-            mock_predictions.return_value = [['棒', '讚', '優秀']]
+            mock_predictions.return_value = [["棒", "讚", "優秀"]]
 
             text = "我很好"
             augmented = self.augmenter.augment(text, num_augmentations=1)
@@ -218,11 +214,11 @@ class TestContextualAugmenter(unittest.TestCase):
 
     def test_short_text_handling(self):
         """Test handling of very short texts."""
-        with patch.object(self.augmenter, 'model') as mock_model_prop:
+        with patch.object(self.augmenter, "model") as mock_model_prop:
             mock_model = Mock()
             mock_tokenizer = Mock()
             mock_model_prop.__get__ = Mock(return_value=(mock_model, mock_tokenizer))
-            mock_tokenizer.tokenize.return_value = ['好']  # Too short
+            mock_tokenizer.tokenize.return_value = ["好"]  # Too short
 
             text = "好"
             augmented = self.augmenter.augment(text, num_augmentations=1)
@@ -245,7 +241,7 @@ class TestEDAugmenter(unittest.TestCase):
 
     def test_random_insertion(self):
         """Test random insertion operation."""
-        words = ['我', '很', '好']
+        words = ["我", "很", "好"]
         augmented = self.augmenter._random_insertion(words, 1)
 
         self.assertEqual(len(augmented), 4)  # Original + 1 insertion
@@ -253,7 +249,7 @@ class TestEDAugmenter(unittest.TestCase):
 
     def test_random_deletion(self):
         """Test random deletion operation."""
-        words = ['我', '很', '好', '的', '今天']
+        words = ["我", "很", "好", "的", "今天"]
         augmented = self.augmenter._random_deletion(words, 0.5)
 
         self.assertLessEqual(len(augmented), len(words))
@@ -261,14 +257,14 @@ class TestEDAugmenter(unittest.TestCase):
 
     def test_random_deletion_single_word(self):
         """Test random deletion with single word."""
-        words = ['好']
+        words = ["好"]
         augmented = self.augmenter._random_deletion(words, 0.9)
 
         self.assertEqual(len(augmented), 1)  # Should preserve single word
 
     def test_random_swap(self):
         """Test random swap operation."""
-        words = ['我', '很', '好', '的', '今天']
+        words = ["我", "很", "好", "的", "今天"]
         original_set = set(words)
         augmented = self.augmenter._random_swap(words, 1)
 
@@ -349,15 +345,15 @@ class TestAugmentationPipeline(unittest.TestCase):
             use_backtranslation=False,  # Disable heavy augmenters for testing
             use_contextual=False,
             augmentation_ratio=0.5,
-            augmentations_per_text=1
+            augmentations_per_text=1,
         )
         self.pipeline = AugmentationPipeline(self.config)
 
     def test_initialization(self):
         """Test pipeline initialization."""
         self.assertIsInstance(self.pipeline.augmenters, dict)
-        self.assertIn('synonym', self.pipeline.augmenters)
-        self.assertIn('eda', self.pipeline.augmenters)
+        self.assertIn("synonym", self.pipeline.augmenters)
+        self.assertIn("eda", self.pipeline.augmenters)
 
     def test_select_augmentation_strategy(self):
         """Test strategy selection."""
@@ -367,9 +363,9 @@ class TestAugmentationPipeline(unittest.TestCase):
     def test_augment_single_text(self):
         """Test single text augmentation."""
         text = "我很好"
-        label = {'toxicity': 'none', 'emotion': 'pos'}
+        label = {"toxicity": "none", "emotion": "pos"}
 
-        with patch.object(self.pipeline, '_validate_augmented_text', return_value=True):
+        with patch.object(self.pipeline, "_validate_augmented_text", return_value=True):
             augmented = self.pipeline._augment_single_text(text, label, 1)
 
             self.assertIsInstance(augmented, list)
@@ -394,14 +390,15 @@ class TestAugmentationPipeline(unittest.TestCase):
     def test_augment_basic(self):
         """Test basic pipeline augmentation."""
         texts = ["我很好", "今天天氣不錯"]
-        labels = [
-            {'toxicity': 'none', 'emotion': 'pos'},
-            {'toxicity': 'none', 'emotion': 'neu'}
-        ]
+        labels = [{"toxicity": "none", "emotion": "pos"}, {"toxicity": "none", "emotion": "neu"}]
 
         # Mock augmenters to avoid model loading
-        with patch.object(self.pipeline.augmenters['synonym'], 'augment', return_value=["我很棒"]), \
-             patch.object(self.pipeline.augmenters['eda'], 'augment', return_value=["今天很不錯的天氣"]):
+        with (
+            patch.object(self.pipeline.augmenters["synonym"], "augment", return_value=["我很棒"]),
+            patch.object(
+                self.pipeline.augmenters["eda"], "augment", return_value=["今天很不錯的天氣"]
+            ),
+        ):
 
             aug_texts, aug_labels = self.pipeline.augment(texts, labels, verbose=False)
 
@@ -410,28 +407,34 @@ class TestAugmentationPipeline(unittest.TestCase):
 
     def test_augment_dataframe(self):
         """Test DataFrame augmentation."""
-        df = pd.DataFrame({
-            'text': ["我很好", "今天天氣不錯"],
-            'toxicity': ['none', 'none'],
-            'emotion': ['pos', 'neu']
-        })
+        df = pd.DataFrame(
+            {
+                "text": ["我很好", "今天天氣不錯"],
+                "toxicity": ["none", "none"],
+                "emotion": ["pos", "neu"],
+            }
+        )
 
         # Mock augmenters
-        with patch.object(self.pipeline.augmenters['synonym'], 'augment', return_value=["我很棒"]), \
-             patch.object(self.pipeline.augmenters['eda'], 'augment', return_value=["今天很不錯的天氣"]):
+        with (
+            patch.object(self.pipeline.augmenters["synonym"], "augment", return_value=["我很棒"]),
+            patch.object(
+                self.pipeline.augmenters["eda"], "augment", return_value=["今天很不錯的天氣"]
+            ),
+        ):
 
             result_df = self.pipeline.augment_dataframe(
-                df, 'text', ['toxicity', 'emotion'], verbose=False
+                df, "text", ["toxicity", "emotion"], verbose=False
             )
 
             self.assertGreaterEqual(len(result_df), len(df))
-            self.assertIn('is_augmented', result_df.columns)
-            self.assertTrue(result_df['is_augmented'].any())
+            self.assertIn("is_augmented", result_df.columns)
+            self.assertTrue(result_df["is_augmented"].any())
 
     def test_balance_dataset(self):
         """Test dataset balancing."""
         texts = ["好文本"] * 10 + ["壞文本"] * 2  # Imbalanced
-        labels = [{'toxicity': 'none'}] * 10 + [{'toxicity': 'toxic'}] * 2
+        labels = [{"toxicity": "none"}] * 10 + [{"toxicity": "toxic"}] * 2
 
         balanced_texts, balanced_labels = self.pipeline._balance_dataset(texts, labels)
 
@@ -443,9 +446,13 @@ class TestAugmentationPipeline(unittest.TestCase):
         stats = self.pipeline.get_statistics()
 
         required_keys = [
-            'total_processed', 'total_augmented', 'quality_filtered',
-            'augmentation_ratio', 'strategy_usage', 'strategy_percentages',
-            'quality_pass_rate'
+            "total_processed",
+            "total_augmented",
+            "quality_filtered",
+            "augmentation_ratio",
+            "strategy_usage",
+            "strategy_percentages",
+            "quality_pass_rate",
         ]
 
         for key in required_keys:
@@ -454,10 +461,10 @@ class TestAugmentationPipeline(unittest.TestCase):
     def test_reset_statistics(self):
         """Test statistics reset."""
         # Set some stats
-        self.pipeline.stats['total_processed'] = 100
+        self.pipeline.stats["total_processed"] = 100
 
         self.pipeline.reset_statistics()
-        self.assertEqual(self.pipeline.stats['total_processed'], 0)
+        self.assertEqual(self.pipeline.stats["total_processed"], 0)
 
 
 class TestFactoryFunction(unittest.TestCase):
@@ -465,7 +472,7 @@ class TestFactoryFunction(unittest.TestCase):
 
     def test_create_augmentation_pipeline_light(self):
         """Test creating light intensity pipeline."""
-        pipeline = create_augmentation_pipeline('light')
+        pipeline = create_augmentation_pipeline("light")
 
         self.assertEqual(pipeline.config.augmentation_ratio, 0.1)
         self.assertEqual(pipeline.config.augmentations_per_text, 1)
@@ -473,7 +480,7 @@ class TestFactoryFunction(unittest.TestCase):
 
     def test_create_augmentation_pipeline_medium(self):
         """Test creating medium intensity pipeline."""
-        pipeline = create_augmentation_pipeline('medium')
+        pipeline = create_augmentation_pipeline("medium")
 
         self.assertEqual(pipeline.config.augmentation_ratio, 0.3)
         self.assertEqual(pipeline.config.augmentations_per_text, 2)
@@ -481,7 +488,7 @@ class TestFactoryFunction(unittest.TestCase):
 
     def test_create_augmentation_pipeline_heavy(self):
         """Test creating heavy intensity pipeline."""
-        pipeline = create_augmentation_pipeline('heavy')
+        pipeline = create_augmentation_pipeline("heavy")
 
         self.assertEqual(pipeline.config.augmentation_ratio, 0.5)
         self.assertEqual(pipeline.config.augmentations_per_text, 3)
@@ -489,7 +496,7 @@ class TestFactoryFunction(unittest.TestCase):
 
     def test_create_with_specific_strategies(self):
         """Test creating pipeline with specific strategies."""
-        pipeline = create_augmentation_pipeline('medium', ['synonym', 'eda'])
+        pipeline = create_augmentation_pipeline("medium", ["synonym", "eda"])
 
         self.assertTrue(pipeline.config.use_synonym)
         self.assertFalse(pipeline.config.use_backtranslation)
@@ -505,9 +512,9 @@ class TestIntegration(unittest.TestCase):
         # Create sample data
         texts = ["我很好", "今天天氣不錯", "這個很有趣"]
         labels = [
-            {'toxicity': 'none', 'emotion': 'pos'},
-            {'toxicity': 'none', 'emotion': 'neu'},
-            {'toxicity': 'none', 'emotion': 'pos'}
+            {"toxicity": "none", "emotion": "pos"},
+            {"toxicity": "none", "emotion": "neu"},
+            {"toxicity": "none", "emotion": "pos"},
         ]
 
         # Create pipeline with minimal models to avoid loading issues
@@ -516,13 +523,15 @@ class TestIntegration(unittest.TestCase):
             use_contextual=False,
             augmentation_ratio=0.3,
             augmentations_per_text=1,
-            use_multiprocessing=False
+            use_multiprocessing=False,
         )
         pipeline = AugmentationPipeline(config)
 
         # Mock the heavy augmenters to avoid model loading
-        with patch.object(pipeline.augmenters['synonym'], 'augment') as mock_syn, \
-             patch.object(pipeline.augmenters['eda'], 'augment') as mock_eda:
+        with (
+            patch.object(pipeline.augmenters["synonym"], "augment") as mock_syn,
+            patch.object(pipeline.augmenters["eda"], "augment") as mock_eda,
+        ):
 
             mock_syn.return_value = ["我很棒"]
             mock_eda.return_value = ["今天很好的天氣"]
@@ -536,42 +545,46 @@ class TestIntegration(unittest.TestCase):
 
             # Verify statistics
             stats = pipeline.get_statistics()
-            self.assertGreater(stats['total_processed'], 0)
+            self.assertGreater(stats["total_processed"], 0)
 
     def test_dataframe_workflow(self):
         """Test DataFrame-based workflow."""
         # Create sample DataFrame
-        df = pd.DataFrame({
-            'text': ["我很好", "今天天氣不錯"],
-            'toxicity': ['none', 'none'],
-            'bullying': ['none', 'none'],
-            'emotion': ['pos', 'neu']
-        })
+        df = pd.DataFrame(
+            {
+                "text": ["我很好", "今天天氣不錯"],
+                "toxicity": ["none", "none"],
+                "bullying": ["none", "none"],
+                "emotion": ["pos", "neu"],
+            }
+        )
 
         # Create simple pipeline
         config = PipelineConfig(
             use_backtranslation=False,
             use_contextual=False,
             augmentation_ratio=0.5,
-            use_multiprocessing=False
+            use_multiprocessing=False,
         )
         pipeline = AugmentationPipeline(config)
 
         # Mock augmenters
-        with patch.object(pipeline.augmenters['synonym'], 'augment', return_value=["我很棒"]), \
-             patch.object(pipeline.augmenters['eda'], 'augment', return_value=["今天很好的天氣"]):
+        with (
+            patch.object(pipeline.augmenters["synonym"], "augment", return_value=["我很棒"]),
+            patch.object(pipeline.augmenters["eda"], "augment", return_value=["今天很好的天氣"]),
+        ):
 
             result_df = pipeline.augment_dataframe(
-                df, 'text', ['toxicity', 'bullying', 'emotion'], verbose=False
+                df, "text", ["toxicity", "bullying", "emotion"], verbose=False
             )
 
             # Verify structure
             self.assertGreaterEqual(len(result_df), len(df))
             self.assertTrue(all(col in result_df.columns for col in df.columns))
-            self.assertIn('is_augmented', result_df.columns)
+            self.assertIn("is_augmented", result_df.columns)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Set random seeds for reproducible tests
     random.seed(42)
     np.random.seed(42)

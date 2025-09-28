@@ -4,20 +4,17 @@
 Tests for improved bullying detection model
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
 import torch
 import torch.nn as nn
-from unittest.mock import Mock, patch, MagicMock
-import numpy as np
-from typing import Dict, Any
 
 # Test target modules
-from cyberpuppy.models.improved_detector import (
-    ImprovedModelConfig,
-    ImprovedBullyingDetector,
-    FocalLoss,
-    DynamicTaskWeighting,
-)
+from cyberpuppy.models.improved_detector import (DynamicTaskWeighting,
+                                                 FocalLoss,
+                                                 ImprovedBullyingDetector,
+                                                 ImprovedModelConfig)
 
 
 class TestImprovedModelConfig:
@@ -38,10 +35,7 @@ class TestImprovedModelConfig:
     def test_config_custom_values(self):
         """測試自定義配置值"""
         config = ImprovedModelConfig(
-            model_name="custom-model",
-            hidden_size=512,
-            max_length=256,
-            num_toxicity_classes=5
+            model_name="custom-model", hidden_size=512, max_length=256, num_toxicity_classes=5
         )
 
         assert config.model_name == "custom-model"
@@ -112,11 +106,7 @@ class TestDynamicTaskWeighting:
         """測試動態任務權重前向傳播"""
         weighting = DynamicTaskWeighting(num_tasks=3)
 
-        losses = [
-            torch.tensor(0.5),
-            torch.tensor(0.3),
-            torch.tensor(0.7)
-        ]
+        losses = [torch.tensor(0.5), torch.tensor(0.3), torch.tensor(0.7)]
 
         weighted_loss = weighting(losses)
 
@@ -129,9 +119,9 @@ def mock_tokenizer():
     """模擬分詞器"""
     tokenizer = Mock()
     tokenizer.encode_plus.return_value = {
-        'input_ids': torch.tensor([[101, 1234, 5678, 102]]),
-        'attention_mask': torch.tensor([[1, 1, 1, 1]]),
-        'token_type_ids': torch.tensor([[0, 0, 0, 0]])
+        "input_ids": torch.tensor([[101, 1234, 5678, 102]]),
+        "attention_mask": torch.tensor([[1, 1, 1, 1]]),
+        "token_type_ids": torch.tensor([[0, 0, 0, 0]]),
     }
     tokenizer.vocab_size = 21128
     return tokenizer
@@ -160,8 +150,12 @@ class TestImprovedBullyingDetector:
         """測試模型初始化"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained') as mock_model, \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained') as mock_tokenizer:
+        with (
+            patch("cyberpuppy.models.improved_detector.AutoModel.from_pretrained") as mock_model,
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained"
+            ) as mock_tokenizer,
+        ):
 
             # Mock the transformer model
             mock_model.return_value.config.hidden_size = 768
@@ -170,17 +164,25 @@ class TestImprovedBullyingDetector:
             model = ImprovedBullyingDetector(config)
 
             assert model.config == config
-            assert hasattr(model, 'transformer')
-            assert hasattr(model, 'tokenizer')
-            assert hasattr(model, 'toxicity_classifier')
-            assert hasattr(model, 'bullying_classifier')
+            assert hasattr(model, "transformer")
+            assert hasattr(model, "tokenizer")
+            assert hasattr(model, "toxicity_classifier")
+            assert hasattr(model, "bullying_classifier")
 
     def test_model_forward_pass(self, mock_tokenizer, mock_transformer):
         """測試模型前向傳播"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
 
@@ -190,17 +192,25 @@ class TestImprovedBullyingDetector:
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
 
-            assert 'toxicity_logits' in outputs
-            assert 'bullying_logits' in outputs
-            assert 'emotion_logits' in outputs
-            assert 'role_logits' in outputs
+            assert "toxicity_logits" in outputs
+            assert "bullying_logits" in outputs
+            assert "emotion_logits" in outputs
+            assert "role_logits" in outputs
 
     def test_model_predict_method(self, mock_tokenizer, mock_transformer):
         """測試模型預測方法"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
             model.eval()
@@ -211,51 +221,70 @@ class TestImprovedBullyingDetector:
                 result = model.predict(text)
 
             assert isinstance(result, dict)
-            assert 'toxicity' in result
-            assert 'bullying' in result
-            assert 'emotion' in result
-            assert 'role' in result
-            assert 'confidence' in result
+            assert "toxicity" in result
+            assert "bullying" in result
+            assert "emotion" in result
+            assert "role" in result
+            assert "confidence" in result
 
     def test_model_training_step(self, mock_tokenizer, mock_transformer):
         """測試模型訓練步驟"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
             model.train()
 
             # Mock training data
             batch = {
-                'input_ids': torch.tensor([[101, 1234, 5678, 102]]),
-                'attention_mask': torch.tensor([[1, 1, 1, 1]]),
-                'toxicity_labels': torch.tensor([1]),
-                'bullying_labels': torch.tensor([0]),
-                'emotion_labels': torch.tensor([2]),
-                'role_labels': torch.tensor([1]),
+                "input_ids": torch.tensor([[101, 1234, 5678, 102]]),
+                "attention_mask": torch.tensor([[1, 1, 1, 1]]),
+                "toxicity_labels": torch.tensor([1]),
+                "bullying_labels": torch.tensor([0]),
+                "emotion_labels": torch.tensor([2]),
+                "role_labels": torch.tensor([1]),
             }
 
             outputs = model(**batch)
 
-            assert 'loss' in outputs
-            assert 'toxicity_loss' in outputs
-            assert 'bullying_loss' in outputs
-            assert isinstance(outputs['loss'], torch.Tensor)
+            assert "loss" in outputs
+            assert "toxicity_loss" in outputs
+            assert "bullying_loss" in outputs
+            assert isinstance(outputs["loss"], torch.Tensor)
 
-    @pytest.mark.parametrize("text,expected_type", [
-        ("你好，今天天氣很好", str),
-        ("這個笨蛋真的很煩", str),
-        ("", str),
-        ("    ", str),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_type",
+        [
+            ("你好，今天天氣很好", str),
+            ("這個笨蛋真的很煩", str),
+            ("", str),
+            ("    ", str),
+        ],
+    )
     def test_model_text_preprocessing(self, text, expected_type, mock_tokenizer, mock_transformer):
         """測試文本前處理"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
 
@@ -267,21 +296,37 @@ class TestImprovedBullyingDetector:
         """測試注意力機制"""
         config = ImprovedModelConfig(use_cross_attention=True, use_self_attention=True)
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
 
             # Check if attention layers are properly initialized
-            assert hasattr(model, 'cross_attention')
-            assert hasattr(model, 'self_attention')
+            assert hasattr(model, "cross_attention")
+            assert hasattr(model, "self_attention")
 
     def test_model_regularization(self, mock_tokenizer, mock_transformer):
         """測試正規化技術"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
 
@@ -299,8 +344,16 @@ class TestModelPerformance:
         """測試模型推理速度"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
             model.eval()
@@ -322,8 +375,16 @@ class TestModelPerformance:
         """測試模型記憶體使用"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
 
@@ -339,17 +400,25 @@ class TestModelPerformance:
         """測試批次處理"""
         config = ImprovedModelConfig()
 
-        with patch('cyberpuppy.models.improved_detector.AutoModel.from_pretrained', return_value=mock_transformer), \
-             patch('cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained', return_value=mock_tokenizer):
+        with (
+            patch(
+                "cyberpuppy.models.improved_detector.AutoModel.from_pretrained",
+                return_value=mock_transformer,
+            ),
+            patch(
+                "cyberpuppy.models.improved_detector.AutoTokenizer.from_pretrained",
+                return_value=mock_tokenizer,
+            ),
+        ):
 
             model = ImprovedBullyingDetector(config)
             model.eval()
 
             # Mock batch tokenizer output
             mock_tokenizer.encode_plus.return_value = {
-                'input_ids': torch.tensor([[101, 1234, 5678, 102], [101, 2345, 6789, 102]]),
-                'attention_mask': torch.tensor([[1, 1, 1, 1], [1, 1, 1, 1]]),
-                'token_type_ids': torch.tensor([[0, 0, 0, 0], [0, 0, 0, 0]])
+                "input_ids": torch.tensor([[101, 1234, 5678, 102], [101, 2345, 6789, 102]]),
+                "attention_mask": torch.tensor([[1, 1, 1, 1], [1, 1, 1, 1]]),
+                "token_type_ids": torch.tensor([[0, 0, 0, 0], [0, 0, 0, 0]]),
             }
 
             # Mock transformer output for batch
@@ -365,7 +434,7 @@ class TestModelPerformance:
             assert len(results) == len(texts)
             for result in results:
                 assert isinstance(result, dict)
-                assert 'toxicity' in result
+                assert "toxicity" in result
 
 
 if __name__ == "__main__":

@@ -9,8 +9,8 @@ from pathlib import Path
 api_dir = Path(__file__).parent.parent / "api"
 sys.path.insert(0, str(api_dir))
 
-from app import ExplanationData, ImportantWord, AnalyzeResponse  # noqa: E402
 import pytest  # noqa: E402
+from app import AnalyzeResponse, ExplanationData, ImportantWord  # noqa: E402
 
 
 def test_important_word_model():
@@ -64,18 +64,17 @@ def test_explanation_data_with_model_loader():
 
     assert isinstance(explanation_model, ExplanationData)
     assert len(explanation_model.important_words) > 0
-    assert all(
-        isinstance(word, ImportantWord) for word in explanation_model.important_words
-    )
+    assert all(isinstance(word, ImportantWord) for word in explanation_model.important_words)
     assert explanation_model.method == "keyword_based_mock"
     assert 0 <= explanation_model.confidence <= 1
 
 
 def test_analyze_response_full():
     """Test complete AnalyzeResponse model with mock data."""
-    from model_loader_simple import get_model_loader
-    from datetime import datetime
     import hashlib
+    from datetime import datetime
+
+    from model_loader_simple import get_model_loader
 
     # Get mock analysis result
     loader = get_model_loader()
@@ -104,8 +103,7 @@ def test_analyze_response_full():
     assert isinstance(response_model.explanations, ExplanationData)
     assert len(response_model.explanations.important_words) > 0
     assert all(
-        isinstance(word, ImportantWord)
-        for word in response_model.explanations.important_words
+        isinstance(word, ImportantWord) for word in response_model.explanations.important_words
     )
 
 

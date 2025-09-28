@@ -2,25 +2,18 @@
 Tests for CyberPuppy CLI interface following TDD London School approach.
 """
 
-import pytest
-import json
 import csv
-import tempfile
+import json
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
-from cyberpuppy.cli import (
-    CyberPuppyCLI,
-    AnalyzeCommand,
-    TrainCommand,
-    EvaluateCommand,
-    ExportCommand,
-    ConfigCommand,
-    CLIError,
-    create_parser,
-    main,
-)
+import pytest
+
+from cyberpuppy.cli import (AnalyzeCommand, CLIError, ConfigCommand,
+                            CyberPuppyCLI, EvaluateCommand, ExportCommand,
+                            TrainCommand, create_parser, main)
 
 
 @pytest.mark.unit
@@ -296,16 +289,12 @@ class TestAnalyzeCommand:
 
     def test_batch_processing_with_json_output_file(self):
         """Test batch processing with JSON output to file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as input_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as input_file:
             input_file.write("Good morning\n")
             input_file.write("Shut up idiot\n")
             input_file_name = input_file.name
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as output_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as output_file:
             output_file_name = output_file.name
 
         try:
@@ -514,7 +503,9 @@ class TestEvaluateCommand:
         self.mock_console.__exit__ = Mock(return_value=None)
         self.command = EvaluateCommand(self.mock_evaluator, self.mock_console)
         # Patch file validation for all tests
-        self.validate_patcher = patch.object(self.command, '_validate_file_exists', return_value=Path('model.pt'))
+        self.validate_patcher = patch.object(
+            self.command, "_validate_file_exists", return_value=Path("model.pt")
+        )
         self.validate_patcher.start()
 
     def teardown_method(self):
@@ -621,7 +612,9 @@ class TestExportCommand:
         self.mock_console.__exit__ = Mock(return_value=None)
         self.command = ExportCommand(self.mock_exporter, self.mock_console)
         # Patch file validation for all tests
-        self.validate_patcher = patch.object(self.command, '_validate_file_exists', return_value=Path('model.pt'))
+        self.validate_patcher = patch.object(
+            self.command, "_validate_file_exists", return_value=Path("model.pt")
+        )
         self.validate_patcher.start()
 
     def teardown_method(self):
@@ -644,9 +637,7 @@ class TestExportCommand:
         result = self.command.execute(args)
 
         assert result == 0
-        self.mock_exporter.export_to_onnx.assert_called_once_with(
-            "model.pt", "model.onnx"
-        )
+        self.mock_exporter.export_to_onnx.assert_called_once_with("model.pt", "model.onnx")
 
     def test_export_to_torchscript(self):
         """Test exporting model to TorchScript format."""
@@ -841,9 +832,7 @@ training:
                 }
 
                 parser = create_parser()
-                args = parser.parse_args(
-                    ["--config-file", config_file, "analyze", "test"]
-                )
+                args = parser.parse_args(["--config-file", config_file, "analyze", "test"])
 
                 assert args.config_file == config_file
 

@@ -2,14 +2,17 @@
 Hybrid query strategies combining uncertainty and diversity sampling
 """
 
-import numpy as np
-from typing import List, Optional, Dict, Any
-from torch.utils.data import Dataset
 import logging
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+from torch.utils.data import Dataset
 
 from .base import QueryStrategy
-from .uncertainty import EntropySampling, LeastConfidenceSampling, MarginSampling, BayesianUncertaintySampling
-from .diversity import ClusteringSampling, CoreSetSampling, RepresentativeSampling, DiversityMixin
+from .diversity import (ClusteringSampling, CoreSetSampling, DiversityMixin,
+                        RepresentativeSampling)
+from .uncertainty import (BayesianUncertaintySampling, EntropySampling,
+                          LeastConfidenceSampling, MarginSampling)
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +22,15 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
     Hybrid query strategy combining uncertainty and diversity sampling
     """
 
-    def __init__(self,
-                 uncertainty_strategy: str = 'entropy',
-                 diversity_strategy: str = 'clustering',
-                 uncertainty_weight: float = 0.7,
-                 diversity_weight: float = 0.3,
-                 batch_size: int = 10,
-                 device: str = 'cpu'):
+    def __init__(
+        self,
+        uncertainty_strategy: str = "entropy",
+        diversity_strategy: str = "clustering",
+        uncertainty_weight: float = 0.7,
+        diversity_weight: float = 0.3,
+        batch_size: int = 10,
+        device: str = "cpu",
+    ):
         """
         Initialize hybrid query strategy
 
@@ -54,10 +59,10 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
     def _get_uncertainty_sampler(self, model) -> Any:
         """Get uncertainty sampler instance"""
         samplers = {
-            'entropy': EntropySampling,
-            'least_confidence': LeastConfidenceSampling,
-            'margin': MarginSampling,
-            'bayesian': BayesianUncertaintySampling
+            "entropy": EntropySampling,
+            "least_confidence": LeastConfidenceSampling,
+            "margin": MarginSampling,
+            "bayesian": BayesianUncertaintySampling,
         }
 
         sampler_class = samplers.get(self.uncertainty_strategy, EntropySampling)
@@ -66,19 +71,21 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
     def _get_diversity_sampler(self, model) -> Any:
         """Get diversity sampler instance"""
         samplers = {
-            'clustering': ClusteringSampling,
-            'coreset': CoreSetSampling,
-            'representative': RepresentativeSampling
+            "clustering": ClusteringSampling,
+            "coreset": CoreSetSampling,
+            "representative": RepresentativeSampling,
         }
 
         sampler_class = samplers.get(self.diversity_strategy, ClusteringSampling)
         return sampler_class(model, self.device)
 
-    def query(self,
-             unlabeled_data: Dataset,
-             n_samples: int,
-             model: Any,
-             labeled_data: Optional[Dataset] = None) -> List[int]:
+    def query(
+        self,
+        unlabeled_data: Dataset,
+        n_samples: int,
+        model: Any,
+        labeled_data: Optional[Dataset] = None,
+    ) -> List[int]:
         """
         Query samples using hybrid strategy
 
@@ -102,11 +109,13 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
         # For batch selection, use hybrid approach
         return self._hybrid_batch_selection(unlabeled_data, n_samples, model, labeled_data)
 
-    def _hybrid_batch_selection(self,
-                               unlabeled_data: Dataset,
-                               n_samples: int,
-                               model: Any,
-                               labeled_data: Optional[Dataset] = None) -> List[int]:
+    def _hybrid_batch_selection(
+        self,
+        unlabeled_data: Dataset,
+        n_samples: int,
+        model: Any,
+        labeled_data: Optional[Dataset] = None,
+    ) -> List[int]:
         """
         Perform hybrid batch selection
 
@@ -124,23 +133,24 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
         _, probabilities = uncertainty_sampler.get_predictions(unlabeled_data)
 
         # Calculate uncertainty scores based on strategy
-        if self.uncertainty_strategy == 'entropy':
+        if self.uncertainty_strategy == "entropy":
             uncertainty_scores = -np.sum(probabilities * np.log(probabilities + 1e-10), axis=1)
-        elif self.uncertainty_strategy == 'least_confidence':
+        elif self.uncertainty_strategy == "least_confidence":
             uncertainty_scores = 1.0 - np.max(probabilities, axis=1)
-        elif self.uncertainty_strategy == 'margin':
+        elif self.uncertainty_strategy == "margin":
             sorted_probs = np.sort(probabilities, axis=1)[:, ::-1]
             uncertainty_scores = 1.0 - (sorted_probs[:, 0] - sorted_probs[:, 1])
         else:  # bayesian
-            if hasattr(uncertainty_sampler, 'get_bayesian_predictions'):
+            if hasattr(uncertainty_sampler, "get_bayesian_predictions"):
                 _, uncertainty_scores = uncertainty_sampler.get_bayesian_predictions(unlabeled_data)
             else:
                 # Fallback to entropy
                 uncertainty_scores = -np.sum(probabilities * np.log(probabilities + 1e-10), axis=1)
 
         # Normalize uncertainty scores
-        uncertainty_scores = (uncertainty_scores - uncertainty_scores.min()) / \
-                           (uncertainty_scores.max() - uncertainty_scores.min() + 1e-10)
+        uncertainty_scores = (uncertainty_scores - uncertainty_scores.min()) / (
+            uncertainty_scores.max() - uncertainty_scores.min() + 1e-10
+        )
 
         # Step 2: Get diversity sampler for feature extraction
         diversity_sampler = self._get_diversity_sampler(model)
@@ -150,7 +160,7 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
         selected_indices = []
         remaining_indices = list(range(len(unlabeled_data)))
 
-        for i in range(n_samples):
+        for _i in range(n_samples):
             if not remaining_indices:
                 break
 
@@ -165,13 +175,15 @@ class HybridQueryStrategy(QueryStrategy, DiversityMixin):
                 if selected_indices:
                     # Calculate minimum distance to selected samples
                     selected_features = features[selected_indices]
-                    current_feature = features[idx:idx+1]
+                    current_feature = features[idx : idx + 1]
 
                     distances = np.sqrt(np.sum((selected_features - current_feature) ** 2, axis=1))
                     min_distance = np.min(distances)
                     # Normalize by average feature norm
                     avg_norm = np.mean(np.linalg.norm(features, axis=1))
-                    diversity_component = (min_distance / (avg_norm + 1e-10)) * self.diversity_weight
+                    diversity_component = (
+                        min_distance / (avg_norm + 1e-10)
+                    ) * self.diversity_weight
                 else:
                     # First sample, only uncertainty matters
                     diversity_component = 0.0
@@ -195,13 +207,15 @@ class AdaptiveQueryStrategy(HybridQueryStrategy):
     Adaptive query strategy that adjusts weights based on learning progress
     """
 
-    def __init__(self,
-                 initial_uncertainty_weight: float = 0.8,
-                 initial_diversity_weight: float = 0.2,
-                 adaptation_rate: float = 0.1,
-                 min_uncertainty_weight: float = 0.3,
-                 max_uncertainty_weight: float = 0.9,
-                 **kwargs):
+    def __init__(
+        self,
+        initial_uncertainty_weight: float = 0.8,
+        initial_diversity_weight: float = 0.2,
+        adaptation_rate: float = 0.1,
+        min_uncertainty_weight: float = 0.3,
+        max_uncertainty_weight: float = 0.9,
+        **kwargs,
+    ):
         """
         Initialize adaptive query strategy
 
@@ -215,7 +229,7 @@ class AdaptiveQueryStrategy(HybridQueryStrategy):
         super().__init__(
             uncertainty_weight=initial_uncertainty_weight,
             diversity_weight=initial_diversity_weight,
-            **kwargs
+            **kwargs,
         )
         self.initial_uncertainty_weight = initial_uncertainty_weight
         self.initial_diversity_weight = initial_diversity_weight
@@ -244,29 +258,31 @@ class AdaptiveQueryStrategy(HybridQueryStrategy):
             # Good improvement, slightly favor diversity for exploration
             adjustment = self.adaptation_rate * recent_improvement
             new_uncertainty_weight = max(
-                self.min_uncertainty_weight,
-                self.uncertainty_weight - adjustment
+                self.min_uncertainty_weight, self.uncertainty_weight - adjustment
             )
         else:
             # Poor improvement, favor uncertainty for exploitation
             adjustment = self.adaptation_rate * abs(recent_improvement)
             new_uncertainty_weight = min(
-                self.max_uncertainty_weight,
-                self.uncertainty_weight + adjustment
+                self.max_uncertainty_weight, self.uncertainty_weight + adjustment
             )
 
         # Update weights
         self.uncertainty_weight = new_uncertainty_weight
         self.diversity_weight = 1.0 - new_uncertainty_weight
 
-        logger.info(f"Adapted weights: uncertainty={self.uncertainty_weight:.3f}, "
-                   f"diversity={self.diversity_weight:.3f}")
+        logger.info(
+            f"Adapted weights: uncertainty={self.uncertainty_weight:.3f}, "
+            f"diversity={self.diversity_weight:.3f}"
+        )
 
-    def query(self,
-             unlabeled_data: Dataset,
-             n_samples: int,
-             model: Any,
-             labeled_data: Optional[Dataset] = None) -> List[int]:
+    def query(
+        self,
+        unlabeled_data: Dataset,
+        n_samples: int,
+        model: Any,
+        labeled_data: Optional[Dataset] = None,
+    ) -> List[int]:
         """Query with adaptive weights"""
         return super().query(unlabeled_data, n_samples, model, labeled_data)
 
@@ -276,11 +292,13 @@ class BudgetAwareQueryStrategy(HybridQueryStrategy):
     Budget-aware query strategy that optimizes selection based on annotation budget
     """
 
-    def __init__(self,
-                 total_budget: int,
-                 budget_stages: List[float] = [0.3, 0.6, 1.0],
-                 stage_strategies: List[Dict] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        total_budget: int,
+        budget_stages: List[float] = None,
+        stage_strategies: List[Dict] = None,
+        **kwargs,
+    ):
         """
         Initialize budget-aware strategy
 
@@ -289,6 +307,8 @@ class BudgetAwareQueryStrategy(HybridQueryStrategy):
             budget_stages: Budget milestones (as fractions)
             stage_strategies: Strategy configurations for each stage
         """
+        if budget_stages is None:
+            budget_stages = [0.3, 0.6, 1.0]
         super().__init__(**kwargs)
         self.total_budget = total_budget
         self.budget_stages = budget_stages
@@ -297,9 +317,9 @@ class BudgetAwareQueryStrategy(HybridQueryStrategy):
         # Default strategies for different stages
         if stage_strategies is None:
             self.stage_strategies = [
-                {'uncertainty_weight': 0.9, 'diversity_weight': 0.1},  # Early: exploitation
-                {'uncertainty_weight': 0.5, 'diversity_weight': 0.5},  # Middle: balanced
-                {'uncertainty_weight': 0.3, 'diversity_weight': 0.7}   # Late: exploration
+                {"uncertainty_weight": 0.9, "diversity_weight": 0.1},  # Early: exploitation
+                {"uncertainty_weight": 0.5, "diversity_weight": 0.5},  # Middle: balanced
+                {"uncertainty_weight": 0.3, "diversity_weight": 0.7},  # Late: exploration
             ]
         else:
             self.stage_strategies = stage_strategies
@@ -318,11 +338,13 @@ class BudgetAwareQueryStrategy(HybridQueryStrategy):
 
         return len(self.budget_stages) - 1
 
-    def query(self,
-             unlabeled_data: Dataset,
-             n_samples: int,
-             model: Any,
-             labeled_data: Optional[Dataset] = None) -> List[int]:
+    def query(
+        self,
+        unlabeled_data: Dataset,
+        n_samples: int,
+        model: Any,
+        labeled_data: Optional[Dataset] = None,
+    ) -> List[int]:
         """Query with budget-aware strategy"""
         # Update strategy based on current stage
         current_stage = self.get_current_stage()
@@ -332,11 +354,13 @@ class BudgetAwareQueryStrategy(HybridQueryStrategy):
         old_uncertainty_weight = self.uncertainty_weight
         old_diversity_weight = self.diversity_weight
 
-        self.uncertainty_weight = stage_config['uncertainty_weight']
-        self.diversity_weight = stage_config['diversity_weight']
+        self.uncertainty_weight = stage_config["uncertainty_weight"]
+        self.diversity_weight = stage_config["diversity_weight"]
 
-        logger.info(f"Budget stage {current_stage + 1}/{len(self.budget_stages)} "
-                   f"({self.current_budget}/{self.total_budget} samples used)")
+        logger.info(
+            f"Budget stage {current_stage + 1}/{len(self.budget_stages)} "
+            f"({self.current_budget}/{self.total_budget} samples used)"
+        )
 
         # Perform selection
         selected_indices = super().query(unlabeled_data, n_samples, model, labeled_data)

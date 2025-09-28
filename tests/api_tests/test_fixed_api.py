@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """測試修復後的 API"""
-import requests
-import json
 import time
 
+import requests
+
 BASE_URL = "http://localhost:8000"
+
 
 def test_analyze_fixed():
     """測試修復後的分析功能"""
@@ -14,12 +15,12 @@ def test_analyze_fixed():
         {"text": "今天天氣真好", "expected": "positive"},
         {"text": "你這個笨蛋", "expected": "toxic"},
         {"text": "去死吧", "expected": "severe"},
-        {"text": "我不太確定", "expected": "neutral"}
+        {"text": "我不太確定", "expected": "neutral"},
     ]
 
-    print("="*60)
+    print("=" * 60)
     print("CyberPuppy API 修復測試")
-    print("="*60)
+    print("=" * 60)
 
     success_count = 0
 
@@ -30,9 +31,9 @@ def test_analyze_fixed():
         try:
             response = requests.post(
                 f"{BASE_URL}/analyze",
-                json={"text": case['text']},
+                json={"text": case["text"]},
                 headers={"Content-Type": "application/json"},
-                timeout=10
+                timeout=10,
             )
 
             if response.status_code == 200:
@@ -46,16 +47,17 @@ def test_analyze_fixed():
                 print(f"結果: [ERROR] {response.status_code}")
                 print(f"  訊息: {response.text[:100]}")
         except Exception as e:
-            print(f"結果: [EXCEPTION]")
+            print("結果: [EXCEPTION]")
             print(f"  錯誤: {str(e)}")
 
         time.sleep(0.5)  # 避免過快請求
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"測試總結: {success_count}/{len(test_cases)} 成功")
-    print("="*60)
+    print("=" * 60)
 
     return success_count == len(test_cases)
+
 
 if __name__ == "__main__":
     # 等待服務啟動

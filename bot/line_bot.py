@@ -27,20 +27,10 @@ import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import LineBotApiError
-from linebot.models import (
-    BoxComponent,
-    BubbleContainer,
-    ButtonComponent,
-    CarouselContainer,
-    FlexSendMessage,
-    MessageAction,
-    MessageEvent,
-    QuickReply,
-    QuickReplyButton,
-    TextComponent,
-    TextSendMessage,
-    URIAction,
-)
+from linebot.models import (BoxComponent, BubbleContainer, ButtonComponent,
+                            CarouselContainer, FlexSendMessage, MessageAction,
+                            MessageEvent, QuickReply, QuickReplyButton,
+                            TextComponent, TextSendMessage, URIAction)
 
 # 設定日誌
 logging.basicConfig(
@@ -54,9 +44,7 @@ LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 CYBERPUPPY_API_URL = os.getenv("CYBERPUPPY_API_URL", "http://localhost:8000")
 
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
-    logger.warning(
-        "LINE 設定遺失：需要設定 LINE_CHANNEL_ACCESS_TOKEN 和 LINE_CHANNEL_SECRET"
-    )
+    logger.warning("LINE 設定遺失：需要設定 LINE_CHANNEL_ACCESS_TOKEN 和 LINE_CHANNEL_SECRET")
     # Don't raise during import for test compatibility
     line_bot_api = None
     handler = None
@@ -119,9 +107,7 @@ class CyberPuppyBot:
     def __init__(self):
         self.api_client = httpx.AsyncClient(timeout=30.0)
 
-    async def analyze_message(
-        self, text: str, context: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def analyze_message(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
         """呼叫分析 API"""
         payload = {"text": text, "context": context}
 
@@ -134,9 +120,7 @@ class CyberPuppyBot:
                 return response.json()
 
             except httpx.RequestError as e:
-                logger.warning(
-                    f"API 請求失敗 (嘗試 {attempt + 1}/{retry_config.max_retries}): {e}"
-                )
+                logger.warning(f"API 請求失敗 (嘗試 {attempt + 1}/{retry_config.max_retries}): {e}")
                 if attempt == retry_config.max_retries - 1:
                     raise HTTPException(status_code=503, detail="分析服務暫時不可用")
 
@@ -241,12 +225,8 @@ class CyberPuppyBot:
                     body=BoxComponent(
                         layout="vertical",
                         contents=[
-                            TextComponent(
-                                text="💚 心理健康資源", weight="bold", size="lg"
-                            ),
-                            TextComponent(
-                                text="如果您需要心理支持", margin="md", wrap=True
-                            ),
+                            TextComponent(text="💚 心理健康資源", weight="bold", size="lg"),
+                            TextComponent(text="如果您需要心理支持", margin="md", wrap=True),
                         ],
                     ),
                     footer=BoxComponent(
@@ -264,9 +244,7 @@ class CyberPuppyBot:
                         layout="vertical",
                         contents=[
                             TextComponent(text="🤝 霸凌防治", weight="bold", size="lg"),
-                            TextComponent(
-                                text="遭遇網路霸凌的求助管道", margin="md", wrap=True
-                            ),
+                            TextComponent(text="遭遇網路霸凌的求助管道", margin="md", wrap=True),
                         ],
                     ),
                     footer=BoxComponent(
@@ -292,20 +270,14 @@ class CyberPuppyBot:
             body=BoxComponent(
                 layout="vertical",
                 contents=[
-                    TextComponent(
-                        text="🚨 重要提醒", weight="bold", size="lg", color="#ff0000"
-                    ),
+                    TextComponent(text="🚨 重要提醒", weight="bold", size="lg", color="#ff0000"),
                     TextComponent(
                         text=("您已多次發送不適當內容。持續的網路霸凌行為："),
                         margin="md",
                         wrap=True,
                     ),
                     TextComponent(
-                        text=(
-                            "• 違反平台使用條款\n"
-                            "• 可能面臨法律責任\n"
-                            "• 傷害他人心理健康"
-                        ),
+                        text=("• 違反平台使用條款\n" "• 可能面臨法律責任\n" "• 傷害他人心理健康"),
                         margin="lg",
                         wrap=True,
                         color="#666666",
@@ -323,17 +295,13 @@ class CyberPuppyBot:
         quick_reply = QuickReply(
             items=[
                 QuickReplyButton(action=URIAction(label="求助專線", uri="tel:1995")),
-                QuickReplyButton(
-                    action=MessageAction(label="我了解了", text="我會注意我的言行")
-                ),
+                QuickReplyButton(action=MessageAction(label="我了解了", text="我會注意我的言行")),
             ]
         )
 
         return FlexSendMessage(alt_text="嚴重警告", contents=bubble), quick_reply
 
-    async def update_user_session(
-        self, user_id: str, message_text: str, analysis: Dict[str, Any]
-    ):
+    async def update_user_session(self, user_id: str, message_text: str, analysis: Dict[str, Any]):
         """更新使用者會話狀態"""
         if user_id not in user_sessions:
             user_sessions[user_id] = UserSession(user_id=user_id)
@@ -362,15 +330,12 @@ class CyberPuppyBot:
             session.last_warning_time = datetime.now()
 
         # 重置警告計數（24小時後）
-        if (
-            session.last_warning_time
-            and datetime.now() - session.last_warning_time > timedelta(hours=24)
+        if session.last_warning_time and datetime.now() - session.last_warning_time > timedelta(
+            hours=24
         ):
             session.warning_count = max(0, session.warning_count - 1)
 
-    async def handle_message_analysis(
-        self, event: MessageEvent, user_id: str, message_text: str
-    ):
+    async def handle_message_analysis(self, event: MessageEvent, user_id: str, message_text: str):
         """處理訊息分析與回應"""
         try:
             # 建立對話上下文
@@ -392,9 +357,7 @@ class CyberPuppyBot:
             await self.update_user_session(user_id, message_text, analysis)
 
             # 決定回應策略
-            strategy = self.determine_response_strategy(
-                analysis, user_sessions[user_id]
-            )
+            strategy = self.determine_response_strategy(analysis, user_sessions[user_id])
             logger.info(f"回應策略: {strategy.value}")
 
             # 執行回應
@@ -419,16 +382,12 @@ class CyberPuppyBot:
                         {user_sessions[user_id].escalation_count}"
                 )
 
-                line_bot_api.reply_message(
-                    event.reply_token, message, quick_reply=quick_reply
-                )
+                line_bot_api.reply_message(event.reply_token, message, quick_reply=quick_reply)
 
         except Exception as e:
             logger.error(f"處理訊息分析時發生錯誤: {e}")
             # 發送通用錯誤訊息
-            error_message = TextSendMessage(
-                text="抱歉，系統暫時無法處理您的訊息，請稍後再試。"
-            )
+            error_message = TextSendMessage(text="抱歉，系統暫時無法處理您的訊息，請稍後再試。")
             line_bot_api.reply_message(event.reply_token, error_message)
 
 
@@ -509,15 +468,11 @@ async def process_line_event(event_data: dict):
                         },
                     )()
 
-                    await cyberpuppy_bot.handle_message_analysis(
-                        mock_event, user_id, message_text
-                    )
+                    await cyberpuppy_bot.handle_message_analysis(mock_event, user_id, message_text)
 
         elif event_type == "postback":
             # 處理 Postback 事件
-            logger.info(
-                f"收到 Postback 事件: {event_data.get('postback', {}).get('data')}"
-            )
+            logger.info(f"收到 Postback 事件: {event_data.get('postback', {}).get('data')}")
 
     except Exception as e:
         logger.error(f"處理 LINE 事件時發生錯誤: {e}")
@@ -541,9 +496,7 @@ async def health_check():
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{CYBERPUPPY_API_URL}/healthz", timeout=5.0)
-            analysis_api_status = (
-                "healthy" if response.status_code == 200 else "unhealthy"
-            )
+            analysis_api_status = "healthy" if response.status_code == 200 else "unhealthy"
     except Exception:
         analysis_api_status = "unhealthy"
 
@@ -564,9 +517,7 @@ async def health_check():
 async def get_stats():
     """取得統計資訊"""
     total_warnings = sum(session.warning_count for session in user_sessions.values())
-    total_escalations = sum(
-        session.escalation_count for session in user_sessions.values()
-    )
+    total_escalations = sum(session.escalation_count for session in user_sessions.values())
 
     return {
         "active_users": len(user_sessions),

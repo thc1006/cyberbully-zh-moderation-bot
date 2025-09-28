@@ -2,14 +2,15 @@
 Diversity sampling strategies for active learning
 """
 
+import logging
+from typing import List, Optional
+
 import numpy as np
 import torch
-from typing import List, Optional
 from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from sklearn.decomposition import PCA
-from torch.utils.data import Dataset, DataLoader
-import logging
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
+from torch.utils.data import DataLoader, Dataset
 
 from .base import ActiveLearner
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 class ClusteringSampling(ActiveLearner):
     """Clustering-based diversity sampling"""
 
-    def __init__(self, model, device: str = 'cpu', n_clusters: Optional[int] = None):
+    def __init__(self, model, device: str = "cpu", n_clusters: Optional[int] = None):
         """
         Initialize clustering sampler
 
@@ -47,12 +48,13 @@ class ClusteringSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
 
                 # Get hidden states from the model
-                outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                   output_hidden_states=True)
+                outputs = self.model(
+                    input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                )
 
                 # Use the [CLS] token embedding from the last hidden layer
                 features = outputs.hidden_states[-1][:, 0, :]  # [batch_size, hidden_size]
@@ -60,10 +62,9 @@ class ClusteringSampling(ActiveLearner):
 
         return np.concatenate(all_features)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select diverse samples using clustering
 
@@ -89,7 +90,7 @@ class ClusteringSampling(ActiveLearner):
         selected_indices = []
         cluster_centers = kmeans.cluster_centers_
 
-        for i in range(min(n_samples, n_clusters)):
+        for _i in range(min(n_samples, n_clusters)):
             # Find cluster with most samples if we need fewer than n_clusters
             if len(selected_indices) < n_samples:
                 cluster_sizes = [(j, np.sum(cluster_labels == j)) for j in range(n_clusters)]
@@ -103,8 +104,7 @@ class ClusteringSampling(ActiveLearner):
                         cluster_indices = np.where(cluster_mask)[0]
 
                         distances = euclidean_distances(
-                            cluster_features,
-                            cluster_centers[cluster_id].reshape(1, -1)
+                            cluster_features, cluster_centers[cluster_id].reshape(1, -1)
                         ).flatten()
 
                         closest_idx = cluster_indices[np.argmin(distances)]
@@ -117,7 +117,7 @@ class ClusteringSampling(ActiveLearner):
 class CoreSetSampling(ActiveLearner):
     """CoreSet-based diversity sampling"""
 
-    def __init__(self, model, device: str = 'cpu', distance_metric: str = 'cosine'):
+    def __init__(self, model, device: str = "cpu", distance_metric: str = "cosine"):
         """
         Initialize CoreSet sampler
 
@@ -137,11 +137,12 @@ class CoreSetSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
 
-                outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                   output_hidden_states=True)
+                outputs = self.model(
+                    input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                )
                 features = outputs.hidden_states[-1][:, 0, :]
                 all_features.append(features.cpu().numpy())
 
@@ -149,15 +150,14 @@ class CoreSetSampling(ActiveLearner):
 
     def compute_distances(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
         """Compute distances between feature sets"""
-        if self.distance_metric == 'cosine':
+        if self.distance_metric == "cosine":
             return cosine_distances(X, Y)
         else:
             return euclidean_distances(X, Y)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select samples using CoreSet greedy selection
 
@@ -209,12 +209,11 @@ class CoreSetSampling(ActiveLearner):
                         selected_for_distance = selected_indices
 
                     distances = self.compute_distances(
-                        all_features[idx:idx+1],
-                        all_features[selected_for_distance]
+                        all_features[idx : idx + 1], all_features[selected_for_distance]
                     )
                     min_distance = np.min(distances)
                 else:
-                    min_distance = float('inf')
+                    min_distance = float("inf")
 
                 if min_distance > best_distance:
                     best_distance = min_distance
@@ -226,8 +225,9 @@ class CoreSetSampling(ActiveLearner):
 
         # Convert to unlabeled indices
         if labeled_size > 0:
-            unlabeled_indices = [idx - labeled_size for idx in selected_indices
-                               if idx >= labeled_size]
+            unlabeled_indices = [
+                idx - labeled_size for idx in selected_indices if idx >= labeled_size
+            ]
         else:
             unlabeled_indices = selected_indices
 
@@ -237,7 +237,7 @@ class CoreSetSampling(ActiveLearner):
 class RepresentativeSampling(ActiveLearner):
     """Representative sampling based on feature space coverage"""
 
-    def __init__(self, model, device: str = 'cpu', coverage_method: str = 'pca'):
+    def __init__(self, model, device: str = "cpu", coverage_method: str = "pca"):
         """
         Initialize representative sampler
 
@@ -257,20 +257,20 @@ class RepresentativeSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
 
-                outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                   output_hidden_states=True)
+                outputs = self.model(
+                    input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                )
                 features = outputs.hidden_states[-1][:, 0, :]
                 all_features.append(features.cpu().numpy())
 
         return np.concatenate(all_features)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select representative samples covering feature space
 
@@ -284,7 +284,7 @@ class RepresentativeSampling(ActiveLearner):
         """
         features = self.get_features(unlabeled_data)
 
-        if self.coverage_method == 'pca':
+        if self.coverage_method == "pca":
             # Use PCA to find principal directions
             pca = PCA(n_components=min(50, features.shape[1]))
             features_pca = pca.fit_transform(features)
@@ -294,7 +294,7 @@ class RepresentativeSampling(ActiveLearner):
             n_dims = min(3, features_pca.shape[1])  # Use top 3 PCA components
 
             # Create grid points
-            grid_size = int(np.ceil(n_samples ** (1/n_dims)))
+            grid_size = int(np.ceil(n_samples ** (1 / n_dims)))
             grid_points = []
 
             for dim in range(n_dims):
@@ -303,6 +303,7 @@ class RepresentativeSampling(ActiveLearner):
 
             # Find closest sample to each grid point
             import itertools
+
             grid_combinations = list(itertools.product(*grid_points))[:n_samples]
 
             for grid_point in grid_combinations:
@@ -357,8 +358,7 @@ class DiversityMixin:
         return diversity
 
     @staticmethod
-    def calculate_coverage_score(all_features: np.ndarray,
-                               selected_indices: List[int]) -> float:
+    def calculate_coverage_score(all_features: np.ndarray, selected_indices: List[int]) -> float:
         """
         Calculate feature space coverage score
 
@@ -378,6 +378,7 @@ class DiversityMixin:
         # Use convex hull volume approximation
         try:
             from scipy.spatial import ConvexHull
+
             if len(selected_features) > all_features.shape[1]:  # Need more points than dimensions
                 hull = ConvexHull(selected_features)
                 coverage = hull.volume

@@ -6,39 +6,29 @@ all models (baseline, contextual, weak supervision) and integrates
 explanation generation for comprehensive text analysis.
 """
 
-import time
 import logging
+import threading
+import time
 import warnings
-from typing import Dict, List, Optional, Tuple, Union, Any
-from datetime import datetime
-from dataclasses import dataclass
-
-# from pathlib import Path  # Unused import commented out
-import torch
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
-import threading
-import opencc
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from .result import (
-    DetectionResult,
-    ToxicityResult,
-    EmotionResult,
-    BullyingResult,
-    RoleResult,
-    ExplanationResult,
-    ModelPrediction,
-    ToxicityLevel,
-    EmotionType,
-    BullyingType,
-    RoleType,
-    ConfidenceThresholds,
-)
+import numpy as np
+import opencc
+# from pathlib import Path  # Unused import commented out
+import torch
+
+from ..explain.ig import IntegratedGradientsExplainer
 from .baselines import BaselineModel, ModelConfig
 from .contextual import ContextualModel
+from .result import (BullyingResult, BullyingType, ConfidenceThresholds,
+                     DetectionResult, EmotionResult, EmotionType,
+                     ExplanationResult, ModelPrediction, RoleResult, RoleType,
+                     ToxicityLevel, ToxicityResult)
 from .weak_supervision import WeakSupervisionModel
-from ..explain.ig import IntegratedGradientsExplainer
 
 # from ..config import Config  # Unused import commented out
 
@@ -74,9 +64,7 @@ class CyberPuppyDetector:
         """
         self.config = config
         self.device = self._setup_device(device)
-        self.ensemble_weights = self._normalize_weights(
-            config.get("ensemble_weights", {})
-        )
+        self.ensemble_weights = self._normalize_weights(config.get("ensemble_weights", {}))
 
         # Initialize text preprocessing components
         self._setup_preprocessing()
@@ -116,9 +104,7 @@ class CyberPuppyDetector:
 
         total_weight = sum(weights.values())
         if abs(total_weight - 1.0) > 1e-6:
-            logger.warning(
-                f"Ensemble weights sum to {total_weight}, normalizing to 1.0"
-            )
+            logger.warning(f"Ensemble weights sum to {total_weight}, normalizing to 1.0")
             return {model: weight / total_weight for model, weight in weights.items()}
 
         return weights
@@ -130,12 +116,8 @@ class CyberPuppyDetector:
             self.converter = opencc.OpenCC("t2s")
             self.preprocessing_config = self.config.get("preprocessing", {})
             self.max_length = self.preprocessing_config.get("max_length", 512)
-            self.normalize_unicode = self.preprocessing_config.get(
-                "normalize_unicode", True
-            )
-            self.convert_traditional = self.preprocessing_config.get(
-                "convert_traditional", True
-            )
+            self.normalize_unicode = self.preprocessing_config.get("normalize_unicode", True)
+            self.convert_traditional = self.preprocessing_config.get("convert_traditional", True)
             logger.info("Text preprocessing components initialized")
         except Exception as e:
             logger.warning(f"Error initializing preprocessing: {e}")
@@ -171,9 +153,7 @@ class CyberPuppyDetector:
             # Load contextual model
             logger.info("Loading contextual model...")
             self.models["contextual"] = ContextualModel(
-                base_model_name=self.config.get(
-                    "base_model", "hfl/chinese-macbert-base"
-                ),
+                base_model_name=self.config.get("base_model", "hfl/chinese-macbert-base"),
                 device=self.device,
             )
             if "contextual" in model_paths:
@@ -184,16 +164,12 @@ class CyberPuppyDetector:
             # Load weak supervision model
             logger.info("Loading weak supervision model...")
             self.models["weak_supervision"] = WeakSupervisionModel(
-                base_model_name=self.config.get(
-                    "base_model", "hfl/chinese-macbert-base"
-                ),
+                base_model_name=self.config.get("base_model", "hfl/chinese-macbert-base"),
                 device=self.device,
             )
             if "weak_supervision" in model_paths:
                 self.models["weak_supervision"].load_state_dict(
-                    torch.load(
-                        model_paths["weak_supervision"], map_location=self.device
-                    )
+                    torch.load(model_paths["weak_supervision"], map_location=self.device)
                 )
 
             # Load explainer
@@ -247,8 +223,8 @@ class CyberPuppyDetector:
         if self.convert_traditional and self.converter:
             try:
                 text = self.converter.convert(text)
-            except Exception as e:
-                logger.warning(f"Traditional to Simplifie" "d conversion failed: {e}")
+            except Exception:
+                logger.warning("Traditional to Simplifie" "d conversion failed: {e}")
 
         # Truncate if too long
         if len(text) > self.max_length:
@@ -357,17 +333,13 @@ class CyberPuppyDetector:
 
                 ensemble_results[task] = ensemble_pred
             else:
-                logger.warning(
-                    f"No valid predictions for t" "ask {task}, using baseline"
-                )
+                logger.warning("No valid predictions for t" "ask {task}, using baseline")
                 # Fallback to baseline
                 if (
                     "baseline" in model_predictions
                     and task in model_predictions["baseline"]["predictions"]
                 ):
-                    ensemble_results[task] = model_predictions["baseline"][
-                        "predictions"
-                    ][task]
+                    ensemble_results[task] = model_predictions["baseline"]["predictions"][task]
                 else:
                     # Generate dummy prediction
                     if task == "role":
@@ -469,9 +441,7 @@ class CyberPuppyDetector:
         Returns:
             Task-specific result object
         """
-        predicted_label, raw_scores = self._convert_prediction_to_label(
-            prediction, task
-        )
+        predicted_label, raw_scores = self._convert_prediction_to_label(prediction, task)
         confidence = self._calibrate_confidence(prediction, task)
         threshold = thresholds.get(predicted_label, 0.5)
         threshold_met = confidence >= threshold
@@ -485,9 +455,7 @@ class CyberPuppyDetector:
             )
         elif task == "emotion":
             # Calculate emotion strength based on confidence and prediction
-            strength = self._calculate_emotion_strength(
-                prediction, predicted_label, confidence
-            )
+            strength = self._calculate_emotion_strength(prediction, predicted_label, confidence)
             return EmotionResult(
                 prediction=EmotionType(predicted_label),
                 confidence=confidence,
@@ -575,13 +543,9 @@ class CyberPuppyDetector:
                     # Extract top contributing words
                     top_words = []
                     if "attributions" in explanation and "tokens" in explanation:
-                        word_attrs = list(
-                            zip(explanation["tokens"], explanation["attributions"])
-                        )
+                        word_attrs = list(zip(explanation["tokens"], explanation["attributions"]))
                         word_attrs.sort(key=lambda x: abs(x[1]), reverse=True)
-                        top_words = [
-                            (word, float(attr)) for word, attr in word_attrs[:5]
-                        ]
+                        top_words = [(word, float(attr)) for word, attr in word_attrs[:5]]
 
                     explanations[task] = ExplanationResult(
                         attributions=explanation.get("attributions", []),
@@ -591,15 +555,13 @@ class CyberPuppyDetector:
                         method="integrated_gradients",
                     )
 
-                except Exception as e:
-                    logger.error(
-                        f"Explanation generation fa" "iled for task {task}: {e}"
-                    )
+                except Exception:
+                    logger.error("Explanation generation fa" "iled for task {task}: {e}")
                     # Create empty explanation as fallback
                     explanations[task] = ExplanationResult(
                         attributions=[],
                         tokens=[],
-                        explanation_text=f"Explanation generat" "ion failed: {str(e)}",
+                        explanation_text="Explanation generat" "ion failed: {str(e)}",
                         top_contributing_words=[],
                         method="integrated_gradients",
                     )
@@ -646,14 +608,10 @@ class CyberPuppyDetector:
         def _analyze_with_timeout():
             """Internal analysis function for timeout handling."""
             # Get individual model predictions
-            model_predictions = self._get_individual_predictions(
-                preprocessed_text, context
-            )
+            model_predictions = self._get_individual_predictions(preprocessed_text, context)
 
             # Ensemble predictions
-            ensemble_predictions = self._ensemble_predict(
-                preprocessed_text, model_predictions
-            )
+            ensemble_predictions = self._ensemble_predict(preprocessed_text, model_predictions)
 
             # Get confidence thresholds
             thresholds = self.config.get(
@@ -664,14 +622,10 @@ class CyberPuppyDetector:
             task_results = {}
             for task, prediction in ensemble_predictions.items():
                 task_thresholds = thresholds.get(task, {})
-                task_results[task] = self._create_task_result(
-                    prediction, task, task_thresholds
-                )
+                task_results[task] = self._create_task_result(prediction, task, task_thresholds)
 
             # Generate explanations
-            explanations = self._generate_explanations(
-                preprocessed_text, ensemble_predictions
-            )
+            explanations = self._generate_explanations(preprocessed_text, ensemble_predictions)
 
             # Create model prediction results
             model_prediction_results = {}
@@ -693,15 +647,13 @@ class CyberPuppyDetector:
             try:
                 with ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(_analyze_with_timeout)
-                    task_results, explanations, model_prediction_results = (
-                        future.result(timeout=timeout)
+                    task_results, explanations, model_prediction_results = future.result(
+                        timeout=timeout
                     )
             except FutureTimeoutError:
                 raise TimeoutError(f"Analysis timed out after {timeout} seconds")
         else:
-            task_results, explanations, model_prediction_results = (
-                _analyze_with_timeout()
-            )
+            task_results, explanations, model_prediction_results = _analyze_with_timeout()
 
         # Calculate processing time
         processing_time = time.time() - start_time
@@ -801,8 +753,7 @@ class CyberPuppyDetector:
 
             return {
                 "total_predictions": self._prediction_count,
-                "average_processing_time": self._total_processing_time
-                / self._prediction_count,
+                "average_processing_time": self._total_processing_time / self._prediction_count,
                 "total_processing_time": self._total_processing_time,
                 "device": self.device,
                 "models_loaded": self._models_loaded,
@@ -849,9 +800,7 @@ class CyberPuppyDetector:
                 "type": type(model).__name__,
                 "device": str(getattr(model, "device", "unknown")),
                 "parameters": sum(
-                    p.numel()
-                    for p in model.parameters()
-                    if hasattr(model, "parameters")
+                    p.numel() for p in model.parameters() if hasattr(model, "parameters")
                 ),
             }
 
@@ -867,7 +816,6 @@ class CyberPuppyDetector:
         if self.device.startswith("cuda"):
             torch.cuda.empty_cache()
         logger.info("CyberPuppyDetector resources cleaned up")
-
 
 
 @dataclass
@@ -888,7 +836,9 @@ class EnsembleConfig:
             self.weights = [1.0 / len(self.models)] * len(self.models)
 
         if len(self.models) != len(self.weights):
-            raise ValueError(f"Number of models ({len(self.models)}) must match number of weights ({len(self.weights)})")
+            raise ValueError(
+                f"Number of models ({len(self.models)}) must match number of weights ({len(self.weights)})"
+            )
 
         # Normalize weights to sum to 1.0
         total_weight = sum(self.weights)
@@ -900,7 +850,7 @@ class EnsembleConfig:
         return {
             "models": self.models,
             "weights": self.weights,
-            "voting_strategy": self.voting_strategy
+            "voting_strategy": self.voting_strategy,
         }
 
     @classmethod
@@ -908,7 +858,7 @@ class EnsembleConfig:
         """Create from dictionary."""
         config = cls()
         config.models = data.get("models", ["baseline", "contextual", "weak_supervision"])
-        config.weights = data.get("weights", [1.0/len(config.models)] * len(config.models))
+        config.weights = data.get("weights", [1.0 / len(config.models)] * len(config.models))
         config.voting_strategy = data.get("voting_strategy", "weighted")
         config.__post_init__()  # Re-validate
         return config
@@ -952,7 +902,7 @@ class PreprocessingConfig:
             "convert_traditional_to_simplified": self.convert_traditional_to_simplified,
             "max_length": self.max_length,
             "clean_whitespace": self.clean_whitespace,
-            "lowercase": self.lowercase
+            "lowercase": self.lowercase,
         }
 
     @classmethod
@@ -965,7 +915,7 @@ class PreprocessingConfig:
             convert_traditional_to_simplified=data.get("convert_traditional_to_simplified", True),
             max_length=data.get("max_length", 512),
             clean_whitespace=data.get("clean_whitespace", True),
-            lowercase=data.get("lowercase", False)
+            lowercase=data.get("lowercase", False),
         )
 
     def is_valid(self) -> bool:
@@ -976,4 +926,3 @@ class PreprocessingConfig:
             return True
         except:
             return False
-

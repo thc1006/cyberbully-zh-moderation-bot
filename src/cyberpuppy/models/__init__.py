@@ -5,21 +5,10 @@ This package contains all machine learning models and result classes
 for the CyberPuppy detection system.
 """
 
-from .result import (
-    DetectionResult,
-    ToxicityResult,
-    EmotionResult,
-    BullyingResult,
-    RoleResult,
-    ExplanationResult,
-    ModelPrediction,
-    ToxicityLevel,
-    EmotionType,
-    BullyingType,
-    RoleType,
-    ResultAggregator,
-    ConfidenceThresholds,
-)
+from .result import (BullyingResult, BullyingType, ConfidenceThresholds,
+                     DetectionResult, EmotionResult, EmotionType,
+                     ExplanationResult, ModelPrediction, ResultAggregator,
+                     RoleResult, RoleType, ToxicityLevel, ToxicityResult)
 
 # Import detector only if dependencies are available
 try:

@@ -2,9 +2,9 @@
 Simple script to start the CyberPuppy API for testing.
 """
 
+import logging
 import sys
 from pathlib import Path
-import logging
 
 # Add the project root to the path so imports work
 project_root = Path(__file__).parent.parent

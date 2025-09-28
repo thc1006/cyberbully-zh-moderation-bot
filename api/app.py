@@ -10,22 +10,21 @@ import hashlib
 import logging
 import re
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
-from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+# Import model loader and SHAP explainer
+from model_loader import get_model_loader
 from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-
-# Import model loader and SHAP explainer
-from model_loader import get_model_loader
 
 # 設定日誌
 logging.basicConfig(
@@ -129,15 +128,11 @@ start_time = time.time()
 class AnalyzeRequest(BaseModel):
     """分析請求模型"""
 
-    text: str = Field(
-        ..., min_length=1, max_length=MAX_TEXT_LENGTH, description="待分析文本"
-    )
+    text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH, description="待分析文本")
     context: Optional[str] = Field(
         None, max_length=MAX_CONTEXT_LENGTH, description="對話上下文（可選）"
     )
-    thread_id: Optional[str] = Field(
-        None, max_length=50, description="對話串 ID（可選）"
-    )
+    thread_id: Optional[str] = Field(None, max_length=50, description="對話串 ID（可選）")
 
     @field_validator("text")
     @classmethod
@@ -198,15 +193,9 @@ class ExplanationData(BaseModel):
 class SHAPExplanationRequest(BaseModel):
     """SHAP解釋請求模型"""
 
-    text: str = Field(
-        ..., min_length=1, max_length=MAX_TEXT_LENGTH, description="待解釋文本"
-    )
-    task: str = Field(
-        "toxicity", description="解釋任務: toxicity|bullying|role|emotion"
-    )
-    max_evals: int = Field(
-        500, ge=100, le=2000, description="最大評估次數（影響準確性和速度）"
-    )
+    text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH, description="待解釋文本")
+    task: str = Field("toxicity", description="解釋任務: toxicity|bullying|role|emotion")
+    max_evals: int = Field(500, ge=100, le=2000, description="最大評估次數（影響準確性和速度）")
     visualization_type: str = Field(
         "waterfall", description="可視化類型: force|waterfall|text|summary"
     )
@@ -262,15 +251,9 @@ class SHAPExplanationResponse(BaseModel):
 class MisclassificationAnalysisRequest(BaseModel):
     """誤判分析請求模型"""
 
-    texts: List[str] = Field(
-        ..., min_items=1, max_items=100, description="文本列表（最多100個）"
-    )
-    true_labels: List[Dict[str, int]] = Field(
-        ..., description="真實標籤列表"
-    )
-    task: str = Field(
-        "toxicity", description="分析任務: toxicity|bullying|role|emotion"
-    )
+    texts: List[str] = Field(..., min_items=1, max_items=100, description="文本列表（最多100個）")
+    true_labels: List[Dict[str, int]] = Field(..., description="真實標籤列表")
+    task: str = Field("toxicity", description="分析任務: toxicity|bullying|role|emotion")
 
     @field_validator("texts")
     @classmethod
@@ -286,7 +269,7 @@ class MisclassificationAnalysisRequest(BaseModel):
     @classmethod
     def validate_true_labels(cls, v: List[Dict[str, int]]) -> List[Dict[str, int]]:
         for label_dict in v:
-            for key, value in label_dict.items():
+            for _key, value in label_dict.items():
                 if not isinstance(value, int) or value < 0:
                     raise ValueError("標籤值必須是非負整數")
         return v
@@ -366,9 +349,7 @@ def generate_text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
-async def analyze_text_content(
-    text: str, context: Optional[str] = None
-) -> Dict[str, Any]:
+async def analyze_text_content(text: str, context: Optional[str] = None) -> Dict[str, Any]:
     """
     使用訓練好的模型進行文本分析
     """
@@ -398,14 +379,22 @@ async def analyze_text_content(
         model_metrics["total_processing_time"] += processing_time
 
         # Convert DetectionResult object to dict if needed
-        if hasattr(result_obj, 'to_dict'):
+        if hasattr(result_obj, "to_dict"):
             result = result_obj.to_dict()
         elif isinstance(result_obj, dict):
             result = result_obj
         else:
             # Fallback: try to convert object attributes to dict
             result = {}
-            for attr in ['toxicity', 'bullying', 'role', 'emotion', 'emotion_strength', 'scores', 'explanations']:
+            for attr in [
+                "toxicity",
+                "bullying",
+                "role",
+                "emotion",
+                "emotion_strength",
+                "scores",
+                "explanations",
+            ]:
                 if hasattr(result_obj, attr):
                     result[attr] = getattr(result_obj, attr)
 
@@ -414,14 +403,18 @@ async def analyze_text_content(
         if toxicity_label is not None:
             if isinstance(toxicity_label, dict):
                 # Format: {"level": "none", "confidence": 0.9} or {"prediction": "none", "confidence": 0.9}
-                toxicity_label = toxicity_label.get("level") or toxicity_label.get("prediction", "none")
+                toxicity_label = toxicity_label.get("level") or toxicity_label.get(
+                    "prediction", "none"
+                )
         else:
             toxicity_label = "none"
 
         bullying_label = result.get("bullying")
         if bullying_label is not None:
             if isinstance(bullying_label, dict):
-                bullying_label = bullying_label.get("level") or bullying_label.get("prediction", "none")
+                bullying_label = bullying_label.get("level") or bullying_label.get(
+                    "prediction", "none"
+                )
         else:
             bullying_label = "none"
 
@@ -452,7 +445,7 @@ async def analyze_text_content(
             "emotion": emotion_label,
             "emotion_strength": emotion_strength,
             "scores": result.get("scores", {}),
-            "explanations": result.get("explanations", {})
+            "explanations": result.get("explanations", {}),
         }
 
         # Log prediction (privacy compliant - no text content)
@@ -551,9 +544,7 @@ async def analyze_text(request: Request, data: AnalyzeRequest):
         )
 
         # 執行文本分析
-        analysis_result = await analyze_text_content(
-            text=data.text, context=data.context
-        )
+        analysis_result = await analyze_text_content(text=data.text, context=data.context)
 
         # 計算處理時間
         processing_time = (time.time() * 1000) - start_time_ms
@@ -585,9 +576,7 @@ async def analyze_text(request: Request, data: AnalyzeRequest):
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        logger.error(
-            f"分析錯誤 - Hash: {generate_text_hash(data.text)}, 錯誤: {str(e)}"
-        )
+        logger.error(f"分析錯誤 - Hash: {generate_text_hash(data.text)}, 錯誤: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="分析處理失敗，請稍後再試",
@@ -666,17 +655,17 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
         # 初始化SHAP解釋器
         if model_loader is None or model_loader.detector is None:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="模型未載入，請稍後再試"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="模型未載入，請稍後再試"
             )
 
-        from cyberpuppy.explain.shap_explainer import SHAPExplainer, SHAPVisualizer
         import base64
-        import io
+
+        from cyberpuppy.explain.shap_explainer import (SHAPExplainer,
+                                                       SHAPVisualizer)
 
         # 創建SHAP解釋器
         detector = model_loader.detector
-        device = getattr(detector, 'device', torch.device('cpu'))
+        device = getattr(detector, "device", torch.device("cpu"))
         shap_explainer = SHAPExplainer(detector, device)
 
         # 生成文本雜湊
@@ -701,11 +690,9 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
         for i, token in enumerate(shap_result.tokens):
             if token not in ["[CLS]", "[SEP]", "[PAD]"] and i < len(shap_values):
                 clean_token = token.replace("##", "")
-                tokens.append(SHAPToken(
-                    token=clean_token,
-                    shap_value=float(shap_values[i]),
-                    position=i
-                ))
+                tokens.append(
+                    SHAPToken(token=clean_token, shap_value=float(shap_values[i]), position=i)
+                )
 
         # 生成可視化
         visualization_base64 = None
@@ -715,13 +702,14 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
 
                 # 創建臨時文件保存圖片
                 import tempfile
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
                     if data.visualization_type == "waterfall":
-                        fig = visualizer.create_waterfall_plot(
+                        visualizer.create_waterfall_plot(
                             shap_result, task=data.task, save_path=tmp_file.name
                         )
                     elif data.visualization_type == "text":
-                        fig = visualizer.create_text_plot(
+                        visualizer.create_text_plot(
                             shap_result, task=data.task, save_path=tmp_file.name
                         )
                     elif data.visualization_type == "force":
@@ -730,12 +718,13 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
                         )
 
                     # 讀取圖片並轉換為Base64
-                    with open(tmp_file.name, 'rb') as img_file:
+                    with open(tmp_file.name, "rb") as img_file:
                         img_data = img_file.read()
-                        visualization_base64 = base64.b64encode(img_data).decode('utf-8')
+                        visualization_base64 = base64.b64encode(img_data).decode("utf-8")
 
                     # 清理臨時文件
                     import os
+
                     os.unlink(tmp_file.name)
 
             except Exception as viz_error:
@@ -757,7 +746,7 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
             method="SHAP",
             text_hash=text_hash,
             timestamp=datetime.now().isoformat(),
-            processing_time_ms=round(processing_time, 2)
+            processing_time_ms=round(processing_time, 2),
         )
 
         logger.info(
@@ -772,8 +761,7 @@ async def explain_with_shap(request: Request, data: SHAPExplanationRequest):
     except Exception as e:
         logger.error(f"SHAP解釋錯誤 - Hash: {generate_text_hash(data.text)}, 錯誤: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="SHAP解釋處理失敗，請稍後再試"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="SHAP解釋處理失敗，請稍後再試"
         )
 
 
@@ -791,15 +779,15 @@ async def analyze_misclassification(request: Request, data: MisclassificationAna
         # 檢查模型狀態
         if model_loader is None or model_loader.detector is None:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="模型未載入，請稍後再試"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="模型未載入，請稍後再試"
             )
 
-        from cyberpuppy.explain.shap_explainer import SHAPExplainer, MisclassificationAnalyzer
+        from cyberpuppy.explain.shap_explainer import (
+            MisclassificationAnalyzer, SHAPExplainer)
 
         # 創建分析器
         detector = model_loader.detector
-        device = getattr(detector, 'device', torch.device('cpu'))
+        device = getattr(detector, "device", torch.device("cpu"))
         shap_explainer = SHAPExplainer(detector, device)
         analyzer = MisclassificationAnalyzer(shap_explainer)
 
@@ -826,16 +814,20 @@ async def analyze_misclassification(request: Request, data: MisclassificationAna
             misclassified_count=len(analysis_result["misclassified_cases"]),
             correct_count=len(analysis_result["correct_cases"]),
             error_statistics={
-                "avg_misclassified_confidence": error_analysis.get("avg_misclassified_confidence", 0),
+                "avg_misclassified_confidence": error_analysis.get(
+                    "avg_misclassified_confidence", 0
+                ),
                 "avg_correct_confidence": error_analysis.get("avg_correct_confidence", 0),
                 "confidence_gap": error_analysis.get("confidence_gap", 0),
-                "avg_misclassified_importance": error_analysis.get("avg_misclassified_importance", 0),
-                "avg_correct_importance": error_analysis.get("avg_correct_importance", 0)
+                "avg_misclassified_importance": error_analysis.get(
+                    "avg_misclassified_importance", 0
+                ),
+                "avg_correct_importance": error_analysis.get("avg_correct_importance", 0),
             },
             top_error_features=error_analysis.get("top_error_features", [])[:10],
             task=data.task,
             timestamp=datetime.now().isoformat(),
-            processing_time_ms=round(processing_time, 2)
+            processing_time_ms=round(processing_time, 2),
         )
 
         logger.info(
@@ -851,8 +843,7 @@ async def analyze_misclassification(request: Request, data: MisclassificationAna
     except Exception as e:
         logger.error(f"誤判分析錯誤 - 錯誤: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="誤判分析處理失敗，請稍後再試"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="誤判分析處理失敗，請稍後再試"
         )
 
 
@@ -930,7 +921,7 @@ async def root():
             "misclassification_analysis": "/explain/misclassification",
             "health_check": "/healthz",
             "metrics": "/metrics",
-            "model_info": "/model-info"
+            "model_info": "/model-info",
         },
     }
 

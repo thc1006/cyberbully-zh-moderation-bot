@@ -4,20 +4,18 @@ FastAPI 核心功能單元測試
 Tests for FastAPI core functionality
 """
 
-import pytest
-import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from fastapi.testclient import TestClient
-from fastapi import status
 import json
-import hashlib
-
 # Import API components to test
 import sys
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).parent.parent.parent / "api"))
 
-from app import app, model_loader, get_model_loader
+from app import app, get_model_loader
 from model_loader import ModelLoader
 
 
@@ -64,7 +62,7 @@ class TestDetectionEndpoint:
         """每個測試方法前的設置"""
         self.client = TestClient(app)
 
-    @patch('app.get_model_loader')
+    @patch("app.get_model_loader")
     def test_detect_endpoint_valid_input(self, mock_get_loader):
         """測試有效輸入的偵測端點"""
         # Mock model loader
@@ -74,15 +72,12 @@ class TestDetectionEndpoint:
             "bullying": {"label": "none", "confidence": 0.90},
             "emotion": {"label": "neutral", "confidence": 0.88},
             "role": {"label": "none", "confidence": 0.92},
-            "overall_confidence": 0.91
+            "overall_confidence": 0.91,
         }
         mock_get_loader.return_value = mock_loader
 
         # Test request
-        request_data = {
-            "text": "今天天氣真好，我們去公園散步吧。",
-            "include_explanation": False
-        }
+        request_data = {"text": "今天天氣真好，我們去公園散步吧。", "include_explanation": False}
 
         response = self.client.post("/api/detect", json=request_data)
 
@@ -102,7 +97,7 @@ class TestDetectionEndpoint:
         assert "emotion" in results
         assert "role" in results
 
-    @patch('app.get_model_loader')
+    @patch("app.get_model_loader")
     def test_detect_endpoint_with_explanation(self, mock_get_loader):
         """測試包含解釋性的偵測端點"""
         # Mock model loader with explanation
@@ -115,15 +110,12 @@ class TestDetectionEndpoint:
             "overall_confidence": 0.84,
             "explanation": {
                 "attention_weights": [0.1, 0.3, 0.6],
-                "important_tokens": ["笨蛋", "廢物"]
-            }
+                "important_tokens": ["笨蛋", "廢物"],
+            },
         }
         mock_get_loader.return_value = mock_loader
 
-        request_data = {
-            "text": "你這個笨蛋廢物",
-            "include_explanation": True
-        }
+        request_data = {"text": "你這個笨蛋廢物", "include_explanation": True}
 
         response = self.client.post("/api/detect", json=request_data)
 
@@ -152,12 +144,15 @@ class TestDetectionEndpoint:
 
         assert response.status_code == 422
 
-    @pytest.mark.parametrize("text,expected_fields", [
-        ("正常文字", ["toxicity", "bullying", "emotion", "role"]),
-        ("這個笨蛋", ["toxicity", "bullying", "emotion", "role"]),
-        ("我愛你", ["toxicity", "bullying", "emotion", "role"]),
-    ])
-    @patch('app.get_model_loader')
+    @pytest.mark.parametrize(
+        "text,expected_fields",
+        [
+            ("正常文字", ["toxicity", "bullying", "emotion", "role"]),
+            ("這個笨蛋", ["toxicity", "bullying", "emotion", "role"]),
+            ("我愛你", ["toxicity", "bullying", "emotion", "role"]),
+        ],
+    )
+    @patch("app.get_model_loader")
     def test_detect_various_texts(self, mock_get_loader, text, expected_fields):
         """測試各種文本輸入"""
         mock_loader = Mock(spec=ModelLoader)
@@ -166,7 +161,7 @@ class TestDetectionEndpoint:
             "bullying": {"label": "none", "confidence": 0.90},
             "emotion": {"label": "positive", "confidence": 0.88},
             "role": {"label": "none", "confidence": 0.92},
-            "overall_confidence": 0.91
+            "overall_confidence": 0.91,
         }
         mock_get_loader.return_value = mock_loader
 
@@ -181,19 +176,16 @@ class TestDetectionEndpoint:
 
     def test_detect_endpoint_privacy(self):
         """測試隱私保護 - 文本不應在響應中洩露"""
-        request_data = {
-            "text": "這是一個敏感的私人信息",
-            "include_explanation": False
-        }
+        request_data = {"text": "這是一個敏感的私人信息", "include_explanation": False}
 
-        with patch('app.get_model_loader') as mock_get_loader:
+        with patch("app.get_model_loader") as mock_get_loader:
             mock_loader = Mock(spec=ModelLoader)
             mock_loader.predict.return_value = {
                 "toxicity": {"label": "none", "confidence": 0.95},
                 "bullying": {"label": "none", "confidence": 0.90},
                 "emotion": {"label": "neutral", "confidence": 0.88},
                 "role": {"label": "none", "confidence": 0.92},
-                "overall_confidence": 0.91
+                "overall_confidence": 0.91,
             }
             mock_get_loader.return_value = mock_loader
 
@@ -216,7 +208,7 @@ class TestRateLimiting:
         """每個測試方法前的設置"""
         self.client = TestClient(app)
 
-    @patch('app.get_model_loader')
+    @patch("app.get_model_loader")
     def test_rate_limiting(self, mock_get_loader):
         """測試速率限制功能"""
         mock_loader = Mock(spec=ModelLoader)
@@ -225,7 +217,7 @@ class TestRateLimiting:
             "bullying": {"label": "none", "confidence": 0.90},
             "emotion": {"label": "neutral", "confidence": 0.88},
             "role": {"label": "none", "confidence": 0.92},
-            "overall_confidence": 0.91
+            "overall_confidence": 0.91,
         }
         mock_get_loader.return_value = mock_loader
 
@@ -233,7 +225,7 @@ class TestRateLimiting:
 
         # Make rapid requests to trigger rate limiting
         responses = []
-        for i in range(15):  # Exceed typical rate limit
+        for _i in range(15):  # Exceed typical rate limit
             response = self.client.post("/api/detect", json=request_data)
             responses.append(response)
 
@@ -252,7 +244,7 @@ class TestModelLoader:
 
         assert loader1 is loader2  # Should be the same instance
 
-    @patch('model_loader.ImprovedBullyingDetector')
+    @patch("model_loader.ImprovedBullyingDetector")
     def test_model_loader_initialization(self, mock_detector):
         """測試模型載入器初始化"""
         mock_model = Mock()
@@ -304,7 +296,7 @@ class TestErrorHandling:
         """每個測試方法前的設置"""
         self.client = TestClient(app)
 
-    @patch('app.get_model_loader')
+    @patch("app.get_model_loader")
     def test_model_error_handling(self, mock_get_loader):
         """測試模型錯誤處理"""
         # Mock model that raises exception
@@ -337,14 +329,10 @@ class TestInputValidation:
         """每個測試方法前的設置"""
         self.client = TestClient(app)
 
-    @pytest.mark.parametrize("invalid_input", [
-        {"text": None},
-        {"text": 123},
-        {"text": []},
-        {"text": {}},
-        {},
-        {"invalid_field": "value"}
-    ])
+    @pytest.mark.parametrize(
+        "invalid_input",
+        [{"text": None}, {"text": 123}, {"text": []}, {"text": {}}, {}, {"invalid_field": "value"}],
+    )
     def test_invalid_request_data(self, invalid_input):
         """測試無效請求資料"""
         response = self.client.post("/api/detect", json=invalid_input)
@@ -385,7 +373,7 @@ class TestPerformance:
         """每個測試方法前的設置"""
         self.client = TestClient(app)
 
-    @patch('app.get_model_loader')
+    @patch("app.get_model_loader")
     def test_response_time_tracking(self, mock_get_loader):
         """測試響應時間追蹤"""
         mock_loader = Mock(spec=ModelLoader)
@@ -394,7 +382,7 @@ class TestPerformance:
             "bullying": {"label": "none", "confidence": 0.90},
             "emotion": {"label": "neutral", "confidence": 0.88},
             "role": {"label": "none", "confidence": 0.92},
-            "overall_confidence": 0.91
+            "overall_confidence": 0.91,
         }
         mock_get_loader.return_value = mock_loader
 

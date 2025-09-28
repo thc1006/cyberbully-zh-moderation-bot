@@ -5,16 +5,18 @@ Testing coverage for cyberpuppy.eval.metrics module
 """
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock
-import pytest
-import numpy as np
 from collections import deque
+from unittest.mock import Mock, patch
+
+import numpy as np
+
 
 # Stub classes for missing imports
 class EvaluationContext:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
 
 class MultiTaskMetrics:
     def __init__(self):
@@ -26,12 +28,14 @@ class MultiTaskMetrics:
     def compute(self):
         return {}
 
+
 class SessionLevelEvaluator:
     def __init__(self):
         pass
 
     def evaluate(self, *args, **kwargs):
         return {"f1": 0.8}
+
 
 class RealTimeMonitor:
     def __init__(self, window_size=100):
@@ -44,6 +48,7 @@ class RealTimeMonitor:
     def get_metrics(self):
         return {"accuracy": 0.85}
 
+
 class ConvergenceTracker:
     def __init__(self, patience=5, min_delta=0.001):
         self.patience = patience
@@ -55,6 +60,7 @@ class ConvergenceTracker:
 
     def has_converged(self):
         return self.counter >= self.patience
+
 
 class PerformanceProfiler:
     def __init__(self):
@@ -69,34 +75,30 @@ class PerformanceProfiler:
     def get_stats(self):
         return {"inference_time": 0.1}
 
+
 def compute_classification_metrics(y_true, y_pred, y_proba=None):
     return {"accuracy": 0.9, "f1": 0.85}
+
 
 def compute_session_level_f1(session_predictions):
     return 0.8
 
+
 def evaluate_multilabel_classification(y_true, y_pred):
     return {"macro_f1": 0.8}
 
+
 def create_evaluation_report(metrics, output_path):
     return output_path
-import pandas as pd
-from datetime import datetime, timedelta
-from pathlib import Path
+
+
 import json
 import tempfile
-import shutil
+from datetime import datetime, timedelta
+from pathlib import Path
 
 # Import the module under test
-from cyberpuppy.eval.metrics import (
-    MetricResult,
-    SessionContext,
-    MetricsCalculator,
-    OnlineMonitor,
-    PrometheusExporter,
-    CSVExporter,
-    EvaluationReport
-)
+from cyberpuppy.eval.metrics import MetricResult, SessionContext
 
 
 class TestMetricResult(unittest.TestCase):
@@ -105,9 +107,7 @@ class TestMetricResult(unittest.TestCase):
     def test_metric_result_creation(self):
         """Test basic MetricResult creation"""
         result = MetricResult(
-            name="accuracy",
-            value=0.85,
-            metadata={"threshold": 0.5, "samples": 1000}
+            name="accuracy", value=0.85, metadata={"threshold": 0.5, "samples": 1000}
         )
 
         self.assertEqual(result.name, "accuracy")
@@ -117,19 +117,11 @@ class TestMetricResult(unittest.TestCase):
 
     def test_metric_result_to_dict(self):
         """Test MetricResult to_dict conversion"""
-        result = MetricResult(
-            name="f1_score",
-            value=0.78,
-            metadata={"class": "toxic"}
-        )
+        result = MetricResult(name="f1_score", value=0.78, metadata={"class": "toxic"})
 
         result_dict = result.to_dict()
 
-        expected_dict = {
-            "name": "f1_score",
-            "value": 0.78,
-            "metadata": {"class": "toxic"}
-        }
+        expected_dict = {"name": "f1_score", "value": 0.78, "metadata": {"class": "toxic"}}
 
         self.assertEqual(result_dict, expected_dict)
 
@@ -194,8 +186,7 @@ class TestSessionContext(unittest.TestCase):
     def test_session_with_custom_start_time(self):
         """Test session with custom start time"""
         custom_start = datetime.now() - timedelta(hours=1)
-        session = SessionContext(session_id="test_ses"
-            "sion_001", start_time=custom_start)
+        session = SessionContext(session_id="test_ses" "sion_001", start_time=custom_start)
 
         self.assertEqual(session.start_time, custom_start)
 
@@ -206,9 +197,7 @@ class TestEvaluationContext(unittest.TestCase):
     def test_evaluation_context_creation(self):
         """Test EvaluationContext initialization"""
         context = EvaluationContext(
-            dataset_name="test_dataset",
-            model_name="test_model",
-            config_path="config/test.yaml"
+            dataset_name="test_dataset", model_name="test_model", config_path="config/test.yaml"
         )
 
         self.assertEqual(context.dataset_name, "test_dataset")
@@ -220,9 +209,7 @@ class TestEvaluationContext(unittest.TestCase):
         """Test EvaluationContext with metadata"""
         metadata = {"batch_size": 32, "learning_rate": 0.001}
         context = EvaluationContext(
-            dataset_name="test_dataset",
-            model_name="test_model",
-            metadata=metadata
+            dataset_name="test_dataset", model_name="test_model", metadata=metadata
         )
 
         self.assertEqual(context.metadata["batch_size"], 32)
@@ -230,10 +217,7 @@ class TestEvaluationContext(unittest.TestCase):
 
     def test_evaluation_context_to_dict(self):
         """Test EvaluationContext serialization"""
-        context = EvaluationContext(
-            dataset_name="test_dataset",
-            model_name="test_model"
-        )
+        context = EvaluationContext(dataset_name="test_dataset", model_name="test_model")
 
         context_dict = context.to_dict()
 
@@ -266,9 +250,7 @@ class TestMultiTaskMetrics(unittest.TestCase):
 
         # Add toxicity results
         metrics.add_task_results(
-            task_name="toxicity",
-            y_true=self.y_true_toxicity,
-            y_pred=self.y_pred_toxicity
+            task_name="toxicity", y_true=self.y_true_toxicity, y_pred=self.y_pred_toxicity
         )
 
         self.assertIn("toxicity", metrics.task_metrics)
@@ -278,24 +260,13 @@ class TestMultiTaskMetrics(unittest.TestCase):
         """Test adding task results with probability scores"""
         metrics = MultiTaskMetrics()
 
-        y_proba = np.array(
-            [[0.8,
-            0.2],
-            [0.3,
-            0.7],
-            [0.9,
-            0.1],
-            [0.6,
-            0.4],
-            [0.2,
-            0.8]]
-        )
+        y_proba = np.array([[0.8, 0.2], [0.3, 0.7], [0.9, 0.1], [0.6, 0.4], [0.2, 0.8]])
 
         metrics.add_task_results(
             task_name="toxicity",
             y_true=self.y_true_toxicity,
             y_pred=self.y_pred_toxicity,
-            y_proba=y_proba
+            y_proba=y_proba,
         )
 
         self.assertIn("toxicity", metrics.task_metrics)
@@ -308,15 +279,11 @@ class TestMultiTaskMetrics(unittest.TestCase):
 
         # Add multiple tasks
         metrics.add_task_results(
-            task_name="toxicity",
-            y_true=self.y_true_toxicity,
-            y_pred=self.y_pred_toxicity
+            task_name="toxicity", y_true=self.y_true_toxicity, y_pred=self.y_pred_toxicity
         )
 
         metrics.add_task_results(
-            task_name="emotion",
-            y_true=self.y_true_emotion,
-            y_pred=self.y_pred_emotion
+            task_name="emotion", y_true=self.y_true_emotion, y_pred=self.y_pred_emotion
         )
 
         overall = metrics.compute_overall_metrics()
@@ -330,9 +297,7 @@ class TestMultiTaskMetrics(unittest.TestCase):
         metrics = MultiTaskMetrics()
 
         metrics.add_task_results(
-            task_name="toxicity",
-            y_true=self.y_true_toxicity,
-            y_pred=self.y_pred_toxicity
+            task_name="toxicity", y_true=self.y_true_toxicity, y_pred=self.y_pred_toxicity
         )
 
         summary = metrics.get_summary_report()
@@ -350,7 +315,7 @@ class TestSessionLevelEvaluator(unittest.TestCase):
         self.sample_sessions = [
             SessionContext("session_1"),
             SessionContext("session_2"),
-            SessionContext("session_3")
+            SessionContext("session_3"),
         ]
 
         # Add messages to sessions
@@ -360,7 +325,7 @@ class TestSessionLevelEvaluator(unittest.TestCase):
                     "text": f"Message {j} in session {i}",
                     "true_label": j % 2,
                     "predicted_label": (j + i) % 2,
-                    "confidence": 0.5 + (j * 0.1)
+                    "confidence": 0.5 + (j * 0.1),
                 }
                 session.add_message(message)
 
@@ -447,7 +412,7 @@ class TestRealTimeMonitor(unittest.TestCase):
         predictions = [
             {"text": "test1", "prediction": 0, "confidence": 0.8},
             {"text": "test2", "prediction": 1, "confidence": 0.9},
-            {"text": "test3", "prediction": 0, "confidence": 0.7}
+            {"text": "test3", "prediction": 0, "confidence": 0.7},
         ]
 
         for pred in predictions:
@@ -465,7 +430,7 @@ class TestRealTimeMonitor(unittest.TestCase):
             prediction = {
                 "prediction": i % 2,
                 "true_label": (i + 1) % 2,
-                "confidence": 0.5 + (i * 0.1)
+                "confidence": 0.5 + (i * 0.1),
             }
             monitor.add_prediction(prediction)
 
@@ -503,7 +468,7 @@ class TestRealTimeMonitor(unittest.TestCase):
             {"prediction": 0, "true_label": 0, "confidence": 0.8},
             {"prediction": 1, "true_label": 1, "confidence": 0.9},
             {"prediction": 0, "true_label": 1, "confidence": 0.6},
-            {"prediction": 1, "true_label": 0, "confidence": 0.7}
+            {"prediction": 1, "true_label": 0, "confidence": 0.7},
         ]
 
         for pred in predictions:
@@ -602,7 +567,7 @@ class TestPerformanceProfiler(unittest.TestCase):
         self.assertIsInstance(profiler.timing_data, dict)
         self.assertIsInstance(profiler.memory_data, dict)
 
-    @patch('time.time')
+    @patch("time.time")
     def test_timing_context_manager(self, mock_time):
         """Test timing context manager"""
         mock_time.side_effect = [1000.0, 1005.0]  # 5 second duration
@@ -615,7 +580,7 @@ class TestPerformanceProfiler(unittest.TestCase):
         self.assertIn("test_operation", profiler.timing_data)
         self.assertEqual(profiler.timing_data["test_operation"][-1], 5.0)
 
-    @patch('psutil.Process')
+    @patch("psutil.Process")
     def test_memory_profiling(self, mock_process_class):
         """Test memory profiling"""
         mock_process = Mock()
@@ -670,18 +635,7 @@ class TestUtilityFunctions(unittest.TestCase):
         """Test compute_classification_metrics with probability scores"""
         y_true = np.array([0, 1, 1, 0, 1])
         y_pred = np.array([0, 1, 0, 0, 1])
-        y_proba = np.array(
-            [[0.8,
-            0.2],
-            [0.3,
-            0.7],
-            [0.9,
-            0.1],
-            [0.6,
-            0.4],
-            [0.2,
-            0.8]]
-        )
+        y_proba = np.array([[0.8, 0.2], [0.3, 0.7], [0.9, 0.1], [0.6, 0.4], [0.2, 0.8]])
 
         metrics = compute_classification_metrics(y_true, y_pred, y_proba)
 
@@ -693,7 +647,7 @@ class TestUtilityFunctions(unittest.TestCase):
         session_predictions = [
             {"session_id": "1", "prediction": 0, "label": 0},
             {"session_id": "1", "prediction": 1, "label": 0},
-            {"session_id": "2", "prediction": 1, "label": 1}
+            {"session_id": "2", "prediction": 1, "label": 1},
         ]
 
         session_f1 = compute_session_level_f1(session_predictions)
@@ -720,28 +674,22 @@ class TestUtilityFunctions(unittest.TestCase):
         evaluation_data = {
             "model_name": "test_model",
             "dataset": "test_dataset",
-            "metrics": {
-                "accuracy": 0.85,
-                "f1_score": 0.78,
-                "precision": 0.82,
-                "recall": 0.74
-            },
-            "confusion_matrix": [[80, 10], [15, 95]]
+            "metrics": {"accuracy": 0.85, "f1_score": 0.78, "precision": 0.82, "recall": 0.74},
+            "confusion_matrix": [[80, 10], [15, 95]],
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
             report_path = Path(temp_dir) / "test_report.json"
 
             result_path = create_evaluation_report(
-                evaluation_data=evaluation_data,
-                output_path=report_path
+                evaluation_data=evaluation_data, output_path=report_path
             )
 
             self.assertEqual(result_path, report_path)
             self.assertTrue(report_path.exists())
 
             # Verify report content
-            with open(report_path, 'r', encoding='utf-8') as f:
+            with open(report_path, "r", encoding="utf-8") as f:
                 report_data = json.load(f)
 
             self.assertEqual(report_data["model_name"], "test_model")
@@ -852,7 +800,7 @@ class TestIntegrationScenarios(unittest.TestCase):
                     "true_label": np.random.randint(0, 2),
                     "predicted_label": np.random.randint(0, 2),
                     "confidence": np.random.uniform(0.5, 1.0),
-                    "toxicity_score": np.random.uniform(0.0, 1.0)
+                    "toxicity_score": np.random.uniform(0.0, 1.0),
                 }
                 session.add_message(message)
 
@@ -878,7 +826,7 @@ class TestIntegrationScenarios(unittest.TestCase):
                 "prediction": np.random.randint(0, 2),
                 "true_label": np.random.randint(0, 2),
                 "confidence": np.random.uniform(0.3, 1.0),
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(),
             }
             monitor.add_prediction(prediction)
 
@@ -892,5 +840,5 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.assertIn("total_predictions", summary)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -5,14 +5,15 @@ Enforces consistency between predictions on augmented versions
 of the same input to improve model robustness and generalization.
 """
 
+import logging
+import random
+from dataclasses import dataclass
+from typing import Dict, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Callable
-from dataclasses import dataclass
-import random
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConsistencyConfig:
     """Configuration for consistency regularization."""
+
     consistency_weight: float = 1.0
     consistency_ramp_up_epochs: int = 5
     max_consistency_weight: float = 10.0
@@ -36,9 +38,9 @@ class TextAugmenter:
     def __init__(self, augmentation_strength: float = 0.1):
         self.augmentation_strength = augmentation_strength
 
-    def token_dropout(self, input_ids: torch.Tensor,
-                     attention_mask: torch.Tensor,
-                     dropout_prob: float = 0.1) -> Tuple[torch.Tensor, torch.Tensor]:
+    def token_dropout(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, dropout_prob: float = 0.1
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Randomly dropout tokens (replace with mask token)."""
         mask_token_id = 103  # [MASK] token for BERT-like models
 
@@ -54,9 +56,9 @@ class TextAugmenter:
 
         return augmented_input_ids, attention_mask
 
-    def token_shuffle(self, input_ids: torch.Tensor,
-                     attention_mask: torch.Tensor,
-                     shuffle_prob: float = 0.1) -> Tuple[torch.Tensor, torch.Tensor]:
+    def token_shuffle(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, shuffle_prob: float = 0.1
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Randomly shuffle adjacent tokens."""
         augmented_input_ids = input_ids.clone()
 
@@ -70,14 +72,16 @@ class TextAugmenter:
                 for j in range(start_idx, end_idx - 1):
                     if random.random() < shuffle_prob:
                         # Swap with next token
-                        augmented_input_ids[i, j], augmented_input_ids[i, j + 1] = \
-                            augmented_input_ids[i, j + 1], augmented_input_ids[i, j]
+                        augmented_input_ids[i, j], augmented_input_ids[i, j + 1] = (
+                            augmented_input_ids[i, j + 1],
+                            augmented_input_ids[i, j],
+                        )
 
         return augmented_input_ids, attention_mask
 
-    def synonym_replacement(self, input_ids: torch.Tensor,
-                           attention_mask: torch.Tensor,
-                           replacement_prob: float = 0.1) -> Tuple[torch.Tensor, torch.Tensor]:
+    def synonym_replacement(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, replacement_prob: float = 0.1
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Replace tokens with random tokens (simplified synonym replacement)."""
         vocab_size = 21128  # Chinese BERT vocab size
 
@@ -91,9 +95,7 @@ class TextAugmenter:
 
         # Generate random replacements
         random_tokens = torch.randint(
-            low=1, high=vocab_size,
-            size=input_ids.shape,
-            device=input_ids.device
+            low=1, high=vocab_size, size=input_ids.shape, device=input_ids.device
         )
 
         augmented_input_ids[replacement_mask] = random_tokens[replacement_mask]
@@ -105,30 +107,27 @@ class TextAugmenter:
         augmented_batch = {}
 
         # Choose random augmentation
-        aug_type = random.choice(['dropout', 'shuffle', 'synonym'])
+        aug_type = random.choice(["dropout", "shuffle", "synonym"])
 
-        if aug_type == 'dropout':
+        if aug_type == "dropout":
             aug_input_ids, aug_attention_mask = self.token_dropout(
-                batch['input_ids'], batch['attention_mask'],
-                self.augmentation_strength
+                batch["input_ids"], batch["attention_mask"], self.augmentation_strength
             )
-        elif aug_type == 'shuffle':
+        elif aug_type == "shuffle":
             aug_input_ids, aug_attention_mask = self.token_shuffle(
-                batch['input_ids'], batch['attention_mask'],
-                self.augmentation_strength
+                batch["input_ids"], batch["attention_mask"], self.augmentation_strength
             )
         else:  # synonym
             aug_input_ids, aug_attention_mask = self.synonym_replacement(
-                batch['input_ids'], batch['attention_mask'],
-                self.augmentation_strength
+                batch["input_ids"], batch["attention_mask"], self.augmentation_strength
             )
 
-        augmented_batch['input_ids'] = aug_input_ids
-        augmented_batch['attention_mask'] = aug_attention_mask
+        augmented_batch["input_ids"] = aug_input_ids
+        augmented_batch["attention_mask"] = aug_attention_mask
 
         # Copy other fields
         for key, value in batch.items():
-            if key not in ['input_ids', 'attention_mask']:
+            if key not in ["input_ids", "attention_mask"]:
                 augmented_batch[key] = value
 
         return augmented_batch
@@ -156,18 +155,21 @@ class ConsistencyRegularizer:
         """Get current consistency weight with ramp-up schedule."""
         if current_epoch < self.config.consistency_ramp_up_epochs:
             # Linear ramp-up
-            weight = (current_epoch / self.config.consistency_ramp_up_epochs) * \
-                    self.config.max_consistency_weight
+            weight = (
+                current_epoch / self.config.consistency_ramp_up_epochs
+            ) * self.config.max_consistency_weight
         else:
             weight = self.config.max_consistency_weight
 
         return weight
 
-    def compute_consistency_loss(self,
-                                original_logits: torch.Tensor,
-                                augmented_logits: torch.Tensor,
-                                confidence_mask: Optional[torch.Tensor] = None,
-                                loss_type: str = "mse") -> torch.Tensor:
+    def compute_consistency_loss(
+        self,
+        original_logits: torch.Tensor,
+        augmented_logits: torch.Tensor,
+        confidence_mask: Optional[torch.Tensor] = None,
+        loss_type: str = "mse",
+    ) -> torch.Tensor:
         """
         Compute consistency loss between original and augmented predictions.
 
@@ -182,16 +184,14 @@ class ConsistencyRegularizer:
         """
         if loss_type == "mse":
             # MSE between logits
-            loss = F.mse_loss(original_logits, augmented_logits, reduction='none')
+            loss = F.mse_loss(original_logits, augmented_logits, reduction="none")
             loss = loss.mean(dim=-1)  # Average over classes
 
         elif loss_type == "kl":
             # KL divergence between probability distributions
             original_probs = F.softmax(original_logits / self.config.temperature, dim=-1)
-            augmented_log_probs = F.log_softmax(
-                augmented_logits / self.config.temperature, dim=-1
-            )
-            loss = F.kl_div(augmented_log_probs, original_probs, reduction='none')
+            augmented_log_probs = F.log_softmax(augmented_logits / self.config.temperature, dim=-1)
+            loss = F.kl_div(augmented_log_probs, original_probs, reduction="none")
             loss = loss.sum(dim=-1)  # Sum over classes
 
         elif loss_type == "ce":
@@ -221,11 +221,13 @@ class ConsistencyRegularizer:
         max_probs, _ = torch.max(probs, dim=-1)
         return max_probs >= self.config.confidence_threshold
 
-    def consistency_training_step(self,
-                                 model: nn.Module,
-                                 batch: Dict[str, torch.Tensor],
-                                 optimizer: torch.optim.Optimizer,
-                                 labeled_loss: Optional[torch.Tensor] = None) -> Dict[str, float]:
+    def consistency_training_step(
+        self,
+        model: nn.Module,
+        batch: Dict[str, torch.Tensor],
+        optimizer: torch.optim.Optimizer,
+        labeled_loss: Optional[torch.Tensor] = None,
+    ) -> Dict[str, float]:
         """
         Perform one consistency training step.
 
@@ -241,21 +243,22 @@ class ConsistencyRegularizer:
         model.train()
 
         # Move batch to device
-        original_batch = {k: v.to(self.device) for k, v in batch.items()
-                         if k != 'text'}
+        original_batch = {k: v.to(self.device) for k, v in batch.items() if k != "text"}
 
         # Create augmented version
         augmented_batch = self.augmenter.augment_batch(original_batch)
         augmented_batch = {k: v.to(self.device) for k, v in augmented_batch.items()}
 
         # Forward pass on original input
-        original_outputs = model(**{k: v for k, v in original_batch.items()
-                                  if k not in ['labels', 'text']})
+        original_outputs = model(
+            **{k: v for k, v in original_batch.items() if k not in ["labels", "text"]}
+        )
         original_logits = original_outputs.logits
 
         # Forward pass on augmented input
-        augmented_outputs = model(**{k: v for k, v in augmented_batch.items()
-                                   if k not in ['labels', 'text']})
+        augmented_outputs = model(
+            **{k: v for k, v in augmented_batch.items() if k not in ["labels", "text"]}
+        )
         augmented_logits = augmented_outputs.logits
 
         # Compute confidence mask
@@ -285,23 +288,25 @@ class ConsistencyRegularizer:
         self.confidence_ratios.append(confidence_mask.float().mean().item())
 
         losses = {
-            'total_loss': total_loss.item(),
-            'consistency_loss': consistency_loss.item(),
-            'consistency_weight': consistency_weight,
-            'confidence_ratio': confidence_mask.float().mean().item()
+            "total_loss": total_loss.item(),
+            "consistency_loss": consistency_loss.item(),
+            "consistency_weight": consistency_weight,
+            "confidence_ratio": confidence_mask.float().mean().item(),
         }
 
         if labeled_loss is not None:
-            losses['labeled_loss'] = labeled_loss.item()
+            losses["labeled_loss"] = labeled_loss.item()
 
         return losses
 
-    def mixed_training_step(self,
-                           model: nn.Module,
-                           labeled_batch: Optional[Dict[str, torch.Tensor]],
-                           unlabeled_batch: Dict[str, torch.Tensor],
-                           optimizer: torch.optim.Optimizer,
-                           criterion: nn.Module) -> Dict[str, float]:
+    def mixed_training_step(
+        self,
+        model: nn.Module,
+        labeled_batch: Optional[Dict[str, torch.Tensor]],
+        unlabeled_batch: Dict[str, torch.Tensor],
+        optimizer: torch.optim.Optimizer,
+        criterion: nn.Module,
+    ) -> Dict[str, float]:
         """
         Mixed training step with both labeled and unlabeled data.
 
@@ -322,14 +327,17 @@ class ConsistencyRegularizer:
         # Supervised loss on labeled data
         labeled_loss = None
         if labeled_batch is not None:
-            labeled_inputs = {k: v.to(self.device) for k, v in labeled_batch.items()
-                            if k not in ['text', 'labels']}
-            labels = labeled_batch['labels'].to(self.device)
+            labeled_inputs = {
+                k: v.to(self.device)
+                for k, v in labeled_batch.items()
+                if k not in ["text", "labels"]
+            }
+            labels = labeled_batch["labels"].to(self.device)
 
             labeled_outputs = model(**labeled_inputs)
             labeled_loss = criterion(labeled_outputs.logits, labels)
             total_loss += labeled_loss
-            losses['labeled_loss'] = labeled_loss.item()
+            losses["labeled_loss"] = labeled_loss.item()
 
         # Consistency loss on unlabeled data
         consistency_losses = self.consistency_training_step(
@@ -338,7 +346,7 @@ class ConsistencyRegularizer:
 
         consistency_weight = self.get_consistency_weight(self.current_epoch)
         weighted_consistency_loss = consistency_weight * torch.tensor(
-            consistency_losses['consistency_loss'], device=self.device
+            consistency_losses["consistency_loss"], device=self.device
         )
         total_loss += weighted_consistency_loss
 
@@ -348,19 +356,20 @@ class ConsistencyRegularizer:
         optimizer.step()
 
         # Combine losses
-        losses.update({
-            'total_loss': total_loss.item(),
-            'consistency_loss': consistency_losses['consistency_loss'],
-            'consistency_weight': consistency_weight,
-            'confidence_ratio': consistency_losses['confidence_ratio']
-        })
+        losses.update(
+            {
+                "total_loss": total_loss.item(),
+                "consistency_loss": consistency_losses["consistency_loss"],
+                "consistency_weight": consistency_weight,
+                "confidence_ratio": consistency_losses["confidence_ratio"],
+            }
+        )
 
         return losses
 
-    def evaluate_consistency(self,
-                           model: nn.Module,
-                           dataloader: torch.utils.data.DataLoader,
-                           num_augmentations: int = 5) -> Dict[str, float]:
+    def evaluate_consistency(
+        self, model: nn.Module, dataloader: torch.utils.data.DataLoader, num_augmentations: int = 5
+    ) -> Dict[str, float]:
         """
         Evaluate model consistency across multiple augmentations.
 
@@ -380,20 +389,21 @@ class ConsistencyRegularizer:
 
         with torch.no_grad():
             for batch in dataloader:
-                original_batch = {k: v.to(self.device) for k, v in batch.items()
-                                if k != 'text'}
+                original_batch = {k: v.to(self.device) for k, v in batch.items() if k != "text"}
 
                 # Original predictions
-                original_outputs = model(**{k: v for k, v in original_batch.items()
-                                          if k not in ['labels', 'text']})
+                original_outputs = model(
+                    **{k: v for k, v in original_batch.items() if k not in ["labels", "text"]}
+                )
                 original_probs = F.softmax(original_outputs.logits, dim=-1)
 
                 # Multiple augmented predictions
                 batch_augmented_probs = []
                 for _ in range(num_augmentations):
                     augmented_batch = self.augmenter.augment_batch(original_batch)
-                    augmented_outputs = model(**{k: v for k, v in augmented_batch.items()
-                                               if k not in ['labels', 'text']})
+                    augmented_outputs = model(
+                        **{k: v for k, v in augmented_batch.items() if k not in ["labels", "text"]}
+                    )
                     augmented_probs = F.softmax(augmented_outputs.logits, dim=-1)
                     batch_augmented_probs.append(augmented_probs)
 
@@ -406,10 +416,10 @@ class ConsistencyRegularizer:
                     consistency = []
                     for aug_prob in aug_probs:
                         # KL divergence as consistency measure
-                        kl_div = F.kl_div(
-                            torch.log(aug_prob + 1e-8), orig_prob, reduction='sum'
-                        )
-                        consistency.append((-kl_div).item())  # Negative because lower KL = higher consistency
+                        kl_div = F.kl_div(torch.log(aug_prob + 1e-8), orig_prob, reduction="sum")
+                        consistency.append(
+                            (-kl_div).item()
+                        )  # Negative because lower KL = higher consistency
 
                     consistency_scores.append(np.mean(consistency))
 
@@ -427,10 +437,10 @@ class ConsistencyRegularizer:
         prediction_stability = (original_preds == augmented_preds).mean()
 
         metrics = {
-            'consistency_score': consistency_score,
-            'consistency_std': consistency_std,
-            'prediction_stability': prediction_stability,
-            'num_samples': len(consistency_scores)
+            "consistency_score": consistency_score,
+            "consistency_std": consistency_std,
+            "prediction_stability": prediction_stability,
+            "num_samples": len(consistency_scores),
         }
 
         return metrics
@@ -445,7 +455,7 @@ class ConsistencyRegularizer:
             return {}
 
         return {
-            'avg_consistency_loss': np.mean(self.consistency_losses[-100:]),  # Last 100 steps
-            'avg_confidence_ratio': np.mean(self.confidence_ratios[-100:]),
-            'current_consistency_weight': self.get_consistency_weight(self.current_epoch)
+            "avg_consistency_loss": np.mean(self.consistency_losses[-100:]),  # Last 100 steps
+            "avg_confidence_ratio": np.mean(self.confidence_ratios[-100:]),
+            "current_consistency_weight": self.get_consistency_weight(self.current_epoch),
         }

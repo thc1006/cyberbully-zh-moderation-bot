@@ -2,12 +2,11 @@
 Tests for configuration module
 """
 
-import os
 from pathlib import Path
 
 import pytest
 
-from cyberpuppy.config import DevelopmentConfig, ProductionConfig, Settings, get_config
+from cyberpuppy.config import Settings, get_config
 
 
 @pytest.mark.unit

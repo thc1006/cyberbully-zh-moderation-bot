@@ -5,15 +5,14 @@ Uses hypothesis for generating test cases and validating invariants
 """
 
 import unittest
-from unittest.mock import Mock, patch
+
 import numpy as np
-import torch
-from datetime import datetime
-from pathlib import Path
 
 try:
-    from hypothesis import given, strategies as st, assume, settings
-    from hypothesis.strategies import text, integers, floats, lists, composite
+    from hypothesis import assume, given, settings
+    from hypothesis import strategies as st
+    from hypothesis.strategies import composite, floats, integers, lists, text
+
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     # Fallback for environments without hypothesis
@@ -22,11 +21,13 @@ except ImportError:
     def given(*args, **kwargs):
         def decorator(func):
             return func
+
         return decorator
 
     def settings(*args, **kwargs):
         def decorator(func):
             return func
+
         return decorator
 
     def assume(condition):
@@ -60,11 +61,7 @@ class TestPropertyBasedConfig(unittest.TestCase):
         """Test that model name property handles various inputs correctly."""
         assume(model_name.strip())  # Non-empty after stripping
         assume(
-            not any(char in model_name for char in ['/',
-            '\\',
-            '<',
-            '>',
-            '|'])
+            not any(char in model_name for char in ["/", "\\", "<", ">", "|"])
         )  # No invalid path chars
 
         try:
@@ -80,23 +77,17 @@ class TestPropertyBasedConfig(unittest.TestCase):
         """Property: Valid confidence thresholds should always be accepted"""
         assume(not np.isnan(threshold))  # Exclude NaN values
 
-        settings = Settings(
-            model_name="test-model",
-            confidence_threshold=threshold
-        )
+        settings = Settings(model_name="test-model", confidence_threshold=threshold)
 
         self.assertEqual(settings.confidence_threshold, threshold)
         self.assertTrue(0.0 <= settings.confidence_threshold <= 1.0)
 
-    @given(st.integers(min_value=1, max_value=1024),
-           st.integers(min_value=1, max_value=256))
+    @given(st.integers(min_value=1, max_value=1024), st.integers(min_value=1, max_value=256))
     @settings(max_examples=20)
     def test_settings_size_properties(self, max_seq_length, batch_size):
         """Property: Positive integer parameters should be accepted"""
         settings = Settings(
-            model_name="test-model",
-            max_sequence_length=max_seq_length,
-            batch_size=batch_size
+            model_name="test-model", max_sequence_length=max_seq_length, batch_size=batch_size
         )
 
         self.assertEqual(settings.max_sequence_length, max_seq_length)
@@ -110,45 +101,52 @@ class TestPropertyBasedDetectionResult(unittest.TestCase):
     """Property-based tests for DetectionResult"""
 
     @composite
-    def detection_result_data(draw):
+    def detection_result_data(self):
         """Generate valid detection result data"""
-        __test_text = draw(st.text(min_size=0, max_size=1000))
+        __test_text = self(st.text(min_size=0, max_size=1000))
 
-        toxicity_label = draw(st.integers(min_value=0, max_value=2))
-        toxicity_confidence = draw(st.floats(min_value=0.0, max_value=1.0))
+        toxicity_label = self(st.integers(min_value=0, max_value=2))
+        toxicity_confidence = self(st.floats(min_value=0.0, max_value=1.0))
 
-        emotion_label = draw(st.integers(min_value=0, max_value=2))
-        emotion_confidence = draw(st.floats(min_value=0.0, max_value=1.0))
+        emotion_label = self(st.integers(min_value=0, max_value=2))
+        emotion_confidence = self(st.floats(min_value=0.0, max_value=1.0))
 
-        bullying_label = draw(st.integers(min_value=0, max_value=1))
-        bullying_confidence = draw(st.floats(min_value=0.0, max_value=1.0))
+        bullying_label = self(st.integers(min_value=0, max_value=1))
+        bullying_confidence = self(st.floats(min_value=0.0, max_value=1.0))
 
         return {
-            'text': text,
-            'toxicity_label': toxicity_label,
-            'toxicity_confidence': toxicity_confidence,
-            'emotion_label': emotion_label,
-            'emotion_confidence': emotion_confidence,
-            'bullying_label': bullying_label,
-            'bullying_confidence': bullying_confidence
+            "text": text,
+            "toxicity_label": toxicity_label,
+            "toxicity_confidence": toxicity_confidence,
+            "emotion_label": emotion_label,
+            "emotion_confidence": emotion_confidence,
+            "bullying_label": bullying_label,
+            "bullying_confidence": bullying_confidence,
         }
 
     @given(detection_result_data())
     @settings(max_examples=100, deadline=2000)
     def test_detection_result_invariants(self, data):
         """Property: Valid detection results should maintain invariants"""
-        assume(not any(np.isnan(v) for v in [data['toxicity_confidence'],
-                                            data['emotion_confidence'],
-                                            data['bullying_confidence']]))
+        assume(
+            not any(
+                np.isnan(v)
+                for v in [
+                    data["toxicity_confidence"],
+                    data["emotion_confidence"],
+                    data["bullying_confidence"],
+                ]
+            )
+        )
 
         result = DetectionResult(
-            text=data['text'],
-            toxicity_label=data['toxicity_label'],
-            toxicity_confidence=data['toxicity_confidence'],
-            emotion_label=data['emotion_label'],
-            emotion_confidence=data['emotion_confidence'],
-            bullying_label=data['bullying_label'],
-            bullying_confidence=data['bullying_confidence']
+            text=data["text"],
+            toxicity_label=data["toxicity_label"],
+            toxicity_confidence=data["toxicity_confidence"],
+            emotion_label=data["emotion_label"],
+            emotion_confidence=data["emotion_confidence"],
+            bullying_label=data["bullying_label"],
+            bullying_confidence=data["bullying_confidence"],
         )
 
         # Invariant: Confidence values should remain in [0, 1]
@@ -162,7 +160,7 @@ class TestPropertyBasedDetectionResult(unittest.TestCase):
         self.assertTrue(result.bullying_label >= 0)
 
         # Invariant: Text should be preserved
-        self.assertEqual(result.text, data['text'])
+        self.assertEqual(result.text, data["text"])
 
     @given(st.text())
     @settings(max_examples=50)
@@ -175,7 +173,7 @@ class TestPropertyBasedDetectionResult(unittest.TestCase):
             emotion_label=1,
             emotion_confidence=0.6,
             bullying_label=0,
-            bullying_confidence=0.2
+            bullying_confidence=0.2,
         )
 
         # Invariant: Text should be exactly preserved
@@ -184,14 +182,9 @@ class TestPropertyBasedDetectionResult(unittest.TestCase):
 
         # Invariant: Serialization should preserve text
         serialized = result.to_dict()
-        self.assertEqual(serialized['text'], text)
+        self.assertEqual(serialized["text"], text)
 
-    @given(
-        st.lists(st.floats(min_value=0.0,
-        max_value=1.0),
-        min_size=1,
-        max_size=100)
-    )
+    @given(st.lists(st.floats(min_value=0.0, max_value=1.0), min_size=1, max_size=100))
     @settings(max_examples=30)
     def test_batch_detection_results_properties(self, confidences):
         """Property: Batch operations should preserve individual properties"""
@@ -206,7 +199,7 @@ class TestPropertyBasedDetectionResult(unittest.TestCase):
                 emotion_label=i % 3,
                 emotion_confidence=conf * 0.8,
                 bullying_label=0,
-                bullying_confidence=conf * 0.3
+                bullying_confidence=conf * 0.3,
             )
             results.append(result)
 
@@ -228,7 +221,7 @@ class TestFallbackPropertyTesting(unittest.TestCase):
         edge_cases = [
             {"model_name": "a", "confidence_threshold": 0.0},
             {"model_name": "test-model-123", "confidence_threshold": 1.0},
-            {"model_name": "model/with/path", "confidence_threshold": 0.5}
+            {"model_name": "model/with/path", "confidence_threshold": 0.5},
         ]
 
         for case in edge_cases:
@@ -262,7 +255,7 @@ class TestFallbackPropertyTesting(unittest.TestCase):
                 emotion_label=0,
                 emotion_confidence=0.5,
                 bullying_label=0,
-                bullying_confidence=0.1
+                bullying_confidence=0.1,
             )
 
             # Verify invariants
@@ -282,28 +275,19 @@ class TestFallbackPropertyTesting(unittest.TestCase):
                 emotion_label=0,
                 emotion_confidence=confidence * 0.8,
                 bullying_label=0,
-                bullying_confidence=confidence * 0.3
+                bullying_confidence=confidence * 0.3,
             )
 
             # Test that confidence values are preserved accurately
-            self.assertAlmostEqual(
-                result.toxicity_confidence,
-                confidence,
-                places=7
-            )
+            self.assertAlmostEqual(result.toxicity_confidence, confidence, places=7)
 
             # Test serialization preserves precision
             serialized = result.to_dict()
-            self.assertAlmostEqual(
-                serialized['toxicity_confidence'],
-                confidence,
-                places=7
-            )
+            self.assertAlmostEqual(serialized["toxicity_confidence"], confidence, places=7)
 
     def test_concurrent_result_creation(self):
         """Test creating multiple results concurrently (simulated)"""
         import threading
-        import time
 
         results = []
         errors = []
@@ -317,7 +301,7 @@ class TestFallbackPropertyTesting(unittest.TestCase):
                     emotion_label=index % 3,
                     emotion_confidence=0.3 + (index % 70) / 100.0,
                     bullying_label=0,
-                    bullying_confidence=0.1 + (index % 30) / 100.0
+                    bullying_confidence=0.1 + (index % 30) / 100.0,
                 )
                 results.append(result)
             except Exception as e:
@@ -364,7 +348,7 @@ class TestInvariantValidation(unittest.TestCase):
                 emotion_label=2,
                 emotion_confidence=data["emo_conf"],
                 bullying_label=0,
-                bullying_confidence=0.1
+                bullying_confidence=0.1,
             )
 
             # Serialize to dict
@@ -372,10 +356,8 @@ class TestInvariantValidation(unittest.TestCase):
 
             # Verify critical data is preserved
             self.assertEqual(serialized["text"], original.text)
-            self.assertEqual(serialized["toxicity_"
-                "confidence"], original.toxicity_confidence)
-            self.assertEqual(serialized["emotion_c"
-                "onfidence"], original.emotion_confidence)
+            self.assertEqual(serialized["toxicity_" "confidence"], original.toxicity_confidence)
+            self.assertEqual(serialized["emotion_c" "onfidence"], original.emotion_confidence)
 
     def test_confidence_ordering_invariant(self):
         """Test that confidence relationships are preserved"""
@@ -386,25 +368,16 @@ class TestInvariantValidation(unittest.TestCase):
             emotion_label=1,
             emotion_confidence=0.5,
             bullying_label=0,
-            bullying_confidence=0.3
+            bullying_confidence=0.3,
         )
 
         # Invariant: If we know the ordering, it should be preserved
-        self.assertGreater(
-            base_result.toxicity_confidence,
-            base_result.emotion_confidence
-        )
-        self.assertGreater(
-            base_result.emotion_confidence,
-            base_result.bullying_confidence
-        )
+        self.assertGreater(base_result.toxicity_confidence, base_result.emotion_confidence)
+        self.assertGreater(base_result.emotion_confidence, base_result.bullying_confidence)
 
         # This should hold for serialized version too
         serialized = base_result.to_dict()
-        self.assertGreater(
-            serialized["toxicity_confidence"],
-            serialized["bullying_confidence"]
-        )
+        self.assertGreater(serialized["toxicity_confidence"], serialized["bullying_confidence"])
 
     def test_label_confidence_consistency(self):
         """Test consistency between labels and confidence values"""
@@ -417,7 +390,7 @@ class TestInvariantValidation(unittest.TestCase):
             emotion_label=2,
             emotion_confidence=0.85,
             bullying_label=0,
-            bullying_confidence=0.05
+            bullying_confidence=0.05,
         )
 
         # Just verify the structure is maintained
@@ -427,7 +400,7 @@ class TestInvariantValidation(unittest.TestCase):
         self.assertTrue(0.0 <= high_conf_result.toxicity_confidence <= 1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if HYPOTHESIS_AVAILABLE:
         print("Running property-based tests with Hypothesis")
     else:

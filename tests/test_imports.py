@@ -2,10 +2,9 @@
 Test critical module imports to verify dependency resolution.
 """
 
-import sys
 import importlib
-import traceback
-from typing import Dict, List, Tuple
+import sys
+from typing import Dict, Tuple
 
 
 def test_critical_imports() -> Dict[str, Tuple[bool, str]]:
@@ -69,7 +68,7 @@ def test_pydantic_v2_compatibility():
     """Test Pydantic V2 compatibility specifically."""
     try:
         import pydantic
-        from pydantic import BaseModel, Field, ConfigDict
+        from pydantic import BaseModel, ConfigDict, Field
         from pydantic_settings import BaseSettings
 
         # Test basic V2 model
@@ -87,8 +86,8 @@ def test_pydantic_v2_compatibility():
             port: int = 8000
 
         # Test instantiation
-        model = TestModel(name="test", value=42)
-        settings = TestSettings()
+        TestModel(name="test", value=42)
+        TestSettings()
 
         return True, f"Pydantic V2 OK - version: {pydantic.__version__}"
 
@@ -115,9 +114,7 @@ def main():
         if success:
             success_count += 1
 
-    print(
-        f"\n[STATS] Import Results: {success_count}/{total_count} modules imported successfully"
-    )
+    print(f"\n[STATS] Import Results: {success_count}/{total_count} modules imported successfully")
 
     # Test Pydantic V2 compatibility
     print("\n[INFO] Testing Pydantic V2 Compatibility...")

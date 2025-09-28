@@ -3,41 +3,25 @@
 支援多 GPU、混合精度訓練、記憶體優化和錯誤恢復
 """
 
-import os
 import gc
-import time
-import json
 import logging
-import warnings
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple, Union
-from dataclasses import asdict
+import time
+from typing import Any, Dict, Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, DistributedSampler
-from torch.optim import AdamW, Adam
-from torch.optim.lr_scheduler import (
-    CosineAnnealingLR, LinearLR,
-    PolynomialLR, SequentialLR
-)
+from sklearn.metrics import f1_score
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn.parallel import DistributedDataParallel as DDP
-
-import numpy as np
+from torch.optim import Adam, AdamW
+from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from sklearn.metrics import f1_score, precision_recall_fscore_support
-from transformers import (
-    AutoTokenizer, AutoModel,
-    get_linear_schedule_with_warmup,
-    get_cosine_schedule_with_warmup
-)
+from transformers import (get_cosine_schedule_with_warmup,
+                          get_linear_schedule_with_warmup)
 
+from .checkpoint_manager import CheckpointManager
 from .config import TrainingPipelineConfig
 from .monitor import TrainingMonitor
-from .checkpoint_manager import CheckpointManager
-from ..models.multitask import MultiTaskBullyingDetector
 
 
 class MemoryOptimizer:
@@ -67,10 +51,12 @@ class MemoryOptimizer:
 
         if torch.cuda.is_available():
             device = torch.cuda.current_device()
-            info['gpu_allocated'] = torch.cuda.memory_allocated(device) / (1024**3)
-            info['gpu_reserved'] = torch.cuda.memory_reserved(device) / (1024**3)
-            info['gpu_free'] = (torch.cuda.get_device_properties(device).total_memory -
-                              torch.cuda.memory_reserved(device)) / (1024**3)
+            info["gpu_allocated"] = torch.cuda.memory_allocated(device) / (1024**3)
+            info["gpu_reserved"] = torch.cuda.memory_reserved(device) / (1024**3)
+            info["gpu_free"] = (
+                torch.cuda.get_device_properties(device).total_memory
+                - torch.cuda.memory_reserved(device)
+            ) / (1024**3)
 
         return info
 
@@ -92,20 +78,14 @@ class DynamicBatchSizer:
 
         if oom_occurred:
             # OOM 發生時降低批次大小
-            self.current_batch_size = max(
-                self.min_batch_size,
-                self.current_batch_size // 2
-            )
+            self.current_batch_size = max(self.min_batch_size, self.current_batch_size // 2)
             self.last_oom_step = step
             logging.warning(f"OOM detected, reducing batch size to {self.current_batch_size}")
 
         elif step - self.last_oom_step > 1000:
             # 穩定運行一段時間後嘗試增加批次大小
             if self.current_batch_size < self.max_batch_size:
-                self.current_batch_size = min(
-                    self.max_batch_size,
-                    self.current_batch_size + 1
-                )
+                self.current_batch_size = min(self.max_batch_size, self.current_batch_size + 1)
 
         return self.current_batch_size
 
@@ -121,12 +101,7 @@ class TrainingTracker:
 
     def update_metrics(self, step: int, metrics: Dict[str, float], phase: str = "train"):
         """更新指標"""
-        timestamped_metrics = {
-            "step": step,
-            "phase": phase,
-            "timestamp": time.time(),
-            **metrics
-        }
+        timestamped_metrics = {"step": step, "phase": phase, "timestamp": time.time(), **metrics}
         self.metrics_history.append(timestamped_metrics)
 
         # 更新最佳指標
@@ -134,8 +109,7 @@ class TrainingTracker:
             metric_name = self.config.training.metric_for_best_model
             if metric_name in metrics:
                 is_better = self._is_metric_better(
-                    metrics[metric_name],
-                    self.best_metrics.get(metric_name, float('-inf'))
+                    metrics[metric_name], self.best_metrics.get(metric_name, float("-inf"))
                 )
 
                 if is_better:
@@ -154,16 +128,14 @@ class TrainingTracker:
         if not self.config.training.early_stopping:
             return False
 
-        eval_metrics = [m for m in self.metrics_history[-patience:]
-                       if m["phase"] == "eval"]
+        eval_metrics = [m for m in self.metrics_history[-patience:] if m["phase"] == "eval"]
 
         if len(eval_metrics) < patience:
             return False
 
         # 檢查是否在耐心期內沒有改善
         metric_name = self.config.training.metric_for_best_model
-        recent_best = max(m[metric_name] for m in eval_metrics
-                         if metric_name in m)
+        recent_best = max(m[metric_name] for m in eval_metrics if metric_name in m)
 
         threshold = self.config.training.early_stopping_threshold
         improvement = recent_best - self.best_metrics.get(metric_name, 0)
@@ -174,12 +146,14 @@ class TrainingTracker:
 class MultitaskTrainer:
     """多任務訓練器"""
 
-    def __init__(self,
-                 config: TrainingPipelineConfig,
-                 model: nn.Module,
-                 train_dataloader: DataLoader,
-                 eval_dataloader: DataLoader,
-                 device: Optional[torch.device] = None):
+    def __init__(
+        self,
+        config: TrainingPipelineConfig,
+        model: nn.Module,
+        train_dataloader: DataLoader,
+        eval_dataloader: DataLoader,
+        device: Optional[torch.device] = None,
+    ):
 
         self.config = config
         self.model = model
@@ -235,11 +209,8 @@ class MultitaskTrainer:
             device = torch.device("cuda:0")
 
         # 設置記憶體配置
-        if hasattr(torch.cuda, 'set_memory_fraction'):
-            torch.cuda.set_memory_fraction(
-                self.config.resources.gpu_memory_fraction,
-                device.index
-            )
+        if hasattr(torch.cuda, "set_memory_fraction"):
+            torch.cuda.set_memory_fraction(self.config.resources.gpu_memory_fraction, device.index)
 
         logging.info(f"使用設備: {device}")
         return device
@@ -252,13 +223,17 @@ class MultitaskTrainer:
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in self.model.named_parameters()
-                          if not any(nd in n for nd in no_decay)],
+                "params": [
+                    p
+                    for n, p in self.model.named_parameters()
+                    if not any(nd in n for nd in no_decay)
+                ],
                 "weight_decay": opt_config.weight_decay,
             },
             {
-                "params": [p for n, p in self.model.named_parameters()
-                          if any(nd in n for nd in no_decay)],
+                "params": [
+                    p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)
+                ],
                 "weight_decay": 0.0,
             },
         ]
@@ -268,14 +243,14 @@ class MultitaskTrainer:
                 optimizer_grouped_parameters,
                 lr=opt_config.lr,
                 eps=opt_config.eps,
-                betas=opt_config.betas
+                betas=opt_config.betas,
             )
         elif opt_config.name.lower() == "adam":
             optimizer = Adam(
                 optimizer_grouped_parameters,
                 lr=opt_config.lr,
                 eps=opt_config.eps,
-                betas=opt_config.betas
+                betas=opt_config.betas,
             )
         else:
             raise ValueError(f"不支持的優化器: {opt_config.name}")
@@ -292,9 +267,9 @@ class MultitaskTrainer:
 
         # 計算總步數
         num_training_steps = (
-            len(self.train_dataloader) *
-            training_config.num_epochs //
-            self.config.data.gradient_accumulation_steps
+            len(self.train_dataloader)
+            * training_config.num_epochs
+            // self.config.data.gradient_accumulation_steps
         )
 
         # 熱身步數
@@ -309,14 +284,14 @@ class MultitaskTrainer:
                 num_warmup_steps=warmup_steps,
                 num_training_steps=num_training_steps,
                 num_cycles=1,
-                last_epoch=-1
+                last_epoch=-1,
             )
         elif opt_config.scheduler_type == "linear":
             scheduler = get_linear_schedule_with_warmup(
                 self.optimizer,
                 num_warmup_steps=warmup_steps,
                 num_training_steps=num_training_steps,
-                last_epoch=-1
+                last_epoch=-1,
             )
         else:
             raise ValueError(f"不支持的調度器: {opt_config.scheduler_type}")
@@ -327,13 +302,13 @@ class MultitaskTrainer:
         """設置日誌"""
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.StreamHandler(),
                 logging.FileHandler(
                     f"{self.config.log_dir}/training_{self.config.experiment.name}.log"
-                )
-            ]
+                ),
+            ],
         )
 
     def train(self) -> Dict[str, Any]:
@@ -358,7 +333,7 @@ class MultitaskTrainer:
                 self.current_epoch = epoch
 
                 # 訓練一個 epoch
-                train_metrics = self._train_epoch()
+                self._train_epoch()
 
                 # 評估
                 if self._should_evaluate():
@@ -366,18 +341,19 @@ class MultitaskTrainer:
                     self.tracker.update_metrics(self.global_step, eval_metrics, "eval")
 
                     # 檢查早停
-                    if self.tracker.should_stop_early(
-                        self.config.training.early_stopping_patience
-                    ):
+                    if self.tracker.should_stop_early(self.config.training.early_stopping_patience):
                         logging.info(f"Early stopping at epoch {epoch}")
                         break
 
                 # 保存檢查點
                 if self._should_save():
                     self.checkpoint_manager.save_checkpoint(
-                        epoch, self.global_step, self.model,
-                        self.optimizer, self.scheduler,
-                        self.tracker.best_metrics
+                        epoch,
+                        self.global_step,
+                        self.model,
+                        self.optimizer,
+                        self.scheduler,
+                        self.tracker.best_metrics,
                     )
 
             # 載入最佳模型
@@ -392,7 +368,7 @@ class MultitaskTrainer:
                 "best_metrics": self.tracker.best_metrics,
                 "final_metrics": final_eval_metrics,
                 "total_steps": self.global_step,
-                "epochs_completed": self.current_epoch + 1
+                "epochs_completed": self.current_epoch + 1,
             }
 
         except KeyboardInterrupt:
@@ -400,8 +376,7 @@ class MultitaskTrainer:
             self.is_training_interrupted = True
             # 保存當前狀態
             self.checkpoint_manager.save_checkpoint(
-                self.current_epoch, self.global_step, self.model,
-                self.optimizer, self.scheduler, {}
+                self.current_epoch, self.global_step, self.model, self.optimizer, self.scheduler, {}
             )
             raise
 
@@ -409,8 +384,13 @@ class MultitaskTrainer:
             logging.error(f"訓練過程中發生錯誤: {e}")
             # 保存錯誤狀態
             self.checkpoint_manager.save_checkpoint(
-                self.current_epoch, self.global_step, self.model,
-                self.optimizer, self.scheduler, {}, is_error=True
+                self.current_epoch,
+                self.global_step,
+                self.model,
+                self.optimizer,
+                self.scheduler,
+                {},
+                is_error=True,
             )
             raise
 
@@ -420,16 +400,16 @@ class MultitaskTrainer:
         epoch_metrics = {"loss": 0.0, "count": 0}
 
         # 分佈式訓練時設置 epoch
-        if hasattr(self.train_dataloader.sampler, 'set_epoch'):
+        if hasattr(self.train_dataloader.sampler, "set_epoch"):
             self.train_dataloader.sampler.set_epoch(self.current_epoch)
 
         progress_bar = tqdm(
             self.train_dataloader,
             desc=f"Epoch {self.current_epoch}",
-            disable=self.config.resources.local_rank > 0
+            disable=self.config.resources.local_rank > 0,
         )
 
-        for step, batch in enumerate(progress_bar):
+        for _step, batch in enumerate(progress_bar):
             try:
                 # 動態調整批次大小
                 current_batch_size = self.batch_sizer.adjust_batch_size(self.global_step)
@@ -449,11 +429,13 @@ class MultitaskTrainer:
                 self.memory_optimizer.optimize_memory(self.global_step)
 
                 # 更新進度條
-                progress_bar.set_postfix({
-                    "loss": f"{loss:.4f}",
-                    "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}",
-                    "step": self.global_step
-                })
+                progress_bar.set_postfix(
+                    {
+                        "loss": f"{loss:.4f}",
+                        "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}",
+                        "step": self.global_step,
+                    }
+                )
 
                 self.global_step += 1
 
@@ -480,8 +462,9 @@ class MultitaskTrainer:
     def _training_step(self, batch: Dict[str, torch.Tensor]) -> float:
         """執行單個訓練步"""
         # 移動數據到設備
-        batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                for k, v in batch.items()}
+        batch = {
+            k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()
+        }
 
         # 前向傳播
         if self.use_amp:
@@ -509,8 +492,7 @@ class MultitaskTrainer:
             # 梯度裁剪
             if self.config.training.max_grad_norm > 0:
                 torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(),
-                    self.config.training.max_grad_norm
+                    self.model.parameters(), self.config.training.max_grad_norm
                 )
 
             if self.use_amp:
@@ -535,8 +517,10 @@ class MultitaskTrainer:
 
         with torch.no_grad():
             for batch in tqdm(self.eval_dataloader, desc="Evaluating"):
-                batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                        for k, v in batch.items()}
+                batch = {
+                    k: v.to(self.device) if isinstance(v, torch.Tensor) else v
+                    for k, v in batch.items()
+                }
 
                 if self.use_amp:
                     with autocast():
@@ -564,18 +548,18 @@ class MultitaskTrainer:
         # 計算各任務的 F1 分數
         for task in all_predictions.keys():
             if all_predictions[task] and all_labels[task]:
-                f1_macro = f1_score(all_labels[task], all_predictions[task], average='macro')
-                f1_micro = f1_score(all_labels[task], all_predictions[task], average='micro')
+                f1_macro = f1_score(all_labels[task], all_predictions[task], average="macro")
+                f1_micro = f1_score(all_labels[task], all_predictions[task], average="micro")
                 eval_metrics[f"eval_{task}_f1_macro"] = f1_macro
                 eval_metrics[f"eval_{task}_f1_micro"] = f1_micro
 
         # 計算整體 F1（主要任務權重更高）
         if all_predictions["toxicity"] and all_predictions["bullying"]:
             overall_f1 = (
-                eval_metrics.get("eval_toxicity_f1_macro", 0) * 0.4 +
-                eval_metrics.get("eval_bullying_f1_macro", 0) * 0.4 +
-                eval_metrics.get("eval_emotion_f1_macro", 0) * 0.1 +
-                eval_metrics.get("eval_role_f1_macro", 0) * 0.1
+                eval_metrics.get("eval_toxicity_f1_macro", 0) * 0.4
+                + eval_metrics.get("eval_bullying_f1_macro", 0) * 0.4
+                + eval_metrics.get("eval_emotion_f1_macro", 0) * 0.1
+                + eval_metrics.get("eval_role_f1_macro", 0) * 0.1
             )
             eval_metrics["eval_f1_macro"] = overall_f1
 
@@ -596,9 +580,9 @@ class MultitaskTrainer:
         """記錄訓練步驟"""
         metrics = {
             "train_loss": loss,
-            "learning_rate": self.optimizer.param_groups[0]['lr'],
+            "learning_rate": self.optimizer.param_groups[0]["lr"],
             "batch_size": batch_size,
-            "epoch": self.current_epoch
+            "epoch": self.current_epoch,
         }
 
         # 添加記憶體信息
@@ -619,14 +603,16 @@ class MultitaskTrainer:
             )
 
 
-def create_trainer(config: TrainingPipelineConfig,
-                  model: nn.Module,
-                  train_dataloader: DataLoader,
-                  eval_dataloader: DataLoader) -> MultitaskTrainer:
+def create_trainer(
+    config: TrainingPipelineConfig,
+    model: nn.Module,
+    train_dataloader: DataLoader,
+    eval_dataloader: DataLoader,
+) -> MultitaskTrainer:
     """創建訓練器的工廠函數"""
     return MultitaskTrainer(
         config=config,
         model=model,
         train_dataloader=train_dataloader,
-        eval_dataloader=eval_dataloader
+        eval_dataloader=eval_dataloader,
     )

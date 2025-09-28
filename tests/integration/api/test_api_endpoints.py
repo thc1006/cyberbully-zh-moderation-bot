@@ -10,7 +10,7 @@ API 端點整合測試
 
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
 import httpx
 import pytest
@@ -166,9 +166,7 @@ class TestAPIAnalyze:
         for category, score_dict in scores.items():
             if isinstance(score_dict, dict):
                 total = sum(score_dict.values())
-                assert (
-                    0.99 <= total <= 1.01
-                ), f"{category} scores don't sum to 1: {total}"
+                assert 0.99 <= total <= 1.01, f"{category} scores don't sum to 1: {total}"
 
         # 驗證可解釋性資料
         explanations = data["explanations"]
@@ -189,7 +187,7 @@ class TestAPIRateLimit:
 
         # 快速發送多個請求
         tasks = []
-        for i in range(35):  # 超過 30/分鐘 的限制
+        for _i in range(35):  # 超過 30/分鐘 的限制
             task = http_client.post(f"{api_server}/analyze", json=payload)
             tasks.append(task)
 
@@ -264,9 +262,7 @@ class TestAPIErrorHandling:
 class TestAPIStressTest:
     """API 壓力測試"""
 
-    async def test_concurrent_requests(
-        self, api_server, http_client, performance_monitor
-    ):
+    async def test_concurrent_requests(self, api_server, http_client, performance_monitor):
         """測試併發請求處理"""
         payload = {"text": "併發測試訊息"}
         concurrent_requests = 10
@@ -281,9 +277,7 @@ class TestAPIStressTest:
 
         # 驗證所有請求都成功
         for i, response in enumerate(responses):
-            assert (
-                response.status_code == 200
-            ), f"Request {i} failed: {response.status_code}"
+            assert response.status_code == 200, f"Request {i} failed: {response.status_code}"
 
         # 驗證回應時間合理
         metrics = await monitor
@@ -302,7 +296,7 @@ class TestAPIStressTest:
         # 執行多個請求
         payload = {"text": "記憶體測試訊息 " * 50}  # 較長的文本
 
-        for i in range(20):
+        for _i in range(20):
             response = await http_client.post(f"{api_server}/analyze", json=payload)
             assert response.status_code == 200
 
@@ -323,9 +317,7 @@ class TestAPILogging:
         """測試隱私保護日誌記錄"""
         # 包含個人資訊的文本
         sensitive_text = (
-            "我的電話是 0912345678，"
-            "信用卡號碼是 1234-5678-9012-3456，"
-            "身分證號碼是 A123456789"
+            "我的電話是 0912345678，" "信用卡號碼是 1234-5678-9012-3456，" "身分證號碼是 A123456789"
         )
 
         payload = {"text": sensitive_text}

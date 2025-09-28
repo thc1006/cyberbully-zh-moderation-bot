@@ -45,9 +45,7 @@ class ArbiterConfig:
             burst_size=int(os.getenv("PERSPECTIVE_BURST_SIZE", "5")),
             timeout_seconds=float(os.getenv("PERSPECTIVE_TIMEOUT", "30.0")),
             max_retries=int(os.getenv("PERSPECTIVE_MAX_RETRIES", "3")),
-            enable_caching=(
-                os.getenv("PERSPECTIVE_ENABLE_CACHE", "true").lower() == "true"
-            ),
+            enable_caching=(os.getenv("PERSPECTIVE_ENABLE_CACHE", "true").lower() == "true"),
             cache_ttl_hours=int(os.getenv("PERSPECTIVE_CACHE_TTL", "24")),
         )
 
@@ -56,12 +54,8 @@ class ArbiterConfig:
             uncertainty_threshold=float(os.getenv("UNCERTAINTY_THRESHOLD", "0.4")),
             confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.6")),
             min_confidence_gap=float(os.getenv("MIN_CONFIDENCE_GAP", "0.1")),
-            enable_context_check=(
-                os.getenv("ENABLE_CONTEXT_CHECK", "true").lower() == "true"
-            ),
-            conflict_detection=(
-                os.getenv("CONFLICT_DETECTION", "true").lower() == "true"
-            ),
+            enable_context_check=(os.getenv("ENABLE_CONTEXT_CHECK", "true").lower() == "true"),
+            conflict_detection=(os.getenv("CONFLICT_DETECTION", "true").lower() == "true"),
         )
 
     def is_perspective_enabled(self) -> bool:

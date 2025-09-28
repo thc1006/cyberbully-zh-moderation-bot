@@ -2,18 +2,19 @@
 Active Learning Loop Implementation
 """
 
-import os
 import json
+import logging
+import os
 import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple, Callable
+from typing import Any, Callable, Dict, List
+
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader, ConcatDataset
-import logging
+from torch.utils.data import Dataset
 
 from .active_learner import CyberPuppyActiveLearner
-from .annotator import InteractiveAnnotator, BatchAnnotator
+from .annotator import BatchAnnotator, InteractiveAnnotator
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +24,19 @@ class ActiveLearningLoop:
     Main active learning loop orchestrating the entire process
     """
 
-    def __init__(self,
-                 active_learner: CyberPuppyActiveLearner,
-                 annotator: InteractiveAnnotator,
-                 train_function: Callable,
-                 initial_labeled_data: Dataset,
-                 unlabeled_pool: Dataset,
-                 test_data: Dataset,
-                 test_labels: List[int],
-                 samples_per_iteration: int = 20,
-                 max_iterations: int = 50,
-                 evaluation_frequency: int = 1):
+    def __init__(
+        self,
+        active_learner: CyberPuppyActiveLearner,
+        annotator: InteractiveAnnotator,
+        train_function: Callable,
+        initial_labeled_data: Dataset,
+        unlabeled_pool: Dataset,
+        test_data: Dataset,
+        test_labels: List[int],
+        samples_per_iteration: int = 20,
+        max_iterations: int = 50,
+        evaluation_frequency: int = 1,
+    ):
         """
         Initialize active learning loop
 
@@ -66,7 +69,9 @@ class ActiveLearningLoop:
         self.selected_indices_history = []
         self.loop_start_time = None
 
-        logger.info(f"Initialized ActiveLearningLoop with {len(initial_labeled_data)} initial samples")
+        logger.info(
+            f"Initialized ActiveLearningLoop with {len(initial_labeled_data)} initial samples"
+        )
 
     def run(self, interactive: bool = True, auto_train: bool = True) -> Dict[str, Any]:
         """
@@ -101,7 +106,9 @@ class ActiveLearningLoop:
 
                 # Step 3: Annotate samples
                 if interactive:
-                    annotations = self._interactive_annotation(samples_to_annotate, selected_indices)
+                    annotations = self._interactive_annotation(
+                        samples_to_annotate, selected_indices
+                    )
                 else:
                     annotations = self._mock_annotation(samples_to_annotate, selected_indices)
 
@@ -133,7 +140,9 @@ class ActiveLearningLoop:
                 self.active_learner.next_iteration()
 
                 iteration_time = time.time() - iteration_start_time
-                logger.info(f"Iteration {self.active_learner.iteration} completed in {iteration_time:.2f}s")
+                logger.info(
+                    f"Iteration {self.active_learner.iteration} completed in {iteration_time:.2f}s"
+                )
 
         except KeyboardInterrupt:
             logger.info("Active learning loop interrupted by user")
@@ -154,13 +163,14 @@ class ActiveLearningLoop:
 
         # Create subset of unlabeled data from remaining indices
         from torch.utils.data import Subset
+
         remaining_unlabeled_data = Subset(self.unlabeled_pool, self.remaining_unlabeled_indices)
 
         # Select samples using active learner
         selected_sub_indices = self.active_learner.select_samples_for_annotation(
             remaining_unlabeled_data,
             min(self.samples_per_iteration, len(self.remaining_unlabeled_indices)),
-            self.current_labeled_data
+            self.current_labeled_data,
         )
 
         # Map back to original indices
@@ -191,16 +201,16 @@ class ActiveLearningLoop:
                     # Get model prediction for this sample
                     predictions = self._get_model_predictions([sample])
                     sample_dict = {
-                        'text': sample.get('text', sample.get('input_ids', '')),
-                        'metadata': sample.get('metadata', {}),
-                        'predictions': predictions[0] if predictions else {}
+                        "text": sample.get("text", sample.get("input_ids", "")),
+                        "metadata": sample.get("metadata", {}),
+                        "predictions": predictions[0] if predictions else {},
                     }
             except Exception as e:
                 logger.warning(f"Could not get predictions for sample {idx}: {e}")
                 sample_dict = {
-                    'text': sample.get('text', sample.get('input_ids', '')),
-                    'metadata': sample.get('metadata', {}),
-                    'predictions': {}
+                    "text": sample.get("text", sample.get("input_ids", "")),
+                    "metadata": sample.get("metadata", {}),
+                    "predictions": {},
                 }
 
             samples.append(sample_dict)
@@ -213,14 +223,14 @@ class ActiveLearningLoop:
 
         self.active_learner.model.eval()
         with torch.no_grad():
-            for sample in samples:
+            for _sample in samples:
                 try:
                     # This would need to be adapted based on your specific model interface
                     # For now, returning mock predictions
                     pred = {
-                        'toxicity': {'label': 'none', 'confidence': 0.5},
-                        'bullying': {'label': 'none', 'confidence': 0.5},
-                        'emotion': {'label': 'neutral', 'confidence': 0.5}
+                        "toxicity": {"label": "none", "confidence": 0.5},
+                        "bullying": {"label": "none", "confidence": 0.5},
+                        "emotion": {"label": "neutral", "confidence": 0.5},
                     }
                     predictions.append(pred)
                 except Exception as e:
@@ -229,9 +239,9 @@ class ActiveLearningLoop:
 
         return predictions
 
-    def _interactive_annotation(self,
-                               samples: List[Dict[str, Any]],
-                               selected_indices: List[int]) -> List[Dict[str, Any]]:
+    def _interactive_annotation(
+        self, samples: List[Dict[str, Any]], selected_indices: List[int]
+    ) -> List[Dict[str, Any]]:
         """Perform interactive annotation"""
         logger.info("Starting interactive annotation session")
 
@@ -241,32 +251,34 @@ class ActiveLearningLoop:
 
         # Validate annotations
         validation_results = self.annotator.validate_annotations(annotations)
-        if validation_results['issues']:
+        if validation_results["issues"]:
             logger.warning(f"Annotation validation issues: {len(validation_results['issues'])}")
 
         return annotations
 
-    def _mock_annotation(self,
-                        samples: List[Dict[str, Any]],
-                        selected_indices: List[int]) -> List[Dict[str, Any]]:
+    def _mock_annotation(
+        self, samples: List[Dict[str, Any]], selected_indices: List[int]
+    ) -> List[Dict[str, Any]]:
         """Generate mock annotations for testing"""
         logger.info("Generating mock annotations")
 
         annotations = []
-        for i, (sample, idx) in enumerate(zip(samples, selected_indices)):
+        for _i, (sample, idx) in enumerate(zip(samples, selected_indices)):
             # Generate random but realistic annotations
             annotation = {
-                'original_index': idx,
-                'text': sample.get('text', ''),
-                'timestamp': datetime.now().isoformat(),
-                'annotator': 'mock',
-                'toxicity': np.random.choice(['none', 'toxic', 'severe'], p=[0.7, 0.25, 0.05]),
-                'bullying': np.random.choice(['none', 'harassment', 'threat'], p=[0.8, 0.15, 0.05]),
-                'role': np.random.choice(['none', 'perpetrator', 'victim', 'bystander'], p=[0.7, 0.1, 0.1, 0.1]),
-                'emotion': np.random.choice(['negative', 'neutral', 'positive'], p=[0.3, 0.5, 0.2]),
-                'emotion_strength': np.random.randint(0, 5),
-                'confidence': np.random.uniform(0.6, 1.0),
-                'comments': ''
+                "original_index": idx,
+                "text": sample.get("text", ""),
+                "timestamp": datetime.now().isoformat(),
+                "annotator": "mock",
+                "toxicity": np.random.choice(["none", "toxic", "severe"], p=[0.7, 0.25, 0.05]),
+                "bullying": np.random.choice(["none", "harassment", "threat"], p=[0.8, 0.15, 0.05]),
+                "role": np.random.choice(
+                    ["none", "perpetrator", "victim", "bystander"], p=[0.7, 0.1, 0.1, 0.1]
+                ),
+                "emotion": np.random.choice(["negative", "neutral", "positive"], p=[0.3, 0.5, 0.2]),
+                "emotion_strength": np.random.randint(0, 5),
+                "confidence": np.random.uniform(0.6, 1.0),
+                "comments": "",
             }
             annotations.append(annotation)
 
@@ -290,7 +302,7 @@ class ActiveLearningLoop:
             training_results = self.train_function(
                 self.current_labeled_data,
                 model=self.active_learner.model,
-                device=self.active_learner.device
+                device=self.active_learner.device,
             )
             logger.info(f"Training completed: {training_results}")
 
@@ -300,16 +312,14 @@ class ActiveLearningLoop:
 
     def _evaluate_model(self) -> Dict[str, float]:
         """Evaluate the model on test data"""
-        return self.active_learner.evaluate_model(
-            self.test_data, self.test_labels, task='toxicity'
-        )
+        return self.active_learner.evaluate_model(self.test_data, self.test_labels, task="toxicity")
 
     def _check_stopping_criteria(self) -> bool:
         """Check if active learning should stop"""
         if not self.active_learner.performance_history:
             return False
 
-        current_f1 = self.active_learner.performance_history[-1]['metrics']['f1_macro']
+        current_f1 = self.active_learner.performance_history[-1]["metrics"]["f1_macro"]
         return self.active_learner.check_stopping_criteria(current_f1)
 
     def _save_checkpoint(self):
@@ -318,18 +328,17 @@ class ActiveLearningLoop:
 
         # Save loop-specific state
         loop_state = {
-            'iteration': self.active_learner.iteration,
-            'remaining_unlabeled_indices': self.remaining_unlabeled_indices,
-            'selected_indices_history': self.selected_indices_history,
-            'loop_start_time': self.loop_start_time
+            "iteration": self.active_learner.iteration,
+            "remaining_unlabeled_indices": self.remaining_unlabeled_indices,
+            "selected_indices_history": self.selected_indices_history,
+            "loop_start_time": self.loop_start_time,
         }
 
         checkpoint_path = os.path.join(
-            self.active_learner.save_dir,
-            f'loop_state_iter_{self.active_learner.iteration}.json'
+            self.active_learner.save_dir, f"loop_state_iter_{self.active_learner.iteration}.json"
         )
 
-        with open(checkpoint_path, 'w') as f:
+        with open(checkpoint_path, "w") as f:
             json.dump(loop_state, f, indent=2)
 
     def _should_stop(self) -> bool:
@@ -356,26 +365,32 @@ class ActiveLearningLoop:
         total_time = time.time() - self.loop_start_time if self.loop_start_time else 0
 
         results = {
-            'total_iterations': self.active_learner.iteration,
-            'total_annotations': self.active_learner.total_annotations,
-            'total_time_seconds': total_time,
-            'annotations_per_hour': (self.active_learner.total_annotations / (total_time / 3600))
-                                   if total_time > 0 else 0,
-            'final_performance': (self.active_learner.performance_history[-1]['metrics']
-                                if self.active_learner.performance_history else {}),
-            'performance_history': self.active_learner.get_learning_curve_data(),
-            'annotation_statistics': self.active_learner.get_annotation_statistics(),
-            'status_summary': self.active_learner.get_status_summary(),
-            'remaining_unlabeled_samples': len(self.remaining_unlabeled_indices)
+            "total_iterations": self.active_learner.iteration,
+            "total_annotations": self.active_learner.total_annotations,
+            "total_time_seconds": total_time,
+            "annotations_per_hour": (
+                (self.active_learner.total_annotations / (total_time / 3600))
+                if total_time > 0
+                else 0
+            ),
+            "final_performance": (
+                self.active_learner.performance_history[-1]["metrics"]
+                if self.active_learner.performance_history
+                else {}
+            ),
+            "performance_history": self.active_learner.get_learning_curve_data(),
+            "annotation_statistics": self.active_learner.get_annotation_statistics(),
+            "status_summary": self.active_learner.get_status_summary(),
+            "remaining_unlabeled_samples": len(self.remaining_unlabeled_indices),
         }
 
         # Save final results
         results_path = os.path.join(
             self.active_learner.save_dir,
-            f'final_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+            f'final_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
         )
 
-        with open(results_path, 'w') as f:
+        with open(results_path, "w") as f:
             json.dump(results, f, indent=2)
 
         logger.info(f"Final results saved to {results_path}")
@@ -385,30 +400,34 @@ class ActiveLearningLoop:
     def resume_from_checkpoint(self, checkpoint_dir: str, iteration: int):
         """Resume active learning from a checkpoint"""
         # Load active learner checkpoint
-        al_checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_iter_{iteration}.pkl')
+        al_checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_iter_{iteration}.pkl")
         self.active_learner.load_checkpoint(al_checkpoint_path)
 
         # Load loop state
-        loop_checkpoint_path = os.path.join(checkpoint_dir, f'loop_state_iter_{iteration}.json')
-        with open(loop_checkpoint_path, 'r') as f:
+        loop_checkpoint_path = os.path.join(checkpoint_dir, f"loop_state_iter_{iteration}.json")
+        with open(loop_checkpoint_path, "r") as f:
             loop_state = json.load(f)
 
-        self.remaining_unlabeled_indices = loop_state['remaining_unlabeled_indices']
-        self.selected_indices_history = loop_state['selected_indices_history']
-        self.loop_start_time = loop_state['loop_start_time']
+        self.remaining_unlabeled_indices = loop_state["remaining_unlabeled_indices"]
+        self.selected_indices_history = loop_state["selected_indices_history"]
+        self.loop_start_time = loop_state["loop_start_time"]
 
         logger.info(f"Resumed active learning from iteration {iteration}")
 
     def get_progress_summary(self) -> Dict[str, Any]:
         """Get current progress summary"""
         return {
-            'current_iteration': self.active_learner.iteration,
-            'total_annotations': self.active_learner.total_annotations,
-            'remaining_budget': self.active_learner.max_budget - self.active_learner.total_annotations,
-            'remaining_unlabeled': len(self.remaining_unlabeled_indices),
-            'current_performance': (self.active_learner.performance_history[-1]['metrics']
-                                  if self.active_learner.performance_history else {}),
-            'elapsed_time': time.time() - self.loop_start_time if self.loop_start_time else 0
+            "current_iteration": self.active_learner.iteration,
+            "total_annotations": self.active_learner.total_annotations,
+            "remaining_budget": self.active_learner.max_budget
+            - self.active_learner.total_annotations,
+            "remaining_unlabeled": len(self.remaining_unlabeled_indices),
+            "current_performance": (
+                self.active_learner.performance_history[-1]["metrics"]
+                if self.active_learner.performance_history
+                else {}
+            ),
+            "elapsed_time": time.time() - self.loop_start_time if self.loop_start_time else 0,
         }
 
 
@@ -427,16 +446,16 @@ class BatchActiveLearningLoop(ActiveLearningLoop):
         self.batch_size = batch_size
         self.batch_annotator = BatchAnnotator(self.annotator)
 
-    def _interactive_annotation(self,
-                               samples: List[Dict[str, Any]],
-                               selected_indices: List[int]) -> List[Dict[str, Any]]:
+    def _interactive_annotation(
+        self, samples: List[Dict[str, Any]], selected_indices: List[int]
+    ) -> List[Dict[str, Any]]:
         """Perform batch interactive annotation"""
         logger.info(f"Starting batch annotation session with {len(samples)} samples")
 
         # Combine samples with indices for batch processing
         sample_data = []
         for sample, idx in zip(samples, selected_indices):
-            sample['original_index'] = idx
+            sample["original_index"] = idx
             sample_data.append(sample)
 
         annotations = self.batch_annotator.process_batch(

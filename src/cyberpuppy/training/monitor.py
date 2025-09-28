@@ -3,35 +3,34 @@ CyberPuppy 實時訓練監控器
 提供美觀的實時訓練進度顯示，支援 GPU 記憶體監控、最佳模型追蹤等功能
 """
 
+import json
 import os
+import platform
 import sys
 import time
-import json
-import platform
-import threading
+from collections import deque
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, Tuple
-from dataclasses import dataclass, asdict
-from collections import deque, defaultdict
+from typing import Dict, Optional, Union
 
-import torch
 import numpy as np
+import torch
 
 # Rich imports with fallback
 try:
+    from rich import box
+    from rich.align import Align
     from rich.console import Console
-    from rich.progress import (
-        Progress, BarColumn, TextColumn, TimeRemainingColumn,
-        MofNCompleteColumn, SpinnerColumn, TaskProgressColumn
-    )
-    from rich.table import Table
-    from rich.panel import Panel
     from rich.layout import Layout
     from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (BarColumn, MofNCompleteColumn, Progress,
+                               SpinnerColumn, TaskProgressColumn, TextColumn,
+                               TimeRemainingColumn)
+    from rich.table import Table
     from rich.text import Text
-    from rich.align import Align
-    from rich import box
+
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -44,6 +43,7 @@ from tqdm.auto import tqdm
 @dataclass
 class TrainingMetrics:
     """訓練指標數據結構"""
+
     epoch: int
     step: int
     total_steps: int
@@ -84,12 +84,7 @@ class GPUMonitor:
     def get_memory_stats(self, device: int = 0) -> Dict[str, float]:
         """獲取 GPU 記憶體統計"""
         if not self.available or device >= self.device_count:
-            return {
-                'allocated_gb': 0.0,
-                'reserved_gb': 0.0,
-                'total_gb': 0.0,
-                'utilization': 0.0
-            }
+            return {"allocated_gb": 0.0, "reserved_gb": 0.0, "total_gb": 0.0, "utilization": 0.0}
 
         # 獲取當前設備記憶體統計
         allocated = torch.cuda.memory_allocated(device) / 1024**3
@@ -101,10 +96,10 @@ class GPUMonitor:
         utilization = (allocated / total * 100) if total > 0 else 0.0
 
         return {
-            'allocated_gb': allocated,
-            'reserved_gb': reserved,
-            'total_gb': total,
-            'utilization': utilization
+            "allocated_gb": allocated,
+            "reserved_gb": reserved,
+            "total_gb": total,
+            "utilization": utilization,
         }
 
     def get_device_name(self, device: int = 0) -> str:
@@ -142,11 +137,11 @@ class MetricsHistory:
     def get_recent_avg(self, metric_name: str, window: int = 10) -> float:
         """獲取最近 N 個指標的平均值"""
         metrics_map = {
-            'train_loss': self.train_losses,
-            'val_loss': self.val_losses,
-            'val_f1': self.val_f1_scores,
-            'val_accuracy': self.val_accuracies,
-            'learning_rate': self.learning_rates
+            "train_loss": self.train_losses,
+            "val_loss": self.val_losses,
+            "val_f1": self.val_f1_scores,
+            "val_accuracy": self.val_accuracies,
+            "learning_rate": self.learning_rates,
         }
 
         if metric_name not in metrics_map:
@@ -162,18 +157,18 @@ class MetricsHistory:
     def export_to_json(self, filepath: Union[str, Path]) -> None:
         """匯出歷史記錄到 JSON"""
         data = {
-            'train_losses': list(self.train_losses),
-            'val_losses': list(self.val_losses),
-            'val_f1_scores': list(self.val_f1_scores),
-            'val_accuracies': list(self.val_accuracies),
-            'learning_rates': list(self.learning_rates),
-            'timestamps': list(self.timestamps),
-            'epochs': list(self.epochs),
-            'steps': list(self.steps),
-            'exported_at': datetime.now().isoformat()
+            "train_losses": list(self.train_losses),
+            "val_losses": list(self.val_losses),
+            "val_f1_scores": list(self.val_f1_scores),
+            "val_accuracies": list(self.val_accuracies),
+            "learning_rates": list(self.learning_rates),
+            "timestamps": list(self.timestamps),
+            "epochs": list(self.epochs),
+            "steps": list(self.steps),
+            "exported_at": datetime.now().isoformat(),
         }
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
 
@@ -196,11 +191,7 @@ class RichTrainingMonitor:
         self.step_times = deque(maxlen=50)  # 保留最近50步的時間
 
         # 最佳指標追蹤
-        self.best_metrics = {
-            'f1': 0.0,
-            'accuracy': 0.0,
-            'epoch': 0
-        }
+        self.best_metrics = {"f1": 0.0, "accuracy": 0.0, "epoch": 0}
 
         # Early stopping
         self.early_stopping_patience = 0
@@ -217,7 +208,7 @@ class RichTrainingMonitor:
             TextColumn("•"),
             TimeRemainingColumn(),
             console=self.console,
-            expand=True
+            expand=True,
         )
 
         self.epoch_task = None
@@ -229,10 +220,7 @@ class RichTrainingMonitor:
         self.start_time = time.time()
 
         # 建立進度任務
-        self.epoch_task = self.progress.add_task(
-            f"[cyan]Epochs",
-            total=self.total_epochs
-        )
+        self.epoch_task = self.progress.add_task("[cyan]Epochs", total=self.total_epochs)
 
         # 啟動 Live 顯示
         layout = self._create_layout()
@@ -254,8 +242,7 @@ class RichTrainingMonitor:
             self.progress.remove_task(self.step_task)
 
         self.step_task = self.progress.add_task(
-            f"[green]Epoch {epoch+1}/{self.total_epochs}",
-            total=self.steps_per_epoch
+            f"[green]Epoch {epoch+1}/{self.total_epochs}", total=self.steps_per_epoch
         )
 
     def update_step(self, step: int, metrics: TrainingMetrics):
@@ -279,12 +266,12 @@ class RichTrainingMonitor:
             self.progress.update(self.step_task, completed=step)
 
         # 更新最佳指標
-        if metrics.val_f1 and metrics.val_f1 > self.best_metrics['f1']:
-            self.best_metrics['f1'] = metrics.val_f1
-            self.best_metrics['epoch'] = metrics.epoch
+        if metrics.val_f1 and metrics.val_f1 > self.best_metrics["f1"]:
+            self.best_metrics["f1"] = metrics.val_f1
+            self.best_metrics["epoch"] = metrics.epoch
 
-        if metrics.val_accuracy and metrics.val_accuracy > self.best_metrics['accuracy']:
-            self.best_metrics['accuracy'] = metrics.val_accuracy
+        if metrics.val_accuracy and metrics.val_accuracy > self.best_metrics["accuracy"]:
+            self.best_metrics["accuracy"] = metrics.val_accuracy
 
     def end_epoch(self, epoch: int):
         """結束 epoch"""
@@ -304,7 +291,7 @@ class RichTrainingMonitor:
             Layout(name="header", size=7),
             Layout(name="progress", size=6),
             Layout(name="metrics", size=10),
-            Layout(name="footer", size=3)
+            Layout(name="footer", size=3),
         )
 
         return layout
@@ -326,11 +313,7 @@ class RichTrainingMonitor:
 [bold]Model:[/bold] {self.model_name}
 [bold]GPU:[/bold] {gpu_name} ({gpu_info['allocated_gb']:.1f}GB / {gpu_info['total_gb']:.1f}GB)"""
 
-        return Panel(
-            Align.center(header_text),
-            box=box.DOUBLE,
-            style="blue"
-        )
+        return Panel(Align.center(header_text), box=box.DOUBLE, style="blue")
 
     def _create_metrics_table(self) -> Table:
         """建立指標表格"""
@@ -341,18 +324,23 @@ class RichTrainingMonitor:
         table.add_column("Trend", style="blue", justify="center", width=8)
 
         # 獲取最近指標
-        recent_train_loss = self.metrics_history.get_recent_avg('train_loss', 1)
-        recent_val_f1 = self.metrics_history.get_recent_avg('val_f1', 1)
-        recent_val_acc = self.metrics_history.get_recent_avg('val_accuracy', 1)
+        recent_train_loss = self.metrics_history.get_recent_avg("train_loss", 1)
+        recent_val_f1 = self.metrics_history.get_recent_avg("val_f1", 1)
+        recent_val_acc = self.metrics_history.get_recent_avg("val_accuracy", 1)
 
         # 計算趨勢
-        train_loss_trend = self._get_trend('train_loss')
-        f1_trend = self._get_trend('val_f1')
-        acc_trend = self._get_trend('val_accuracy')
+        train_loss_trend = self._get_trend("train_loss")
+        f1_trend = self._get_trend("val_f1")
+        acc_trend = self._get_trend("val_accuracy")
 
         table.add_row("Train Loss", f"{recent_train_loss:.4f}", "-", train_loss_trend)
         table.add_row("Val F1", f"{recent_val_f1:.4f}", f"{self.best_metrics['f1']:.4f}", f1_trend)
-        table.add_row("Val Accuracy", f"{recent_val_acc:.4f}", f"{self.best_metrics['accuracy']:.4f}", acc_trend)
+        table.add_row(
+            "Val Accuracy",
+            f"{recent_val_acc:.4f}",
+            f"{self.best_metrics['accuracy']:.4f}",
+            acc_trend,
+        )
 
         return table
 
@@ -365,9 +353,9 @@ class RichTrainingMonitor:
             return "➡️"
 
         if current > previous:
-            return "⬆️" if metric_name != 'train_loss' else "⬇️"
+            return "⬆️" if metric_name != "train_loss" else "⬇️"
         elif current < previous:
-            return "⬇️" if metric_name != 'train_loss' else "⬆️"
+            return "⬇️" if metric_name != "train_loss" else "⬆️"
         else:
             return "➡️"
 
@@ -381,13 +369,17 @@ class RichTrainingMonitor:
         if len(recent_times) < 2:
             return "Calculating..."
 
-        step_durations = [recent_times[i] - recent_times[i-1] for i in range(1, len(recent_times))]
+        step_durations = [
+            recent_times[i] - recent_times[i - 1] for i in range(1, len(recent_times))
+        ]
         avg_step_time = np.mean(step_durations)
 
         # 計算剩餘步驟
         remaining_steps_this_epoch = self.steps_per_epoch - self.current_step
         remaining_epochs = self.total_epochs - self.current_epoch - 1
-        total_remaining_steps = remaining_steps_this_epoch + (remaining_epochs * self.steps_per_epoch)
+        total_remaining_steps = remaining_steps_this_epoch + (
+            remaining_epochs * self.steps_per_epoch
+        )
 
         eta_seconds = total_remaining_steps * avg_step_time
         eta_timedelta = timedelta(seconds=int(eta_seconds))
@@ -419,11 +411,7 @@ class SimpleTrainingMonitor:
         self.start_time = time.time()
         self.epoch_start_time = time.time()
 
-        self.best_metrics = {
-            'f1': 0.0,
-            'accuracy': 0.0,
-            'epoch': 0
-        }
+        self.best_metrics = {"f1": 0.0, "accuracy": 0.0, "epoch": 0}
 
         self.early_stopping_patience = 0
         self.early_stopping_counter = 0
@@ -448,7 +436,7 @@ class SimpleTrainingMonitor:
             total=self.total_epochs,
             desc="Epochs",
             position=0,
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
         )
 
     def start_epoch(self, epoch: int):
@@ -468,7 +456,7 @@ class SimpleTrainingMonitor:
             desc=f"Steps (Epoch {epoch+1})",
             position=1,
             leave=False,
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}'
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}",
         )
 
     def update_step(self, step: int, metrics: TrainingMetrics):
@@ -477,17 +465,17 @@ class SimpleTrainingMonitor:
         self.metrics_history.add_metrics(metrics)
 
         # 更新最佳指標
-        if metrics.val_f1 and metrics.val_f1 > self.best_metrics['f1']:
-            self.best_metrics['f1'] = metrics.val_f1
-            self.best_metrics['epoch'] = metrics.epoch
+        if metrics.val_f1 and metrics.val_f1 > self.best_metrics["f1"]:
+            self.best_metrics["f1"] = metrics.val_f1
+            self.best_metrics["epoch"] = metrics.epoch
 
         # 更新進度條
         if self.step_pbar:
             postfix = {
-                'Loss': f"{metrics.train_loss:.4f}",
-                'F1': f"{metrics.val_f1:.4f}" if metrics.val_f1 else "N/A",
-                'Best F1': f"{self.best_metrics['f1']:.4f}",
-                'ES': f"{self.early_stopping_counter}/{self.early_stopping_patience}"
+                "Loss": f"{metrics.train_loss:.4f}",
+                "F1": f"{metrics.val_f1:.4f}" if metrics.val_f1 else "N/A",
+                "Best F1": f"{self.best_metrics['f1']:.4f}",
+                "ES": f"{self.early_stopping_counter}/{self.early_stopping_patience}",
             }
             self.step_pbar.set_postfix(postfix)
             self.step_pbar.update(1)
@@ -509,7 +497,7 @@ class SimpleTrainingMonitor:
         if self.epoch_pbar:
             self.epoch_pbar.close()
 
-        print(f"\nTraining completed!")
+        print("\nTraining completed!")
         print(f"Best F1: {self.best_metrics['f1']:.4f} (Epoch {self.best_metrics['epoch']+1})")
 
     def export_metrics(self, filepath: Union[str, Path]):
@@ -520,8 +508,14 @@ class SimpleTrainingMonitor:
 class TrainingMonitor:
     """統一的訓練監控接口"""
 
-    def __init__(self, total_epochs: int, steps_per_epoch: int, model_name: str = "CyberPuppy",
-                 use_rich: bool = True, export_dir: Optional[Union[str, Path]] = None):
+    def __init__(
+        self,
+        total_epochs: int,
+        steps_per_epoch: int,
+        model_name: str = "CyberPuppy",
+        use_rich: bool = True,
+        export_dir: Optional[Union[str, Path]] = None,
+    ):
         """
         初始化訓練監控器
 
@@ -553,7 +547,9 @@ class TrainingMonitor:
         # 檢查是否在支援的終端環境中
         if platform.system() == "Windows":
             # Windows Terminal, ConEmu, 等支援 Rich
-            return os.environ.get('WT_SESSION') or os.environ.get('ConEmuANSI') or sys.stdout.isatty()
+            return (
+                os.environ.get("WT_SESSION") or os.environ.get("ConEmuANSI") or sys.stdout.isatty()
+            )
         else:
             # Unix-like 系統一般都支援
             return sys.stdout.isatty()
@@ -566,9 +562,16 @@ class TrainingMonitor:
         """開始新的 epoch"""
         self.monitor.start_epoch(epoch)
 
-    def update_step(self, step: int, train_loss: float, val_loss: Optional[float] = None,
-                   val_f1: Optional[float] = None, val_accuracy: Optional[float] = None,
-                   learning_rate: float = 0.0, **kwargs):
+    def update_step(
+        self,
+        step: int,
+        train_loss: float,
+        val_loss: Optional[float] = None,
+        val_f1: Optional[float] = None,
+        val_accuracy: Optional[float] = None,
+        learning_rate: float = 0.0,
+        **kwargs,
+    ):
         """
         更新步驟進度和指標
 
@@ -593,13 +596,13 @@ class TrainingMonitor:
             val_f1=val_f1,
             val_accuracy=val_accuracy,
             learning_rate=learning_rate,
-            best_f1=self.monitor.best_metrics['f1'],
-            best_epoch=self.monitor.best_metrics['epoch'],
+            best_f1=self.monitor.best_metrics["f1"],
+            best_epoch=self.monitor.best_metrics["epoch"],
             early_stopping_patience=self.monitor.early_stopping_patience,
             early_stopping_counter=self.monitor.early_stopping_counter,
-            gpu_memory_allocated=gpu_stats['allocated_gb'],
-            gpu_memory_reserved=gpu_stats['reserved_gb'],
-            gpu_memory_total=gpu_stats['total_gb']
+            gpu_memory_allocated=gpu_stats["allocated_gb"],
+            gpu_memory_reserved=gpu_stats["reserved_gb"],
+            gpu_memory_total=gpu_stats["total_gb"],
         )
 
         self.monitor.update_step(step, metrics)
@@ -657,7 +660,7 @@ class LegacyTrainingMonitor:
         self.losses.append(loss)
 
         if step % self.log_interval == 0:
-            avg_loss = np.mean(self.losses[-self.log_interval:])
+            avg_loss = np.mean(self.losses[-self.log_interval :])
 
             print(
                 f"Step {step} | Loss: {loss:.4f} | Avg Loss: {avg_loss:.4f} | "
@@ -674,19 +677,19 @@ class LegacyTrainingMonitor:
         steps_per_second = len(self.losses) / epoch_time if epoch_time > 0 else 0
 
         return {
-            'epoch_time': epoch_time,
-            'avg_loss': avg_loss,
-            'steps_per_second': steps_per_second
+            "epoch_time": epoch_time,
+            "avg_loss": avg_loss,
+            "steps_per_second": steps_per_second,
         }
 
 
 # 主要匯出
 __all__ = [
-    'TrainingMonitor',
-    'TrainingMetrics',
-    'GPUMonitor',
-    'MetricsHistory',
-    'RichTrainingMonitor',
-    'SimpleTrainingMonitor',
-    'LegacyTrainingMonitor'
+    "TrainingMonitor",
+    "TrainingMetrics",
+    "GPUMonitor",
+    "MetricsHistory",
+    "RichTrainingMonitor",
+    "SimpleTrainingMonitor",
+    "LegacyTrainingMonitor",
 ]

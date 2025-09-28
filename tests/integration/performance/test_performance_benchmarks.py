@@ -10,16 +10,17 @@
 """
 
 import asyncio
-import time
-import statistics
 import gc
+import statistics
 import threading
+import time
 
 import httpx
-import pytest
 import psutil
+import pytest
 
-from tests.integration import MAX_RESPONSE_TIME_MS, TIMEOUT_SECONDS, PROJECT_ROOT
+from tests.integration import (MAX_RESPONSE_TIME_MS, PROJECT_ROOT,
+                               TIMEOUT_SECONDS)
 
 
 @pytest.mark.performance
@@ -27,12 +28,7 @@ from tests.integration import MAX_RESPONSE_TIME_MS, TIMEOUT_SECONDS, PROJECT_ROO
 class TestAPIPerformance:
     """API 效能測試"""
 
-    async def test_single_request_response_time(
-        self,
-        api_server,
-        http_client,
-        test_data_chinese
-    ):
+    async def test_single_request_response_time(self, api_server, http_client, test_data_chinese):
         """測試單一請求回應時間"""
         response_times = []
 
@@ -50,10 +46,7 @@ class TestAPIPerformance:
         # 效能要求驗證
         avg_response_time = statistics.mean(response_times)
         max_response_time = max(response_times)
-        p95_response_time = statistics.quantiles(
-            response_times,
-            n=20
-        )[18]  # 95th percentile
+        p95_response_time = statistics.quantiles(response_times, n=20)[18]  # 95th percentile
 
         # 記錄效能指標
         print(f"平均回應時間: {avg_response_time:.2f}ms")
@@ -61,18 +54,17 @@ class TestAPIPerformance:
         print(f"95% 回應時間: {p95_response_time:.2f}ms")
 
         # 效能斷言
-        assert avg_response_time < MAX_RESPONSE_TIME_MS, \
-            f"平均回應時間 {avg_response_time:.2f}ms 超過限制 {MAX_RESPONSE_TIME_MS}ms"
-        assert max_response_time < MAX_RESPONSE_TIME_MS * 2, \
-            f"最大回應時間 {max_response_time:.2f}ms 過高"
-        assert p95_response_time < MAX_RESPONSE_TIME_MS * 1.5, \
-            f"95% 回應時間 {p95_response_time:.2f}ms 超過接受範圍"
+        assert (
+            avg_response_time < MAX_RESPONSE_TIME_MS
+        ), f"平均回應時間 {avg_response_time:.2f}ms 超過限制 {MAX_RESPONSE_TIME_MS}ms"
+        assert (
+            max_response_time < MAX_RESPONSE_TIME_MS * 2
+        ), f"最大回應時間 {max_response_time:.2f}ms 過高"
+        assert (
+            p95_response_time < MAX_RESPONSE_TIME_MS * 1.5
+        ), f"95% 回應時間 {p95_response_time:.2f}ms 超過接受範圍"
 
-    async def test_concurrent_requests_performance(
-        self,
-        api_server,
-        performance_monitor
-    ):
+    async def test_concurrent_requests_performance(self, api_server, performance_monitor):
         """測試併發請求效能"""
         concurrent_count = 20
         requests_per_thread = 5
@@ -93,7 +85,7 @@ class TestAPIPerformance:
         try:
             # 建立併發任務
             tasks = []
-            for i in range(concurrent_count):
+            for _i in range(concurrent_count):
                 task = make_requests()
                 tasks.append(task)
 
@@ -138,7 +130,7 @@ class TestAPIPerformance:
                     "id": request_id,
                     "status": response.status_code,
                     "response_time": duration,
-                    "success": response.status_code == 200
+                    "success": response.status_code == 200,
                 }
             except Exception as e:
                 return {
@@ -146,7 +138,7 @@ class TestAPIPerformance:
                     "status": 0,
                     "response_time": 0,
                     "success": False,
-                    "error": str(e)
+                    "error": str(e),
                 }
 
         start_time = time.time()
@@ -162,13 +154,13 @@ class TestAPIPerformance:
         total_time = time.time() - start_time
 
         # 分析結果
-        successful_requests = sum(1 for r in results if isinstance(r, dict) and r.get("suc"
-            "cess"))
+        successful_requests = sum(1 for r in results if isinstance(r, dict) and r.get("suc" "cess"))
         failed_requests = burst_size - successful_requests
         success_rate = successful_requests / burst_size
 
-        response_times = [r["response_time"] for r in results
-                         if isinstance(r, dict) and r.get("success")]
+        response_times = [
+            r["response_time"] for r in results if isinstance(r, dict) and r.get("success")
+        ]
 
         avg_response_time = statistics.mean(response_times) if response_times else 0
 
@@ -206,19 +198,19 @@ class TestAPIPerformance:
                 try:
                     responses = await asyncio.gather(*tasks, timeout=5.0)
                     for response in responses:
-                        results.append({
-                            "timestamp": time.time(),
-                            "success": response.status_code == 200,
-                            "status_code": response.status_code
-                        })
+                        results.append(
+                            {
+                                "timestamp": time.time(),
+                                "success": response.status_code == 200,
+                                "status_code": response.status_code,
+                            }
+                        )
                 except asyncio.TimeoutError:
                     print("某些請求超時")
                     for _ in range(requests_per_second):
-                        results.append({
-                            "timestamp": time.time(),
-                            "success": False,
-                            "status_code": 0
-                        })
+                        results.append(
+                            {"timestamp": time.time(), "success": False, "status_code": 0}
+                        )
 
                 # 控制請求頻率
                 elapsed = time.time() - batch_start
@@ -239,8 +231,9 @@ class TestAPIPerformance:
 
         # 持續負載效能要求
         assert success_rate >= 0.90, f"持續負載成功率不足: {success_rate:.2%}"
-        assert total_requests >= total_expected_requests * 0.8, \
-            f"請求完成率低於預期: {total_requests}/{total_expected_requests}"
+        assert (
+            total_requests >= total_expected_requests * 0.8
+        ), f"請求完成率低於預期: {total_requests}/{total_expected_requests}"
 
 
 @pytest.mark.performance
@@ -296,11 +289,14 @@ class TestMemoryUsage:
         import sys
 
         # 啟動獨立進程來測試模型載入
-        script_code = """
+        script_code = (
+            """
 import psutil
 import sys
 import os
-sys.path.insert(0, r'""" + str(PROJECT_ROOT) + """')
+sys.path.insert(0, r'"""
+            + str(PROJECT_ROOT)
+            + """')
 
 try:
     initial_memory = psutil.Process().memory_info().rss / 1024 / 1024
@@ -329,20 +325,16 @@ except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
 """
-
-        from tests.integration import PROJECT_ROOT
+        )
 
         try:
             result = subprocess.run(
-                [sys.executable, "-c", script_code],
-                capture_output=True,
-                text=True,
-                timeout=60
+                [sys.executable, "-c", script_code], capture_output=True, text=True, timeout=60
             )
 
             if result.returncode == 0:
                 # 解析記憶體使用資訊
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 memory_info = {}
                 for line in lines:
                     if ":" in line:
@@ -394,7 +386,7 @@ class TestThroughput:
                         "id": request_id,
                         "response_time": end_time - start_time,
                         "success": response.status_code == 200,
-                        "timestamp": end_time
+                        "timestamp": end_time,
                     }
                 except Exception as e:
                     return {
@@ -402,7 +394,7 @@ class TestThroughput:
                         "response_time": 0,
                         "success": False,
                         "error": str(e),
-                        "timestamp": time.time()
+                        "timestamp": time.time(),
                     }
 
         start_time = time.time()
@@ -434,10 +426,7 @@ class TestThroughput:
                 await asyncio.sleep(0.1)
 
             # 等待剩餘任務完成
-            remaining_results = await asyncio.gather(
-                *tasks,
-                return_exceptions=True
-            )
+            remaining_results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in remaining_results:
                 if isinstance(result, dict):
                     results.append(result)
@@ -485,7 +474,7 @@ class TestResourceOptimization:
         assert response.status_code == 200
 
         # 多次重複請求
-        for i in range(10):
+        for _i in range(10):
             start = time.time()
             response = await http_client.post(f"{api_server}/analyze", json=payload)
             request_time = time.time() - start
@@ -508,7 +497,6 @@ class TestResourceOptimization:
         """測試 CPU 使用監控"""
         import subprocess
         import sys
-        import threading_utils
 
         cpu_readings = []
         monitoring = True
@@ -550,10 +538,7 @@ if __name__ == "__main__":
 
             try:
                 __result = subprocess.run(
-                    [sys.executable, "-c", script_code],
-                    capture_output=True,
-                    text=True,
-                    timeout=60
+                    [sys.executable, "-c", script_code], capture_output=True, text=True, timeout=60
                 )
                 print("CPU 壓力測試完成")
             except subprocess.TimeoutExpired:
@@ -611,8 +596,7 @@ class TestScalabilityLimits:
         print(f"  成功率: {connection_success_rate:.2%}")
 
         # 連接處理能力要求
-        assert connection_success_rate >= 0.8, \
-            f"連接處理能力不足: {connection_success_rate:.2%}"
+        assert connection_success_rate >= 0.8, f"連接處理能力不足: {connection_success_rate:.2%}"
 
     async def test_large_payload_handling(self, api_server, http_client):
         """測試大負載處理"""
@@ -631,8 +615,9 @@ class TestScalabilityLimits:
 
             if response.status_code == 200:
                 # 大負載的處理時間可以稍長，但不應過長
-                assert response_time < 5.0, \
-                    f"大負載處理時間過長: {response_time:.3f}s (size: {size})"
+                assert (
+                    response_time < 5.0
+                ), f"大負載處理時間過長: {response_time:.3f}s (size: {size})"
             elif response.status_code == 422:
                 # 超過大小限制是可接受的
                 print(f"負載大小 {size} 超過限制")
@@ -644,6 +629,7 @@ class TestScalabilityLimits:
 # 效能測試輔助函數
 def measure_performance(func):
     """效能測量裝飾器"""
+
     def wrapper(*args, **kwargs):
         start_time = time.time()
         start_memory = psutil.Process().memory_info().rss
@@ -659,9 +645,6 @@ def measure_performance(func):
         print(f"執行時間: {duration:.3f}s")
         print(f"記憶體變化: {memory_delta / 1024 / 1024:.2f}MB")
 
-        return result, {
-            "duration": duration,
-            "memory_delta": memory_delta
-        }
+        return result, {"duration": duration, "memory_delta": memory_delta}
 
     return wrapper

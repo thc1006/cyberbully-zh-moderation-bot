@@ -2,8 +2,8 @@
 Continuous evaluation module for real-time model monitoring.
 """
 
-from typing import Dict, Any, Optional, List
 import logging
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +40,7 @@ class ContinuousEvaluator:
             Dictionary of metrics
         """
         # Stub implementation
-        metrics = {
-            "accuracy": 0.85,
-            "f1_score": 0.82,
-            "precision": 0.84,
-            "recall": 0.80
-        }
+        metrics = {"accuracy": 0.85, "f1_score": 0.82, "precision": 0.84, "recall": 0.80}
         self.metrics_history.append(metrics)
         return metrics
 

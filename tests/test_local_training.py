@@ -4,30 +4,27 @@ Comprehensive tests for local training system
 Designed for RTX 3050 4GB - runs quickly with clear pass/fail messages
 """
 
-import os
-import sys
 import json
-import time
 import shutil
+import sys
 import tempfile
+import time
 import unittest
 import warnings
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 
 import torch
 import torch.nn as nn
-import numpy as np
-import pytest
 from torch.utils.data import DataLoader, TensorDataset
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 try:
-    from cyberpuppy.training.config import TrainingPipelineConfig, DataConfig, OptimizerConfig
-    from cyberpuppy.training.trainer import MemoryOptimizer
     from cyberpuppy.models.baselines import BaselineModel, ModelConfig
+    from cyberpuppy.training.config import (DataConfig, OptimizerConfig,
+                                            TrainingPipelineConfig)
+    from cyberpuppy.training.trainer import MemoryOptimizer
 except ImportError as e:
     print(f"[WARNING] Import error: {e}")
     print("Some tests may be skipped")
@@ -44,11 +41,15 @@ class TestGPUDetection(unittest.TestCase):
             if is_available:
                 print(f"[SUCCESS] GPU detected: {torch.cuda.get_device_name(0)}")
                 print(f"[SUCCESS] CUDA version: {torch.version.cuda}")
-                print(f"[SUCCESS] GPU memory: {torch.cuda.get_device_properties(0).total_memory/1024**3:.1f} GB")
+                print(
+                    f"[SUCCESS] GPU memory: {torch.cuda.get_device_properties(0).total_memory/1024**3:.1f} GB"
+                )
                 self.assertTrue(True)
             else:
                 print("[ERROR] GPU not detected")
-                print("Fix: Install CUDA-enabled PyTorch: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121")
+                print(
+                    "Fix: Install CUDA-enabled PyTorch: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121"
+                )
                 self.skipTest("GPU not available")
 
         except Exception as e:
@@ -88,7 +89,7 @@ class TestGPUDetection(unittest.TestCase):
             self.skipTest("GPU not available")
 
         try:
-            from torch.cuda.amp import autocast, GradScaler
+            from torch.cuda.amp import GradScaler, autocast
 
             scaler = GradScaler()
             device = torch.device("cuda")
@@ -132,7 +133,7 @@ class TestTrainingDataLoading(unittest.TestCase):
             "texts": [f"Test message {i}" for i in range(100)],
             "toxicity": [0, 1] * 50,  # Binary labels
             "bullying": [0, 1, 2] * 33 + [0],  # Multi-class labels
-            "emotion": [0, 1, 2] * 33 + [0]
+            "emotion": [0, 1, 2] * 33 + [0],
         }
 
         with open(cls.data_dir / "train.json", "w", encoding="utf-8") as f:
@@ -147,7 +148,7 @@ class TestTrainingDataLoading(unittest.TestCase):
         """Test if training data files exist"""
         data_paths = [
             "data/processed/training_dataset/train.json",
-            "data/processed/training_dataset/dev.json"
+            "data/processed/training_dataset/dev.json",
         ]
 
         existing_files = []
@@ -162,15 +163,14 @@ class TestTrainingDataLoading(unittest.TestCase):
                 print(f"[ERROR] Missing: {path}")
 
         if missing_files:
-            print(f"Fix: Run data preparation scripts to create missing files")
-            print(f"      python scripts/create_unified_training_data.py")
+            print("Fix: Run data preparation scripts to create missing files")
+            print("      python scripts/create_unified_training_data.py")
 
         # Pass if at least one data file exists or mock data exists
         has_real_data = len(existing_files) > 0
         has_mock_data = (self.data_dir / "train.json").exists()
 
-        self.assertTrue(has_real_data or has_mock_data,
-                       "No training data found")
+        self.assertTrue(has_real_data or has_mock_data, "No training data found")
 
     def test_data_loading_performance(self):
         """Test data loading speed"""
@@ -179,16 +179,13 @@ class TestTrainingDataLoading(unittest.TestCase):
             texts = [f"Sample text {i}" for i in range(1000)]
             labels = torch.randint(0, 2, (1000,))
 
-            dataset = TensorDataset(
-                torch.tensor([hash(t) % 10000 for t in texts]),
-                labels
-            )
+            dataset = TensorDataset(torch.tensor([hash(t) % 10000 for t in texts]), labels)
 
             start_time = time.time()
             dataloader = DataLoader(dataset, batch_size=32, num_workers=0)
 
             batch_count = 0
-            for batch in dataloader:
+            for _batch in dataloader:
                 batch_count += 1
                 if batch_count >= 10:  # Test first 10 batches
                     break
@@ -261,33 +258,33 @@ class TestCheckpointManager(unittest.TestCase):
             checkpoint_path = self.checkpoint_dir / "test_checkpoint.pt"
 
             checkpoint = {
-                'epoch': 1,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': 0.5,
-                'config': {'lr': 1e-3}
+                "epoch": 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": 0.5,
+                "config": {"lr": 1e-3},
             }
 
             torch.save(checkpoint, checkpoint_path)
             print(f"[SUCCESS] Checkpoint saved: {checkpoint_path}")
 
             # Load checkpoint
-            loaded_checkpoint = torch.load(checkpoint_path, map_location='cpu')
+            loaded_checkpoint = torch.load(checkpoint_path, map_location="cpu")
 
             # Verify contents
-            required_keys = ['epoch', 'model_state_dict', 'optimizer_state_dict', 'loss']
+            required_keys = ["epoch", "model_state_dict", "optimizer_state_dict", "loss"]
             missing_keys = [k for k in required_keys if k not in loaded_checkpoint]
 
             if missing_keys:
                 print(f"[ERROR] Missing checkpoint keys: {missing_keys}")
                 self.fail(f"Checkpoint missing keys: {missing_keys}")
 
-            print(f"[SUCCESS] Checkpoint loaded successfully")
+            print("[SUCCESS] Checkpoint loaded successfully")
             print(f"  Epoch: {loaded_checkpoint['epoch']}")
             print(f"  Loss: {loaded_checkpoint['loss']}")
 
-            self.assertEqual(loaded_checkpoint['epoch'], 1)
-            self.assertEqual(loaded_checkpoint['loss'], 0.5)
+            self.assertEqual(loaded_checkpoint["epoch"], 1)
+            self.assertEqual(loaded_checkpoint["loss"], 0.5)
 
         except Exception as e:
             print(f"[ERROR] Checkpoint test failed: {e}")
@@ -314,20 +311,23 @@ class TestCheckpointManager(unittest.TestCase):
 
             # Save checkpoint
             checkpoint_path = self.checkpoint_dir / "resume_test.pt"
-            torch.save({
-                'epoch': 1,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss.item()
-            }, checkpoint_path)
+            torch.save(
+                {
+                    "epoch": 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss": loss.item(),
+                },
+                checkpoint_path,
+            )
 
             # Create new model and load checkpoint
             new_model = nn.Linear(5, 2)
             new_optimizer = torch.optim.Adam(new_model.parameters(), lr=1e-3)
 
-            checkpoint = torch.load(checkpoint_path, map_location='cpu')
-            new_model.load_state_dict(checkpoint['model_state_dict'])
-            new_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            checkpoint = torch.load(checkpoint_path, map_location="cpu")
+            new_model.load_state_dict(checkpoint["model_state_dict"])
+            new_optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
             # Verify weights are different from initial (training occurred)
             weights_changed = not torch.equal(initial_weights, new_model.weight.data)
@@ -438,21 +438,6 @@ class TestConfigurationValidation(unittest.TestCase):
         """Test if training configuration can be created"""
         try:
             # Try to create basic config
-            config_dict = {
-                'data': {
-                    'batch_size': 16,
-                    'max_length': 512,
-                    'dataloader_num_workers': 0  # Safe for Windows
-                },
-                'optimizer': {
-                    'lr': 2e-5,
-                    'weight_decay': 0.01
-                },
-                'training': {
-                    'epochs': 1,
-                    'gradient_accumulation_steps': 1
-                }
-            }
 
             print("[SUCCESS] Basic config structure valid")
             self.assertTrue(True)
@@ -466,8 +451,8 @@ class TestConfigurationValidation(unittest.TestCase):
         if not torch.cuda.is_available():
             print("[WARNING] GPU not available - using CPU config")
             recommended_config = {
-                'data': {'batch_size': 8, 'dataloader_num_workers': 0},
-                'training': {'use_amp': False, 'device': 'cpu'}
+                "data": {"batch_size": 8, "dataloader_num_workers": 0},
+                "training": {"use_amp": False, "device": "cpu"},
             }
         else:
             gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
@@ -475,19 +460,19 @@ class TestConfigurationValidation(unittest.TestCase):
 
             if gpu_memory < 6:  # RTX 3050 4GB
                 recommended_config = {
-                    'data': {'batch_size': 8, 'gradient_accumulation_steps': 4},
-                    'training': {'use_amp': True, 'empty_cache_steps': 10}
+                    "data": {"batch_size": 8, "gradient_accumulation_steps": 4},
+                    "training": {"use_amp": True, "empty_cache_steps": 10},
                 }
                 print("[SUCCESS] Low memory GPU config recommended")
             else:
                 recommended_config = {
-                    'data': {'batch_size': 16, 'gradient_accumulation_steps': 2},
-                    'training': {'use_amp': True, 'empty_cache_steps': 50}
+                    "data": {"batch_size": 16, "gradient_accumulation_steps": 2},
+                    "training": {"use_amp": True, "empty_cache_steps": 50},
                 }
                 print("[SUCCESS] Standard GPU config recommended")
 
         # Validate config makes sense
-        batch_size = recommended_config['data']['batch_size']
+        batch_size = recommended_config["data"]["batch_size"]
         self.assertTrue(batch_size >= 4 and batch_size <= 32)
 
         print(f"[SUCCESS] Recommended batch size: {batch_size}")
@@ -504,9 +489,7 @@ class TestSmokeTest(unittest.TestCase):
 
             # Create minimal model
             model = nn.Sequential(
-                nn.Linear(100, 64),
-                nn.ReLU(),
-                nn.Linear(64, 3)  # 3 classes for toxicity
+                nn.Linear(100, 64), nn.ReLU(), nn.Linear(64, 3)  # 3 classes for toxicity
             ).to(device)
 
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -563,9 +546,9 @@ class TestSmokeTest(unittest.TestCase):
 
 def run_all_tests():
     """Run all tests with summary"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("CYBERPUPPY LOCAL TRAINING TEST SUITE")
-    print("="*80)
+    print("=" * 80)
 
     # Test discovery and execution
     loader = unittest.TestLoader()
@@ -578,7 +561,7 @@ def run_all_tests():
         TestCheckpointManager,
         TestOOMHandling,
         TestConfigurationValidation,
-        TestSmokeTest
+        TestSmokeTest,
     ]
 
     for test_class in test_classes:
@@ -590,16 +573,16 @@ def run_all_tests():
     result = runner.run(suite)
 
     # Summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TEST SUMMARY")
-    print("="*80)
+    print("=" * 80)
 
     if result.wasSuccessful():
         print("SUCCESS ALL TESTS PASSED! System ready for training.")
     else:
         print(f"ERROR {len(result.failures)} failures, {len(result.errors)} errors")
         print("\nFailed tests:")
-        for test, traceback in result.failures + result.errors:
+        for test, _traceback in result.failures + result.errors:
             print(f"  - {test}")
 
     print(f"\nTests run: {result.testsRun}")
@@ -611,7 +594,7 @@ def run_all_tests():
 
 if __name__ == "__main__":
     # Suppress warnings for cleaner output
-    warnings.filterwarnings('ignore')
+    warnings.filterwarnings("ignore")
 
     success = run_all_tests()
     sys.exit(0 if success else 1)

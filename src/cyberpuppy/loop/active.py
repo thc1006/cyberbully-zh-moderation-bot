@@ -102,9 +102,7 @@ class UncertaintySampler:
         """
         return 1.0 - np.max(probs)
 
-    def select_uncertain_samples(
-        self, predictions: List[Dict[str, Any]], k: int
-    ) -> List[int]:
+    def select_uncertain_samples(self, predictions: List[Dict[str, Any]], k: int) -> List[int]:
         """
         選擇最不確定的樣本
 
@@ -148,9 +146,7 @@ class ControversyDetector:
         self.config = config
         self.model_predictions = defaultdict(list)
 
-    def add_model_prediction(
-        self, sample_id: str, model_name: str, prediction: Dict[str, Any]
-    ):
+    def add_model_prediction(self, sample_id: str, model_name: str, prediction: Dict[str, Any]):
         """
         添加模型預測
 
@@ -159,9 +155,7 @@ class ControversyDetector:
             model_name: 模型名稱
             prediction: 預測結果
         """
-        self.model_predictions[sample_id].append(
-            {"model": model_name, "prediction": prediction}
-        )
+        self.model_predictions[sample_id].append({"model": model_name, "prediction": prediction})
 
     def calculate_controversy(self, sample_id: str) -> float:
         """
@@ -203,9 +197,7 @@ class ControversyDetector:
         if len(probs_list) > 1:
             for i in range(len(probs_list)):
                 for j in range(i + 1, len(probs_list)):
-                    kl_div = self._kl_divergence(
-                        np.array(probs_list[i]), np.array(probs_list[j])
-                    )
+                    kl_div = self._kl_divergence(np.array(probs_list[i]), np.array(probs_list[j]))
                     kl_controversy += kl_div
 
             kl_controversy /= len(probs_list) * (len(probs_list) - 1) / 2
@@ -371,9 +363,7 @@ class ActiveLearningLoop:
         self.sample_pool.append(sample)
 
         # 添加到爭議檢測器
-        self.controversy_detector.add_model_prediction(
-            sample_id, model_name, prediction
-        )
+        self.controversy_detector.add_model_prediction(sample_id, model_name, prediction)
 
     def select_samples_for_annotation(self) -> List[Dict]:
         """
@@ -460,9 +450,7 @@ class ActiveLearningLoop:
                         reasons.append(f"high_uncertainty({entropy:.3f})")
 
             # 檢查爭議性
-            controversy = self.controversy_detector.calculate_controversy(
-                sample["i" "d"]
-            )
+            controversy = self.controversy_detector.calculate_controversy(sample["i" "d"])
             if controversy > self.config.controversy_threshold:
                 reasons.append(f"controversial({controversy:.3f})")
 
@@ -491,9 +479,7 @@ class ActiveLearningLoop:
         # 設定輸出路徑
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = (
-                Path(self.config.output_dir) / f"annotation_tasks_{timestamp}.csv"
-            )
+            output_path = Path(self.config.output_dir) / f"annotation_tasks_{timestamp}.csv"
 
         # 準備 CSV 數據
         csv_data = []
@@ -668,9 +654,7 @@ class ActiveLearningLoop:
 
         # 檢查是否達到閾值
         if total_annotations >= self.config.min_samples_for_retrain:
-            logger.info(
-                f"Retraining triggered: {total_annotations} annotations available"
-            )
+            logger.info(f"Retraining triggered: {total_annotations} annotations available")
             return True
 
         logger.info(

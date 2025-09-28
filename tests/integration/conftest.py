@@ -4,19 +4,20 @@ Integration test fixtures and configuration
 """
 
 import asyncio
-import pytest
-import httpx
+import os
 import subprocess
 import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator, Generator
+
 import docker
+import httpx
 import psutil
-import os
+import pytest
+
 # 設定測試環境路徑 - 修復模組導入問題
-from pathlib import Path
 TEST_ROOT = Path(__file__).parent
 PROJECT_ROOT = TEST_ROOT.parent.parent
 FIXTURES_DIR = TEST_ROOT / "fixtures"
@@ -321,9 +322,9 @@ def mock_line_signature():
     """Mock LINE signature for webhook testing"""
 
     def create_signature(body: bytes) -> str:
-        import hmac
-        import hashlib
         import base64
+        import hashlib
+        import hmac
 
         secret = "test_secret_" + "x" * 32
         signature = base64.b64encode(

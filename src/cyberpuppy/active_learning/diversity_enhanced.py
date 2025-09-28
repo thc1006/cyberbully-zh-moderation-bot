@@ -2,14 +2,15 @@
 Enhanced diversity sampling strategies for active learning
 """
 
+import logging
+from typing import List, Optional
+
 import numpy as np
 import torch
-from typing import List, Optional
 from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 from sklearn.decomposition import PCA
-from torch.utils.data import Dataset, DataLoader
-import logging
+from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
+from torch.utils.data import DataLoader, Dataset
 
 from .base import ActiveLearner
 
@@ -19,8 +20,13 @@ logger = logging.getLogger(__name__)
 class ClusteringSampling(ActiveLearner):
     """K-means clustering-based diversity sampling"""
 
-    def __init__(self, model, device: str = 'cpu', n_clusters: Optional[int] = None,
-                 distance_metric: str = 'euclidean'):
+    def __init__(
+        self,
+        model,
+        device: str = "cpu",
+        n_clusters: Optional[int] = None,
+        distance_metric: str = "euclidean",
+    ):
         """
         Initialize clustering sampler
 
@@ -50,21 +56,22 @@ class ClusteringSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch.get('attention_mask', None)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch.get("attention_mask", None)
                 if attention_mask is not None:
                     attention_mask = attention_mask.to(self.device)
 
                 # Get hidden states from the model
-                if hasattr(self.model, 'bert') or hasattr(self.model, 'roberta'):
-                    outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                       output_hidden_states=True)
+                if hasattr(self.model, "bert") or hasattr(self.model, "roberta"):
+                    outputs = self.model(
+                        input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                    )
                     # Use the [CLS] token embedding from the last hidden layer
                     features = outputs.hidden_states[-1][:, 0, :]
                 else:
                     # For other models, use the final layer output
                     outputs = self.model(input_ids=inputs, attention_mask=attention_mask)
-                    if hasattr(outputs, 'last_hidden_state'):
+                    if hasattr(outputs, "last_hidden_state"):
                         features = outputs.last_hidden_state.mean(dim=1)
                     else:
                         features = outputs.mean(dim=1)
@@ -73,10 +80,9 @@ class ClusteringSampling(ActiveLearner):
 
         return np.concatenate(all_features)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select diverse samples using K-means clustering
 
@@ -105,7 +111,7 @@ class ClusteringSampling(ActiveLearner):
         cluster_centers = kmeans.cluster_centers_
 
         # Calculate distances based on metric
-        if self.distance_metric == 'cosine':
+        if self.distance_metric == "cosine":
             distances = cosine_distances(features, cluster_centers)
         else:
             distances = euclidean_distances(features, cluster_centers)
@@ -131,8 +137,9 @@ class ClusteringSampling(ActiveLearner):
                     cluster_indices = np.where(cluster_mask)[0]
 
                     # Remove already selected indices
-                    available_indices = [idx for idx in cluster_indices
-                                       if idx not in selected_indices]
+                    available_indices = [
+                        idx for idx in cluster_indices if idx not in selected_indices
+                    ]
 
                     if available_indices:
                         cluster_distances = distances[available_indices, cluster_id]
@@ -155,7 +162,7 @@ class ClusteringSampling(ActiveLearner):
 class CoreSetSampling(ActiveLearner):
     """CoreSet selection for diversity sampling"""
 
-    def __init__(self, model, device: str = 'cpu', distance_metric: str = 'euclidean'):
+    def __init__(self, model, device: str = "cpu", distance_metric: str = "euclidean"):
         """
         Initialize CoreSet sampler
 
@@ -175,18 +182,19 @@ class CoreSetSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch.get('attention_mask', None)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch.get("attention_mask", None)
                 if attention_mask is not None:
                     attention_mask = attention_mask.to(self.device)
 
-                if hasattr(self.model, 'bert') or hasattr(self.model, 'roberta'):
-                    outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                       output_hidden_states=True)
+                if hasattr(self.model, "bert") or hasattr(self.model, "roberta"):
+                    outputs = self.model(
+                        input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                    )
                     features = outputs.hidden_states[-1][:, 0, :]
                 else:
                     outputs = self.model(input_ids=inputs, attention_mask=attention_mask)
-                    if hasattr(outputs, 'last_hidden_state'):
+                    if hasattr(outputs, "last_hidden_state"):
                         features = outputs.last_hidden_state.mean(dim=1)
                     else:
                         features = outputs.mean(dim=1)
@@ -195,8 +203,9 @@ class CoreSetSampling(ActiveLearner):
 
         return np.concatenate(all_features)
 
-    def greedy_coreset_selection(self, features: np.ndarray, n_samples: int,
-                                labeled_features: Optional[np.ndarray] = None) -> List[int]:
+    def greedy_coreset_selection(
+        self, features: np.ndarray, n_samples: int, labeled_features: Optional[np.ndarray] = None
+    ) -> List[int]:
         """
         Greedy CoreSet selection algorithm
 
@@ -221,10 +230,15 @@ class CoreSetSampling(ActiveLearner):
             all_selected_features = []
 
         # Calculate distance matrix
-        if self.distance_metric == 'cosine':
-            distance_fn = lambda x, y: cosine_distances(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+        if self.distance_metric == "cosine":
+
+            def distance_fn(x, y):
+                return cosine_distances(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+
         else:
-            distance_fn = lambda x, y: np.linalg.norm(x - y)
+
+            def distance_fn(x, y):
+                return np.linalg.norm(x - y)
 
         for _ in range(n_samples):
             max_min_distance = -1
@@ -235,7 +249,7 @@ class CoreSetSampling(ActiveLearner):
                     continue
 
                 # Calculate minimum distance to all selected samples
-                min_distance = float('inf')
+                min_distance = float("inf")
 
                 # Check distance to labeled samples
                 for selected_features in all_selected_features:
@@ -259,10 +273,9 @@ class CoreSetSampling(ActiveLearner):
 
         return selected_indices
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select diverse samples using CoreSet selection
 
@@ -282,9 +295,7 @@ class CoreSetSampling(ActiveLearner):
             labeled_features = self.get_features(labeled_data)
             logger.info(f"Using {len(labeled_features)} labeled samples for CoreSet")
 
-        selected_indices = self.greedy_coreset_selection(
-            features, n_samples, labeled_features
-        )
+        selected_indices = self.greedy_coreset_selection(features, n_samples, labeled_features)
 
         logger.info(f"Selected {len(selected_indices)} diverse samples using CoreSet")
 
@@ -294,8 +305,7 @@ class CoreSetSampling(ActiveLearner):
 class RepresentativeSampling(ActiveLearner):
     """Representative sampling based on feature centrality"""
 
-    def __init__(self, model, device: str = 'cpu', use_pca: bool = True,
-                 pca_components: int = 50):
+    def __init__(self, model, device: str = "cpu", use_pca: bool = True, pca_components: int = 50):
         """
         Initialize representative sampler
 
@@ -317,18 +327,19 @@ class RepresentativeSampling(ActiveLearner):
 
         with torch.no_grad():
             for batch in dataloader:
-                inputs = batch['input_ids'].to(self.device)
-                attention_mask = batch.get('attention_mask', None)
+                inputs = batch["input_ids"].to(self.device)
+                attention_mask = batch.get("attention_mask", None)
                 if attention_mask is not None:
                     attention_mask = attention_mask.to(self.device)
 
-                if hasattr(self.model, 'bert') or hasattr(self.model, 'roberta'):
-                    outputs = self.model(input_ids=inputs, attention_mask=attention_mask,
-                                       output_hidden_states=True)
+                if hasattr(self.model, "bert") or hasattr(self.model, "roberta"):
+                    outputs = self.model(
+                        input_ids=inputs, attention_mask=attention_mask, output_hidden_states=True
+                    )
                     features = outputs.hidden_states[-1][:, 0, :]
                 else:
                     outputs = self.model(input_ids=inputs, attention_mask=attention_mask)
-                    if hasattr(outputs, 'last_hidden_state'):
+                    if hasattr(outputs, "last_hidden_state"):
                         features = outputs.last_hidden_state.mean(dim=1)
                     else:
                         features = outputs.mean(dim=1)
@@ -337,10 +348,9 @@ class RepresentativeSampling(ActiveLearner):
 
         return np.concatenate(all_features)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select representative samples based on centrality
 
@@ -369,7 +379,9 @@ class RepresentativeSampling(ActiveLearner):
         selected_indices = np.argsort(distances_to_centroid)[:n_samples].tolist()
 
         logger.info(f"Selected {len(selected_indices)} representative samples")
-        logger.debug(f"Distance to centroid range: [{distances_to_centroid.min():.4f}, {distances_to_centroid.max():.4f}]")
+        logger.debug(
+            f"Distance to centroid range: [{distances_to_centroid.min():.4f}, {distances_to_centroid.max():.4f}]"
+        )
 
         return selected_indices
 
@@ -377,7 +389,7 @@ class RepresentativeSampling(ActiveLearner):
 class DiversityClusteringHybrid(ActiveLearner):
     """Hybrid approach combining multiple diversity strategies"""
 
-    def __init__(self, model, device: str = 'cpu', clustering_ratio: float = 0.6):
+    def __init__(self, model, device: str = "cpu", clustering_ratio: float = 0.6):
         """
         Initialize hybrid diversity sampler
 
@@ -391,10 +403,9 @@ class DiversityClusteringHybrid(ActiveLearner):
         self.clustering_sampler = ClusteringSampling(model, device)
         self.coreset_sampler = CoreSetSampling(model, device)
 
-    def select_samples(self,
-                      unlabeled_data: Dataset,
-                      n_samples: int,
-                      labeled_data: Optional[Dataset] = None) -> List[int]:
+    def select_samples(
+        self, unlabeled_data: Dataset, n_samples: int, labeled_data: Optional[Dataset] = None
+    ) -> List[int]:
         """
         Select diverse samples using hybrid approach
 
@@ -415,12 +426,12 @@ class DiversityClusteringHybrid(ActiveLearner):
         )
 
         # Create a subset excluding clustering selections for CoreSet
-        remaining_indices = [i for i in range(len(unlabeled_data))
-                           if i not in clustering_indices]
+        remaining_indices = [i for i in range(len(unlabeled_data)) if i not in clustering_indices]
 
         if len(remaining_indices) > 0 and n_coreset > 0:
             # Create subset dataset for CoreSet selection
             from torch.utils.data import Subset
+
             remaining_dataset = Subset(unlabeled_data, remaining_indices)
 
             # Select additional samples using CoreSet

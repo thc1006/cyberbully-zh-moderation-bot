@@ -5,12 +5,13 @@ Windows encoding compatibility tests
 Tests that Chinese text processing works correctly on Windows systems
 """
 
-import os
-import sys
-import platform
-import pytest
 import locale
+import os
+import platform
+import sys
 from pathlib import Path
+
+import pytest
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -146,9 +147,7 @@ class TestWindowsEncoding:
             import subprocess
 
             # Try to get current codepage
-            result = subprocess.run(
-                ["chcp"], shell=True, capture_output=True, text=True
-            )
+            result = subprocess.run(["chcp"], shell=True, capture_output=True, text=True)
 
             if result.returncode == 0:
                 # Should contain codepage information (in English or Chinese)
@@ -162,9 +161,7 @@ class TestWindowsEncoding:
                 )
 
             # Test setting UTF-8 codepage (65001)
-            result = subprocess.run(
-                ["chcp", "65001"], shell=True, capture_output=True, text=True
-            )
+            result = subprocess.run(["chcp", "65001"], shell=True, capture_output=True, text=True)
             # Command should execute (may not succeed depending on permissions)
 
         except Exception as e:

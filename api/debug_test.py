@@ -54,8 +54,9 @@ def test_api_function():
 
     try:
         # Import the API function
-        from app import analyze_text_content
         import asyncio
+
+        from app import analyze_text_content
 
         async def run_test():
             result = await analyze_text_content("test message")

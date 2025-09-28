@@ -4,18 +4,20 @@ Co-training Strategy 實作
 多視角學習與互補模型訓練策略
 """
 
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Union
-from dataclasses import dataclass
 from loguru import logger
-import copy
+
 
 @dataclass
 class CoTrainingConfig:
     """Co-training 配置"""
+
     confidence_threshold: float = 0.8
     max_unlabeled_ratio: float = 0.3
     agreement_threshold: float = 0.9
@@ -25,45 +27,46 @@ class CoTrainingConfig:
     samples_per_iteration: int = 1000
     validation_patience: int = 3
 
+
 class MultiViewFeatureExtractor:
     """多視角特徵提取器"""
 
-    def __init__(self, device: str = 'cuda'):
+    def __init__(self, device: str = "cuda"):
         self.device = device
 
     def extract_text_features(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """提取文字特徵（第一視角）"""
-        return {
-            'input_ids': batch['input_ids'],
-            'attention_mask': batch['attention_mask']
-        }
+        return {"input_ids": batch["input_ids"], "attention_mask": batch["attention_mask"]}
 
     def extract_emotion_features(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """提取情緒特徵（第二視角）"""
         # 假設我們有預先計算的情緒特徵
         # 這可以是情緒詞彙統計、情緒強度等
-        if 'emotion_features' in batch:
-            return {'emotion_features': batch['emotion_features']}
+        if "emotion_features" in batch:
+            return {"emotion_features": batch["emotion_features"]}
 
         # 如果沒有預計算特徵，使用簡單的統計特徵
-        text_ids = batch['input_ids']
+        text_ids = batch["input_ids"]
         batch_size, seq_len = text_ids.shape
 
         # 創建簡單的情緒特徵（這裡是示例，實際應用中需要更複雜的特徵）
         emotion_features = torch.randn(batch_size, 64).to(self.device)
 
-        return {'emotion_features': emotion_features}
+        return {"emotion_features": emotion_features}
 
-    def extract_linguistic_features(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def extract_linguistic_features(
+        self, batch: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """提取語言學特徵（第三視角）"""
         # 可以包括：POS 標籤、依存關係、句法特徵等
-        text_ids = batch['input_ids']
+        text_ids = batch["input_ids"]
         batch_size, seq_len = text_ids.shape
 
         # 創建簡單的語言學特徵
         linguistic_features = torch.randn(batch_size, 32).to(self.device)
 
-        return {'linguistic_features': linguistic_features}
+        return {"linguistic_features": linguistic_features}
+
 
 class ViewSpecificModel(nn.Module):
     """視角特定模型"""
@@ -75,83 +78,76 @@ class ViewSpecificModel(nn.Module):
         self.feature_dim = feature_dim
 
         # 根據視角類型添加特定的處理層
-        if view_type == 'emotion' and feature_dim:
+        if view_type == "emotion" and feature_dim:
             self.emotion_projection = nn.Linear(feature_dim, base_model.config.hidden_size)
-        elif view_type == 'linguistic' and feature_dim:
+        elif view_type == "linguistic" and feature_dim:
             self.linguistic_projection = nn.Linear(feature_dim, base_model.config.hidden_size)
 
     def forward(self, **inputs):
-        if self.view_type == 'text':
+        if self.view_type == "text":
             return self.base_model(**inputs)
-        elif self.view_type == 'emotion':
-            emotion_features = inputs['emotion_features']
+        elif self.view_type == "emotion":
+            emotion_features = inputs["emotion_features"]
             projected_features = self.emotion_projection(emotion_features)
 
             # 結合情緒特徵與文字特徵
-            if 'input_ids' in inputs:
+            if "input_ids" in inputs:
                 text_outputs = self.base_model(
-                    input_ids=inputs['input_ids'],
-                    attention_mask=inputs['attention_mask']
+                    input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]
                 )
                 # 簡單的特徵融合
                 combined_features = text_outputs.last_hidden_state.mean(dim=1) + projected_features
                 logits = self.base_model.classifier(combined_features)
-                return type('ModelOutput', (), {'logits': logits})()
+                return type("ModelOutput", (), {"logits": logits})()
             else:
                 logits = self.base_model.classifier(projected_features)
-                return type('ModelOutput', (), {'logits': logits})()
-        elif self.view_type == 'linguistic':
-            linguistic_features = inputs['linguistic_features']
+                return type("ModelOutput", (), {"logits": logits})()
+        elif self.view_type == "linguistic":
+            linguistic_features = inputs["linguistic_features"]
             projected_features = self.linguistic_projection(linguistic_features)
             logits = self.base_model.classifier(projected_features)
-            return type('ModelOutput', (), {'logits': logits})()
+            return type("ModelOutput", (), {"logits": logits})()
+
 
 class CoTrainingStrategy:
     """Co-training 策略實作"""
 
-    def __init__(self, config: CoTrainingConfig, device: str = 'cuda'):
+    def __init__(self, config: CoTrainingConfig, device: str = "cuda"):
         self.config = config
         self.device = device
         self.feature_extractor = MultiViewFeatureExtractor(device)
 
     def create_view_models(
-        self,
-        base_model_class,
-        model_config,
-        num_views: int = 2
+        self, base_model_class, model_config, num_views: int = 2
     ) -> List[ViewSpecificModel]:
         """創建多個視角模型"""
         models = []
-        view_types = ['text', 'emotion', 'linguistic']
+        view_types = ["text", "emotion", "linguistic"]
 
         for i in range(min(num_views, len(view_types))):
             base_model = base_model_class(model_config)
             view_model = ViewSpecificModel(
-                base_model,
-                view_types[i],
-                feature_dim=64 if view_types[i] == 'emotion' else 32
+                base_model, view_types[i], feature_dim=64 if view_types[i] == "emotion" else 32
             )
             models.append(view_model.to(self.device))
 
         return models
 
     def extract_features_for_views(
-        self,
-        batch: Dict[str, torch.Tensor],
-        view_models: List[ViewSpecificModel]
+        self, batch: Dict[str, torch.Tensor], view_models: List[ViewSpecificModel]
     ) -> List[Dict[str, torch.Tensor]]:
         """為每個視角提取特徵"""
         view_features = []
 
         for model in view_models:
-            if model.view_type == 'text':
+            if model.view_type == "text":
                 features = self.feature_extractor.extract_text_features(batch)
-            elif model.view_type == 'emotion':
+            elif model.view_type == "emotion":
                 features = {
                     **self.feature_extractor.extract_text_features(batch),
-                    **self.feature_extractor.extract_emotion_features(batch)
+                    **self.feature_extractor.extract_emotion_features(batch),
                 }
-            elif model.view_type == 'linguistic':
+            elif model.view_type == "linguistic":
                 features = self.feature_extractor.extract_linguistic_features(batch)
             else:
                 features = self.feature_extractor.extract_text_features(batch)
@@ -161,9 +157,7 @@ class CoTrainingStrategy:
         return view_features
 
     def compute_agreement(
-        self,
-        predictions: List[torch.Tensor],
-        confidences: List[torch.Tensor]
+        self, predictions: List[torch.Tensor], confidences: List[torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """計算模型間的一致性"""
         # 預測一致性
@@ -193,7 +187,7 @@ class CoTrainingStrategy:
         confidences: List[torch.Tensor],
         agreement_scores: torch.Tensor,
         batch_data: Dict[str, torch.Tensor],
-        max_samples: int
+        max_samples: int,
     ) -> Tuple[List[Dict], List[int]]:
         """選擇高信心且一致的樣本"""
         # 計算綜合分數
@@ -201,9 +195,8 @@ class CoTrainingStrategy:
         composite_scores = avg_confidence * agreement_scores
 
         # 篩選高分樣本
-        high_score_mask = (
-            (avg_confidence >= self.config.confidence_threshold) &
-            (agreement_scores >= self.config.agreement_threshold)
+        high_score_mask = (avg_confidence >= self.config.confidence_threshold) & (
+            agreement_scores >= self.config.agreement_threshold
         )
 
         if high_score_mask.sum() == 0:
@@ -220,12 +213,12 @@ class CoTrainingStrategy:
         selected_samples = []
         for idx in selected_indices:
             sample = {
-                'input_ids': batch_data['input_ids'][idx].cpu(),
-                'attention_mask': batch_data['attention_mask'][idx].cpu(),
-                'predictions': [pred[idx].cpu().item() for pred in predictions],
-                'confidences': [conf[idx].cpu().item() for conf in confidences],
-                'agreement_score': agreement_scores[idx].cpu().item(),
-                'composite_score': composite_scores[idx].cpu().item()
+                "input_ids": batch_data["input_ids"][idx].cpu(),
+                "attention_mask": batch_data["attention_mask"][idx].cpu(),
+                "predictions": [pred[idx].cpu().item() for pred in predictions],
+                "confidences": [conf[idx].cpu().item() for conf in confidences],
+                "agreement_score": agreement_scores[idx].cpu().item(),
+                "composite_score": composite_scores[idx].cpu().item(),
             }
             selected_samples.append(sample)
 
@@ -236,7 +229,7 @@ class CoTrainingStrategy:
         view_models: List[ViewSpecificModel],
         unlabeled_batch: Dict[str, torch.Tensor],
         optimizers: List[torch.optim.Optimizer],
-        criterions: List[nn.Module]
+        criterions: List[nn.Module],
     ) -> Dict[str, float]:
         """Co-training 訓練步驟"""
         # 提取每個視角的特徵
@@ -264,12 +257,15 @@ class CoTrainingStrategy:
 
         # 選擇可靠樣本用於訓練
         selected_samples, selected_indices = self.select_confident_samples(
-            predictions, confidences, pred_agreement, unlabeled_batch,
-            max_samples=self.config.samples_per_iteration
+            predictions,
+            confidences,
+            pred_agreement,
+            unlabeled_batch,
+            max_samples=self.config.samples_per_iteration,
         )
 
         if not selected_samples:
-            return {'num_selected': 0, 'agreement': 0, 'avg_confidence': 0}
+            return {"num_selected": 0, "agreement": 0, "avg_confidence": 0}
 
         # 使用選定樣本訓練每個模型
         total_losses = []
@@ -317,10 +313,10 @@ class CoTrainingStrategy:
 
         # 統計資訊
         stats = {
-            'num_selected': len(selected_samples),
-            'agreement': pred_agreement.mean().item(),
-            'avg_confidence': torch.stack(confidences).mean().item(),
-            'avg_loss': np.mean(total_losses) if total_losses else 0
+            "num_selected": len(selected_samples),
+            "agreement": pred_agreement.mean().item(),
+            "avg_confidence": torch.stack(confidences).mean().item(),
+            "avg_loss": np.mean(total_losses) if total_losses else 0,
         }
 
         return stats
@@ -332,15 +328,15 @@ class CoTrainingStrategy:
         unlabeled_dataloader: torch.utils.data.DataLoader,
         validation_dataloader: torch.utils.data.DataLoader,
         optimizers: List[torch.optim.Optimizer],
-        criterions: List[nn.Module]
+        criterions: List[nn.Module],
     ) -> Dict[str, List[float]]:
         """完整的 Co-training 訓練流程"""
         history = {
-            'train_accuracies': [],
-            'val_accuracies': [],
-            'agreements': [],
-            'num_selected_samples': [],
-            'avg_confidences': []
+            "train_accuracies": [],
+            "val_accuracies": [],
+            "agreements": [],
+            "num_selected_samples": [],
+            "avg_confidences": [],
         }
 
         best_val_accuracy = 0
@@ -350,26 +346,18 @@ class CoTrainingStrategy:
             logger.info(f"Starting co-training iteration {iteration + 1}")
 
             # 在有標籤資料上訓練
-            self._train_on_labeled_data(
-                view_models, labeled_dataloader, optimizers, criterions
-            )
+            self._train_on_labeled_data(view_models, labeled_dataloader, optimizers, criterions)
 
             # Co-training 在無標籤資料上
-            iteration_stats = {
-                'agreements': [],
-                'num_selected': [],
-                'avg_confidences': []
-            }
+            iteration_stats = {"agreements": [], "num_selected": [], "avg_confidences": []}
 
             for batch in unlabeled_dataloader:
-                stats = self.co_training_step(
-                    view_models, batch, optimizers, criterions
-                )
+                stats = self.co_training_step(view_models, batch, optimizers, criterions)
 
-                if stats['num_selected'] > 0:
-                    iteration_stats['agreements'].append(stats['agreement'])
-                    iteration_stats['num_selected'].append(stats['num_selected'])
-                    iteration_stats['avg_confidences'].append(stats['avg_confidence'])
+                if stats["num_selected"] > 0:
+                    iteration_stats["agreements"].append(stats["agreement"])
+                    iteration_stats["num_selected"].append(stats["num_selected"])
+                    iteration_stats["avg_confidences"].append(stats["avg_confidence"])
 
             # 驗證
             val_accuracies = []
@@ -380,15 +368,23 @@ class CoTrainingStrategy:
             avg_val_accuracy = np.mean(val_accuracies)
 
             # 記錄歷史
-            history['val_accuracies'].append(avg_val_accuracy)
-            history['agreements'].append(np.mean(iteration_stats['agreements']) if iteration_stats['agreements'] else 0)
-            history['num_selected_samples'].append(np.sum(iteration_stats['num_selected']))
-            history['avg_confidences'].append(np.mean(iteration_stats['avg_confidences']) if iteration_stats['avg_confidences'] else 0)
+            history["val_accuracies"].append(avg_val_accuracy)
+            history["agreements"].append(
+                np.mean(iteration_stats["agreements"]) if iteration_stats["agreements"] else 0
+            )
+            history["num_selected_samples"].append(np.sum(iteration_stats["num_selected"]))
+            history["avg_confidences"].append(
+                np.mean(iteration_stats["avg_confidences"])
+                if iteration_stats["avg_confidences"]
+                else 0
+            )
 
-            logger.info(f"Iteration {iteration + 1}: "
-                       f"Val Acc = {avg_val_accuracy:.4f}, "
-                       f"Agreement = {history['agreements'][-1]:.3f}, "
-                       f"Selected = {history['num_selected_samples'][-1]}")
+            logger.info(
+                f"Iteration {iteration + 1}: "
+                f"Val Acc = {avg_val_accuracy:.4f}, "
+                f"Agreement = {history['agreements'][-1]:.3f}, "
+                f"Selected = {history['num_selected_samples'][-1]}"
+            )
 
             # 早停檢查
             if avg_val_accuracy > best_val_accuracy:
@@ -397,7 +393,7 @@ class CoTrainingStrategy:
 
                 # 保存最佳模型
                 for i, model in enumerate(view_models):
-                    torch.save(model.state_dict(), f'best_cotraining_model_view_{i}.pt')
+                    torch.save(model.state_dict(), f"best_cotraining_model_view_{i}.pt")
             else:
                 patience_counter += 1
                 if patience_counter >= self.config.validation_patience:
@@ -411,17 +407,17 @@ class CoTrainingStrategy:
         view_models: List[ViewSpecificModel],
         labeled_dataloader: torch.utils.data.DataLoader,
         optimizers: List[torch.optim.Optimizer],
-        criterions: List[nn.Module]
+        criterions: List[nn.Module],
     ):
         """在有標籤資料上訓練模型"""
         for model in view_models:
             model.train()
 
         for batch in labeled_dataloader:
-            labels = batch['labels'].to(self.device)
+            labels = batch["labels"].to(self.device)
             view_features = self.extract_features_for_views(batch, view_models)
 
-            for i, (model, features, optimizer, criterion) in enumerate(
+            for _i, (model, features, optimizer, criterion) in enumerate(
                 zip(view_models, view_features, optimizers, criterions)
             ):
                 optimizer.zero_grad()
@@ -433,9 +429,7 @@ class CoTrainingStrategy:
                 optimizer.step()
 
     def _validate_model(
-        self,
-        model: ViewSpecificModel,
-        validation_dataloader: torch.utils.data.DataLoader
+        self, model: ViewSpecificModel, validation_dataloader: torch.utils.data.DataLoader
     ) -> float:
         """驗證單個模型"""
         model.eval()
@@ -444,7 +438,7 @@ class CoTrainingStrategy:
 
         with torch.no_grad():
             for batch in validation_dataloader:
-                labels = batch['labels'].to(self.device)
+                labels = batch["labels"].to(self.device)
                 view_features = self.extract_features_for_views(batch, [model])[0]
 
                 outputs = model(**view_features)

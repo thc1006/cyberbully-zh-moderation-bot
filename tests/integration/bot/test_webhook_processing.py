@@ -74,9 +74,7 @@ class TestWebhookSignatureVerification:
 class TestMessageProcessing:
     """訊息處理測試"""
 
-    async def test_text_message_processing(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_text_message_processing(self, bot_server, http_client, mock_line_signature):
         """測試文字訊息處理"""
         payload = {
             "events": [
@@ -110,9 +108,7 @@ class TestMessageProcessing:
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
-    async def test_toxic_message_processing(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_toxic_message_processing(self, bot_server, http_client, mock_line_signature):
         """測試毒性訊息處理與回應"""
         toxic_payload = {
             "events": [
@@ -150,9 +146,7 @@ class TestMessageProcessing:
         # 驗證有回應訊息
         mock_reply.assert_called()
 
-    async def test_severe_threat_processing(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_severe_threat_processing(self, bot_server, http_client, mock_line_signature):
         """測試嚴重威脅訊息處理"""
         threat_payload = {
             "events": [
@@ -193,9 +187,7 @@ class TestMessageProcessing:
 class TestUserSessionManagement:
     """使用者會話管理測試"""
 
-    async def test_user_session_creation(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_user_session_creation(self, bot_server, http_client, mock_line_signature):
         """測試使用者會話建立"""
         user_id = "test_session_user"
         payload = {
@@ -235,9 +227,7 @@ class TestUserSessionManagement:
         assert user_id in user_sessions
         assert len(user_sessions[user_id].recent_messages) == 1
 
-    async def test_warning_count_escalation(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_warning_count_escalation(self, bot_server, http_client, mock_line_signature):
         """測試警告計數與升級"""
         user_id = "test_escalation_user"
 
@@ -449,9 +439,7 @@ class TestBotHealthAndStats:
 class TestErrorHandling:
     """Bot 錯誤處理測試"""
 
-    async def test_api_service_unavailable(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_api_service_unavailable(self, bot_server, http_client, mock_line_signature):
         """測試分析 API 服務不可用時的處理"""
         payload = {
             "events": [
@@ -490,9 +478,7 @@ class TestErrorHandling:
         # 應該有錯誤回應訊息
         mock_reply.assert_called()
 
-    async def test_malformed_webhook_data(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_malformed_webhook_data(self, bot_server, http_client, mock_line_signature):
         """測試格式錯誤的 Webhook 資料處理"""
         # 缺少必要欄位的 payload
         malformed_payload = {
@@ -516,9 +502,7 @@ class TestErrorHandling:
         # 即使資料格式錯誤，webhook 也應該回傳 200 以免 LINE 重送
         assert response.status_code == 200
 
-    async def test_non_text_message_handling(
-        self, bot_server, http_client, mock_line_signature
-    ):
+    async def test_non_text_message_handling(self, bot_server, http_client, mock_line_signature):
         """測試非文字訊息處理"""
         # 圖片訊息
         image_payload = {

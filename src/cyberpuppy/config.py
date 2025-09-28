@@ -3,18 +3,21 @@ Configuration module for CyberPuppy
 """
 
 import json
-import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import yaml
+
 # Compatibility imports for different Pydantic versions
 try:
-    from pydantic import Field, field_validator, ConfigDict
+    from pydantic import ConfigDict, Field, field_validator
     from pydantic_settings import BaseSettings
+
     PYDANTIC_V2 = True
 except ImportError:
     # Fallback for older Pydantic versions
     from pydantic import Field
+
     try:
         from pydantic_settings import BaseSettings
     except ImportError:
@@ -25,6 +28,7 @@ except ImportError:
     def field_validator(field_name, mode=None):
         def decorator(func):
             return func  # Skip validation in older versions for now
+
         return decorator
 
 
@@ -50,16 +54,18 @@ class Settings(BaseSettings):
     BATCH_SIZE: int = Field(default=16)
 
     # Test-compatible attributes (aliases and new fields)
-    MODEL_NAME: str = Field(default="hfl/chinese-macbert-base")  # Alias for BASE_MODEL, supports CYBERPUPPY_MODEL_NAME
-    CONFIDENCE_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)  # General confidence threshold, supports CYBERPUPPY_CONFIDENCE_THRESHOLD
+    MODEL_NAME: str = Field(
+        default="hfl/chinese-macbert-base"
+    )  # Alias for BASE_MODEL, supports CYBERPUPPY_MODEL_NAME
+    CONFIDENCE_THRESHOLD: float = Field(
+        default=0.7, ge=0.0, le=1.0
+    )  # General confidence threshold, supports CYBERPUPPY_CONFIDENCE_THRESHOLD
     MAX_TEXT_LENGTH: int = Field(default=4000)  # Alias for MAX_LENGTH for tests
 
     # Toxicity Labels
     TOXICITY_LABELS: List[str] = Field(default=["none", "toxic", "severe"])
     BULLYING_LABELS: List[str] = Field(default=["none", "harassment", "threat"])
-    ROLE_LABELS: List[str] = Field(
-        default=["none", "perpetrator", "victim", "bystander"]
-    )
+    ROLE_LABELS: List[str] = Field(default=["none", "perpetrator", "victim", "bystander"])
     EMOTION_LABELS: List[str] = Field(default=["positive", "neutral", "negative"])
 
     # API Configuration
@@ -130,7 +136,9 @@ class Settings(BaseSettings):
             return v.lower() in ("true", "1", "yes", "on")
         return v
 
-    @field_validator("TOXICITY_LABELS", "BULLYING_LABELS", "ROLE_LABELS", "EMOTION_LABELS", mode="before")
+    @field_validator(
+        "TOXICITY_LABELS", "BULLYING_LABELS", "ROLE_LABELS", "EMOTION_LABELS", mode="before"
+    )
     @classmethod
     def validate_labels(cls, v):
         """Parse JSON string labels from environment variables."""
@@ -171,7 +179,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
-        env_prefix="CYBERPUPPY_"
+        env_prefix="CYBERPUPPY_",
     )
 
     def __init__(self, **kwargs):

@@ -2,10 +2,10 @@
 Test script for the fixed model loader.
 """
 
-import sys
-import os
-import logging
 import json
+import logging
+import os
+import sys
 from pathlib import Path
 
 # Add project root to path
@@ -15,8 +15,7 @@ from api.model_loader_fixed import get_fixed_loader
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
@@ -79,12 +78,12 @@ def test_predictions():
 
         # Test texts
         test_texts = [
-            "你好，今天天气不错",           # Neutral/positive
-            "笨蛋，你真是太蠢了",           # Toxic
-            "去死吧，我要杀了你",           # Severe/threat
-            "谢谢你的帮助，我很感激",       # Positive
-            "这个天气真糟糕，心情不好",     # Negative
-            "滚开，别烦我",                 # Harassment
+            "你好，今天天气不错",  # Neutral/positive
+            "笨蛋，你真是太蠢了",  # Toxic
+            "去死吧，我要杀了你",  # Severe/threat
+            "谢谢你的帮助，我很感激",  # Positive
+            "这个天气真糟糕，心情不好",  # Negative
+            "滚开，别烦我",  # Harassment
         ]
 
         print(f"\nTesting with {len(test_texts)} sample texts:")
@@ -97,33 +96,29 @@ def test_predictions():
 
                 result = model.predict_text(text)
 
-                print(f"Toxicity: {result['toxicity']} ({result['scores']['toxicity'][result['toxicity']]:.3f})")
+                print(
+                    f"Toxicity: {result['toxicity']} ({result['scores']['toxicity'][result['toxicity']]:.3f})"
+                )
                 print(f"Emotion: {result['emotion']} (strength: {result['emotion_strength']})")
-                print(f"Bullying: {result['bullying']} ({result['scores']['bullying'][result['bullying']]:.3f})")
+                print(
+                    f"Bullying: {result['bullying']} ({result['scores']['bullying'][result['bullying']]:.3f})"
+                )
                 print(f"Role: {result['role']}")
                 print(f"Confidence: {result['explanations']['confidence']:.3f}")
 
-                if result['explanations']['important_words']:
-                    words = [w['word'] for w in result['explanations']['important_words'][:3]]
+                if result["explanations"]["important_words"]:
+                    words = [w["word"] for w in result["explanations"]["important_words"][:3]]
                     print(f"Key words: {', '.join(words)}")
 
-                results.append({
-                    'text': text,
-                    'result': result,
-                    'success': True
-                })
+                results.append({"text": text, "result": result, "success": True})
 
             except Exception as e:
                 print(f"✗ Prediction failed: {e}")
-                results.append({
-                    'text': text,
-                    'error': str(e),
-                    'success': False
-                })
+                results.append({"text": text, "error": str(e), "success": False})
 
         # Summary
-        successful = sum(1 for r in results if r['success'])
-        print(f"\n=== Prediction Results ===")
+        successful = sum(1 for r in results if r["success"])
+        print("\n=== Prediction Results ===")
         print(f"Successful: {successful}/{len(test_texts)}")
         print(f"Success rate: {successful/len(test_texts)*100:.1f}%")
 
@@ -157,14 +152,14 @@ def test_warmup():
         print("\n=== Warmup Results ===")
         print(json.dumps(warmup_stats, indent=2))
 
-        success_rate = warmup_stats['success_count'] / warmup_stats['warmup_samples']
+        success_rate = warmup_stats["success_count"] / warmup_stats["warmup_samples"]
         print(f"\nWarmup success rate: {success_rate*100:.1f}%")
 
-        if warmup_stats['times']:
-            avg_time = warmup_stats['average_time']
+        if warmup_stats["times"]:
+            avg_time = warmup_stats["average_time"]
             print(f"Average prediction time: {avg_time:.3f}s")
 
-        return warmup_stats['success_count'] > 0
+        return warmup_stats["success_count"] > 0
 
     except Exception as e:
         print(f"✗ Warmup testing failed: {e}")
@@ -207,7 +202,7 @@ def test_error_handling():
         for i, text in enumerate(problematic_texts, 1):
             try:
                 display_text = text[:50] + "..." if len(text) > 50 else text
-                display_text = display_text.replace('\n', '\\n')
+                display_text = display_text.replace("\n", "\\n")
                 print(f"\nTest {i}: '{display_text}'")
 
                 result = model.predict_text(text)
@@ -218,7 +213,7 @@ def test_error_handling():
                 print(f"✗ Failed: {e}")
                 errors += 1
 
-        print(f"\n=== Error Handling Results ===")
+        print("\n=== Error Handling Results ===")
         print(f"Successful: {successes}/{len(problematic_texts)}")
         print(f"Errors: {errors}/{len(problematic_texts)}")
         print(f"Success rate: {successes/len(problematic_texts)*100:.1f}%")

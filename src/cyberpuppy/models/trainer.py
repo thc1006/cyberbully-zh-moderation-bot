@@ -5,7 +5,7 @@ Placeholder implementation for CLI integration.
 """
 
 import logging
-from typing import Dict, Any, Optional, Callable
+from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
