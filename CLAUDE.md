@@ -3,10 +3,25 @@
 ## 專案宗旨
 CyberPuppy 是一個以「網路霸凌防治」為核心，結合 **毒性偵測** 與 **情緒分析** 的中文聊天機器人。它需在私訊與群組對話中，以**高可解釋性**、**低誤傷**的方式提供即時提醒。
 
+## 專案規模 (2025-09-29 深度分析)
+- **總檔案數**: 9,185 個檔案 (~3.7 GB)
+- **程式碼**: 254 個 Python 檔案 (79 個核心模組)
+- **測試**: 70 個測試檔案，179+ 測試用例
+- **資料**: 4.75M 行資料 (666 MB)
+- **模型**: 10 個模型檔案 (1.6 GB)
+
 ## 任務與資料
+### 資料集規模
+- **COLD**: 37,483 樣本 (主要訓練資料)
+- **DMSC**: 2,131,887 樣本 (情緒分析，387 MB)
+- **ChnSentiCorp**: 15,534 樣本 (情感分析)
+- **訓練集分割**: train(25,659) / dev(6,430) / test(5,320)
+
+### 標籤體系
 - 主任務：毒性/霸凌偵測（COLD 為主，SCCD/CHNCI 脈絡加強）
 - 副任務：情緒分類／強度（ChnSentiCorp、DMSC v2、NTUSD）
 - 統一標籤：`toxicity{none,toxic,severe}`、`bullying{none,harassment,threat}`、`role{none,perpetrator,victim,bystander}`、`emotion{pos,neu,neg}` + `emotion_strength{0..4}`
+- **⚠️ 問題**: 當前訓練資料 role 全為 "none"，emotion 全為 "neu"
 
 ## 技術與工具
 - 模型：HuggingFace（`hfl/chinese-macbert-base`、`hfl/chinese-roberta-wwm-ext`）
@@ -113,13 +128,33 @@ notebooks/
 
 4. 🎯 **後續**: 模型穩定性與跨領域測試（PTT, Dcard, 微博）
 
+## 資料庫與儲存
+
+### SQLite 資料庫
+- **hive.db**: 124 KB (`.hive-mind/` - Hive-mind 協調系統)
+- **memory.db**: 16 KB + 112 KB (記憶體儲存)
+
+### Git LFS 大檔案
+- 訓練資料: `data/processed/training_dataset/*.json`
+- 處理資料: `data/processed/cold/*.csv`
+- 情緒資料: `data/processed/chnsenticorp/*.json`
+
+## API 與服務
+- **API 端點**: 17 個 RESTful endpoints
+- **LINE Bot**: 2 個主要檔案 (25.6 KB)
+- **Docker**: docker-compose.yml 部署配置
+- **Notebooks**: 5 個 Jupyter notebooks (114 KB)
+- **套件依賴**: 160 個 (64 生產 + 96 開發)
+
 ## 完成定義（DoD）
 
-- ✅ 單元測試通過（>90% 核心模組覆蓋，詳見 docs/TEST_COVERAGE_IMPROVEMENTS.md）
-- ✅ 離線評估：毒性 F1=0.82 (≥0.78 ✅)；霸凌 F1=0.82 (≥0.75 ✅)
+- ✅ 單元測試通過（70-90% 核心模組覆蓋，詳見 docs/TEST_COVERAGE_IMPROVEMENTS.md）
+- ❌ **離線評估**: 實測 F1=0.28 (目標：毒性≥0.78，霸凌≥0.75) - **嚴重未達標**
 - 🔄 情緒 F1=1.00 需大規模驗證；SCCD 會話級報告待生成
 - ⚠️ 提供 IG/SHAP 可視化範例與誤判分析（部分完成）
 - ⚠️ Docker 化的 API 與可用的 LINE Bot Webhook（待驗證）
+
+**深度分析報告**: 詳見 `docs/PROJECT_DEEP_ANALYSIS.md`
 
 ---
 
