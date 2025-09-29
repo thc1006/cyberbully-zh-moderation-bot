@@ -114,7 +114,12 @@ models/**/pytorch_model.bin
 models/macbert_base_demo/
 models/toxicity_only_demo/
 models/working_toxicity_model/pytorch_model.bin
-models/gpu_trained_model/model.safetensors
+
+# Exception: Allow bullying_a100_best model (our production model)
+!models/bullying_a100_best/pytorch_model.bin
+!models/bullying_a100_best/best_model.pt
+!models/bullying_a100_best/*.bin
+!models/bullying_a100_best/*.pt
 
 # Large datasets (can be downloaded via scripts)
 data/raw/dmsc/DMSC.csv
@@ -143,7 +148,6 @@ data/raw/**/*.csv
 !models/bullying_improved/**/*.pth
 
 # Specific large files found in scan
-models/gpu_trained_model/
 models/macbert_base_demo/
 models/toxicity_only_demo/
 models/working_toxicity_model/

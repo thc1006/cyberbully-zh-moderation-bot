@@ -1,11 +1,3 @@
-{
-  "model_name": "macbert_a100_optimized",
-  "f1_score": 0.8191669650316267,
-  "metrics": {
-    "test_bullying_f1": 0.8191669650316267,
-    "test_toxicity_f1": 0.8182035119619464,
-    "best_val_f1": 0.9267425786806784
-  },
-  "trained_on": "Google Colab A100",
-  "timestamp": "2025-09-28T19:08:45.964933"
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:8996db8d8a428b71b0c2061ace12e77ff39333d5d32bf485d3d561d1710c88f3
+size 316
