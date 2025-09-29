@@ -1,6 +1,6 @@
 # 🛡️ CyberPuppy - Advanced Chinese Cyberbullying Detection & Content Moderation System
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![CUDA 12.4](https://img.shields.io/badge/CUDA-12.4-green.svg)](https://developer.nvidia.com/cuda-downloads)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -29,13 +29,14 @@ CyberPuppy represents the **most comprehensive open-source solution** for Chines
 
 | Metric | Actual | Target | Status |
 |--------|--------|--------|--------|
-| **Toxicity Detection F1** | 0.77 | 0.78 | 🔄 Near target |
-| **Bullying Detection F1** | 0.55 | 0.75 | ⚠️ Needs improvement |
+| **Toxicity Detection F1** | - | 0.78 | ⚠️ Awaiting training |
+| **Bullying Detection F1** | 0.826 | 0.75 | ✅ Achieved |
 | **Emotion Analysis F1** | 1.00* | 0.85 | ✅ Exceeds target |
 | **Response Time** | <200ms | 500ms | ✅ Achieved |
 | **GPU Acceleration** | 5-10x | - | ✅ Verified |
 
 *Note: Emotion analysis showed perfect performance in limited testing, requires larger-scale validation
+**Production Model**: bullying_a100_best deployed (F1=0.826, Accuracy=0.824)
 
 ## 🛠️ Technology Stack
 
@@ -61,7 +62,7 @@ CyberPuppy represents the **most comprehensive open-source solution** for Chines
 
 ```bash
 # System Requirements
-- Python 3.11+ (3.13 supported)
+- Python 3.9+ (3.13 supported)
 - CUDA 12.4+ (for GPU acceleration)
 - 8GB+ RAM (16GB recommended)
 - 4GB+ GPU VRAM (optional)
@@ -77,8 +78,10 @@ cd cyberbully-zh-moderation-bot
 # Install dependencies
 pip install -r requirements.txt
 
-# Download required models and datasets (2.8GB)
+# Download required datasets
 python scripts/download_datasets.py --all
+
+# Production model included (bullying_a100_best)
 
 # GPU Setup (optional but recommended)
 python test_gpu.py  # Verify CUDA availability
