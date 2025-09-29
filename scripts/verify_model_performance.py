@@ -181,6 +181,7 @@ def main():
     models_to_test = [
         "models/gpu_trained_model",
         "models/working_toxicity_model",
+        "models/bullying_a100_best",  # 新訓練的 L4/A100 模型
     ]
 
     results = []
