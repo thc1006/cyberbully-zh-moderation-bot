@@ -179,9 +179,8 @@ def main():
 
     # 要測試的模型列表
     models_to_test = [
-        "models/gpu_trained_model",
         "models/working_toxicity_model",
-        "models/bullying_a100_best",  # 新訓練的 L4/A100 模型
+        "models/bullying_a100_best",  # 生產級模型 (F1=0.826)
     ]
 
     results = []

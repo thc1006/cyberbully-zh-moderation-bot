@@ -1,5 +1,3 @@
-{
-  "test_bullying_f1": 0.8191669650316267,
-  "test_toxicity_f1": 0.8182035119619464,
-  "best_val_f1": 0.9267425786806784
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:f3dc4c7fc89ef6381fc426aae65fdeac531d0b9754d8e90275c0c2c147c97b18
+size 127

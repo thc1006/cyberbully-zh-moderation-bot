@@ -1,5 +1,3 @@
-{
-  "bullying_f1": 0.9267425786806784,
-  "toxicity_f1": 0.9265885219605046,
-  "epoch": 4
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:cfd4bafd15b4b065e6a79d008eceac0444c76a581b1371022cc79bb531c9aa29
+size 94
