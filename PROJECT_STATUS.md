@@ -118,7 +118,7 @@ cyberbully-zh-moderation-bot/
 │   ├── download_datasets.py # 資料集下載
 │   └── clean_normalize.py   # 資料清理
 ├── models/                  # 模型檔案
-│   ├── gpu_trained_model/  # GPU 訓練的模型
+│   ├── bullying_a100_best/ # 生產級模型 (F1=0.826)
 │   ├── macbert_base_demo/  # MacBERT 示範模型
 │   └── working_toxicity_model/ # 工作中的毒性模型
 ├── data/                    # 資料集
