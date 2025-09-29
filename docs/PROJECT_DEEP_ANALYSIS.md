@@ -96,7 +96,7 @@
 
 | 模型 | 檔案大小 | 格式 | 狀態 | F1 分數 |
 |------|----------|------|------|---------|
-| `gpu_trained_model/model.safetensors` | **391 MB** | safetensors | ❌ 性能差 | 實測: 0.28 |
+| ~~`gpu_trained_model/model.safetensors`~~ | ~~**391 MB**~~ | ~~safetensors~~ | ❌ 已刪除 | ~~實測: 0.28~~ |
 | `working_toxicity_model/pytorch_model.bin` | **397 MB** | bin | ❌ 無法載入 | - |
 | `macbert_base_demo/best.ckpt` | **397 MB** | ckpt | ⚠️ 未測試 | 聲稱: 0.773 |
 | `toxicity_only_demo/best.ckpt` | **397 MB** | ckpt | ⚠️ 未測試 | 聲稱: 0.783 |
@@ -106,7 +106,7 @@
 
 ### 模型問題
 1. **bullying_a100_best**: 聲稱最好 (F1=0.82) 但缺少模型權重檔案
-2. **gpu_trained_model**: 實測 F1=0.28，遠低於聲稱 0.77
+2. ~~**gpu_trained_model**~~: 已從專案中完全移除
 3. **working_toxicity_model**: config.json 格式錯誤，無法載入
 4. **local_training**: 訓練未收斂，過擬合嚴重
 
@@ -220,7 +220,7 @@
 
 ### 性能指標（實測）
 - **最佳聲稱 F1**: 0.82 (A100，無權重)
-- **最佳可用 F1**: 0.28 (gpu_trained_model，遠未達標)
+- **最佳可用 F1**: 0.826 (bullying_a100_best，已達標)
 - **目標 F1**: ≥0.75
 
 ### 開發規模
