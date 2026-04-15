@@ -109,3 +109,80 @@ def test_sampler_len_matches_actual_batches() -> None:
     records = _build_records(n_clean=40, n_pairs=15)
     sampler = CloakAwareBatchSampler(records, batch_size=8, shuffle=False)
     assert len(sampler) == len(list(sampler))
+
+
+# ---- v2.3: 2-variant pair (homo_lexicon) support --------------------
+
+def _build_records_with_pairs(n_clean: int, n_2pairs: int) -> list[dict]:
+    """n_2pairs = number of 2-variant pairs (base + homo_lexicon)."""
+    records = []
+    for i in range(n_clean):
+        records.append({"text": "x" * 50, "metadata": {"cloak_pair_id": -1}})
+    for p in range(n_2pairs):
+        for variant in ("base", "homo_lexicon"):
+            records.append({
+                "text": "y" * 30,
+                "metadata": {"cloak_pair_id": 10000 + p, "cloak_variant": variant},
+            })
+    return records
+
+
+def test_sampler_groups_2variant_pairs_together() -> None:
+    """v2.3 lexicon-aug pairs (2 variants) must also stay in same batch."""
+    records = _build_records_with_pairs(n_clean=20, n_2pairs=10)
+    sampler = CloakAwareBatchSampler(records, batch_size=6, shuffle=False)
+    pair_batch_ids: dict[int, set[int]] = {}
+    for bi, batch in enumerate(sampler):
+        for idx in batch:
+            pid = records[idx]["metadata"]["cloak_pair_id"]
+            if pid >= 0:
+                pair_batch_ids.setdefault(pid, set()).add(bi)
+    for pid, bids in pair_batch_ids.items():
+        assert len(bids) == 1, f"2-variant pair {pid} split across {bids}"
+
+
+def test_sampler_handles_mixed_2_and_3_variant_pairs() -> None:
+    """v2.3 case: ToxiCloakCN triplets + lexicon-aug pairs side by side."""
+    records = []
+    # 5 clean, 4 triplets (pair_id 0..3), 6 pairs (pair_id 100..105)
+    for i in range(5):
+        records.append({"text": "clean" * 5, "metadata": {"cloak_pair_id": -1}})
+    for p in range(4):
+        for v in ("base", "homo", "emoji"):
+            records.append({"text": "trip", "metadata":
+                {"cloak_pair_id": p, "cloak_variant": v}})
+    for p in range(6):
+        for v in ("base", "homo_lexicon"):
+            records.append({"text": "pair", "metadata":
+                {"cloak_pair_id": 100 + p, "cloak_variant": v}})
+    sampler = CloakAwareBatchSampler(records, batch_size=6, shuffle=False)
+    seen = []
+    for batch in sampler:
+        seen.extend(batch)
+    # Every record covered exactly once
+    assert sorted(seen) == list(range(len(records)))
+    # Each pair_id stays within one batch
+    pair_batch: dict[int, set[int]] = {}
+    for bi, batch in enumerate(sampler):
+        for idx in batch:
+            pid = records[idx]["metadata"]["cloak_pair_id"]
+            if pid >= 0:
+                pair_batch.setdefault(pid, set()).add(bi)
+    for pid, bids in pair_batch.items():
+        assert len(bids) == 1, f"pair {pid} split across {bids}"
+
+
+def test_sampler_len_matches_for_mixed_pairs_and_triplets() -> None:
+    records = []
+    for i in range(10):
+        records.append({"text": "c", "metadata": {"cloak_pair_id": -1}})
+    for p in range(6):
+        for v in ("base", "homo", "emoji"):
+            records.append({"text": "t", "metadata":
+                {"cloak_pair_id": p, "cloak_variant": v}})
+    for p in range(8):
+        for v in ("base", "homo_lexicon"):
+            records.append({"text": "p", "metadata":
+                {"cloak_pair_id": 100 + p, "cloak_variant": v}})
+    sampler = CloakAwareBatchSampler(records, batch_size=6, shuffle=False)
+    assert len(sampler) == len(list(sampler))

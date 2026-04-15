@@ -1,0 +1,58 @@
+{
+  "train": {
+    "total": 81376,
+    "by_source": {
+      "toxicloak": 11004,
+      "homo_aug": 5253,
+      "sccd": 30015,
+      "cold": 28010,
+      "state_toxicn": 7094
+    },
+    "by_cloak_variant": {
+      "homo": 3668,
+      "homo_lexicon": 5253,
+      "—": 59866,
+      "base": 8921,
+      "emoji": 3668
+    },
+    "toxicity": {
+      "none": 41678,
+      "toxic": 33956,
+      "severe": 5742
+    }
+  },
+  "dev": {
+    "total": 10535,
+    "by_source": {
+      "cold": 6430,
+      "state_toxicn": 643,
+      "sccd": 3462
+    },
+    "by_cloak_variant": {
+      "—": 10535
+    },
+    "toxicity": {
+      "toxic": 4103,
+      "none": 6062,
+      "severe": 370
+    }
+  },
+  "test": {
+    "total": 10382,
+    "by_source": {
+      "cold": 5320,
+      "state_toxicn": 1605,
+      "sccd": 3457
+    },
+    "by_cloak_variant": {
+      "—": 10382
+    },
+    "toxicity": {
+      "toxic": 3625,
+      "none": 6317,
+      "severe": 440
+    }
+  },
+  "synthetic_pairs_added": 5253,
+  "skipped_no_overlap": 18488
+}
