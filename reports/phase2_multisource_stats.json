@@ -1,0 +1,89 @@
+{
+  "train": {
+    "total": 59866,
+    "by_source": {
+      "cold": 25659,
+      "sccd": 28426,
+      "state_toxicn": 5781
+    },
+    "toxicity": {
+      "toxic": 19649,
+      "none": 36125,
+      "severe": 4092
+    },
+    "bullying": {
+      "harassment": 23609,
+      "none": 36125,
+      "threat": 132
+    },
+    "role": {
+      "none": 48798,
+      "perpetrator": 11068
+    },
+    "emotion": {
+      "neu": 48798,
+      "neg": 11068
+    },
+    "quality": {
+      "gold": 59866
+    }
+  },
+  "dev": {
+    "total": 10535,
+    "by_source": {
+      "cold": 6430,
+      "state_toxicn": 643,
+      "sccd": 3462
+    },
+    "toxicity": {
+      "toxic": 4103,
+      "none": 6062,
+      "severe": 370
+    },
+    "bullying": {
+      "harassment": 4465,
+      "none": 6062,
+      "threat": 8
+    },
+    "role": {
+      "none": 9272,
+      "perpetrator": 1263
+    },
+    "emotion": {
+      "neu": 9272,
+      "neg": 1263
+    },
+    "quality": {
+      "gold": 10535
+    }
+  },
+  "test": {
+    "total": 10382,
+    "by_source": {
+      "cold": 5320,
+      "state_toxicn": 1605,
+      "sccd": 3457
+    },
+    "toxicity": {
+      "toxic": 3625,
+      "none": 6317,
+      "severe": 440
+    },
+    "bullying": {
+      "harassment": 4036,
+      "none": 6317,
+      "threat": 29
+    },
+    "role": {
+      "none": 8423,
+      "perpetrator": 1959
+    },
+    "emotion": {
+      "neu": 8423,
+      "neg": 1959
+    },
+    "quality": {
+      "gold": 10382
+    }
+  }
+}

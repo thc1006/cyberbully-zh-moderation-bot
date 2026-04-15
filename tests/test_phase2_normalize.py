@@ -153,3 +153,164 @@ def test_process_cold_dataframe_dedup(normalizer: Phase2Normalizer) -> None:
     ])
     out = normalizer.process_cold_dataframe(df, dedup=True)
     assert len(out) == 1
+
+
+# ---- 8. STATE-ToxiCN normalizer --------------------------------------
+
+def test_normalize_state_toxicn_hate_row(normalizer: Phase2Normalizer) -> None:
+    row = {
+        "id": 3346,
+        "content": "話是這樣說，但是像我們這樣的普信男國女又看不上",
+        "platform": "zhihu",
+        "topic": "race",
+        "sen_hate": "1",
+        "Q1 Target": "普信男",
+        "Q1 Argument": "國女又看不上",
+        "Q1 Group": "Sexism",
+        "Q1 hateful": "hate",
+    }
+    rec = normalizer.normalize_state_toxicn_row(row)
+    assert rec is not None
+    assert rec.label["toxicity"] == "toxic"
+    assert rec.label["bullying"] == "harassment"
+    assert rec.label["emotion"] == "neg"
+    assert rec.metadata["source"] == "state_toxicn"
+    assert "Sexism" in rec.metadata.get("hate_groups", "")
+
+
+def test_normalize_state_toxicn_non_hate(normalizer: Phase2Normalizer) -> None:
+    row = {
+        "id": 2448,
+        "content": "我的天啊，求求你坦白吧，放过人家",
+        "platform": "zhihu",
+        "topic": "race",
+        "sen_hate": "0",
+        "Q1 Target": "你",
+        "Q1 Argument": "坦白吧",
+        "Q1 Group": "non-hate",
+        "Q1 hateful": "non-hate",
+    }
+    rec = normalizer.normalize_state_toxicn_row(row)
+    assert rec is not None
+    assert rec.label["toxicity"] == "none"
+    assert rec.label["bullying"] == "none"
+    assert rec.label["emotion"] == "neu"
+
+
+def test_normalize_state_toxicn_short_dropped(normalizer: Phase2Normalizer) -> None:
+    row = {"id": 1, "content": "ok", "sen_hate": "0",
+           "platform": "x", "topic": "x", "Q1 Target": "", "Q1 Argument": "",
+           "Q1 Group": "non-hate", "Q1 hateful": "non-hate"}
+    assert normalizer.normalize_state_toxicn_row(row) is None
+
+
+def test_state_toxicn_severe_when_multiple_targets(normalizer: Phase2Normalizer) -> None:
+    """Records with 3+ hate quadruples are treated as 'severe'/'threat'."""
+    row = {
+        "id": 5, "content": "包含多目標仇恨的長文本，超過三個族群被攻擊",
+        "platform": "x", "topic": "x", "sen_hate": "1",
+        "Q1 Target": "A", "Q1 Argument": "x", "Q1 Group": "Sexism", "Q1 hateful": "hate",
+        "Q2 Target": "B", "Q2 Argument": "y", "Q2 Group": "Racism", "Q2 hateful": "hate",
+        "Q3 Target": "C", "Q3 Argument": "z", "Q3 Group": "LGBTQ", "Q3 hateful": "hate",
+    }
+    rec = normalizer.normalize_state_toxicn_row(row)
+    assert rec is not None
+    assert rec.label["toxicity"] == "severe"
+    assert rec.label["bullying"] == "threat"
+
+
+def test_process_state_toxicn_records_basic(normalizer: Phase2Normalizer) -> None:
+    rows = [
+        {"id": 1, "content": "我的天啊，求求你坦白吧，放过人家", "platform": "x", "topic": "x",
+         "sen_hate": "0", "Q1 Target": "", "Q1 Argument": "", "Q1 Group": "non-hate",
+         "Q1 hateful": "non-hate"},
+        {"id": 2, "content": "話是這樣說，但是像我們這樣的普信男國女又看不上",
+         "platform": "x", "topic": "x", "sen_hate": "1",
+         "Q1 Target": "普信男", "Q1 Argument": "國女又看不上",
+         "Q1 Group": "Sexism", "Q1 hateful": "hate"},
+        {"id": 3, "content": "ab", "platform": "x", "topic": "x",
+         "sen_hate": "0", "Q1 Target": "", "Q1 Argument": "",
+         "Q1 Group": "non-hate", "Q1 hateful": "non-hate"},  # too short
+    ]
+    out = normalizer.process_state_toxicn_records(rows)
+    assert len(out) == 2
+    assert {r.label["toxicity"] for r in out} == {"none", "toxic"}
+
+
+# ---- 9. SCCD normalizer (Yang et al., COLING 2025) -------------------
+
+def test_normalize_sccd_comment_cb_low(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_sccd_comment(
+        comment_row={"comment_id": "x1", "label": "CB-Threat", "comment_content": "我打死你",
+                     "post_id": "p1", "to_id": ""},
+        post_severity="low",
+    )
+    assert rec is not None
+    assert rec.label["toxicity"] == "toxic"
+    # session severity low/med → toxic; high → severe
+    rec2 = normalizer.normalize_sccd_comment(
+        comment_row={"comment_id": "x2", "label": "CB-Insult", "comment_content": "笨蛋滾開",
+                     "post_id": "p1", "to_id": ""},
+        post_severity="high",
+    )
+    assert rec2.label["toxicity"] == "severe"
+
+
+def test_normalize_sccd_comment_non_cb(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_sccd_comment(
+        comment_row={"comment_id": "x3", "label": "Non-CB", "comment_content": "今天天氣真好",
+                     "post_id": "p1", "to_id": ""},
+        post_severity="low",
+    )
+    assert rec.label["toxicity"] == "none"
+    assert rec.label["bullying"] == "none"
+
+
+def test_sccd_short_comment_dropped(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_sccd_comment(
+        comment_row={"comment_id": "x", "label": "Non-CB", "comment_content": "ok",
+                     "post_id": "p", "to_id": ""},
+        post_severity="low",
+    )
+    assert rec is None
+
+
+def test_sccd_threat_label_maps_to_threat(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_sccd_comment(
+        comment_row={"comment_id": "x", "label": "CB-Threat", "comment_content": "我會找到你並且傷害你",
+                     "post_id": "p", "to_id": ""},
+        post_severity="medium",
+    )
+    assert rec.label["bullying"] == "threat"
+
+
+# ---- 10. CHNCI normalizer (Zhu/Zou/Wu, May 2025) --------------------
+
+def test_normalize_chnci_row_cyberbullying(normalizer: Phase2Normalizer) -> None:
+    row = {"timestamp": "2024/9/26 6:02", "platform": "dy",
+           "label1": 1, "label2": 1, "label3": 0, "diff": 1,
+           "content": "這群人就該被掛在牆上示眾，國家不管他們真是太可悲了"}
+    rec = normalizer.normalize_chnci_row(row, incident_label="cyberbullying", incident_name="x")
+    assert rec is not None
+    assert rec.label["toxicity"] == "toxic"  # majority vote 2/3 says CB
+    assert rec.metadata["source"] == "chnci"
+    assert rec.metadata["incident_label"] == "cyberbullying"
+
+
+def test_normalize_chnci_row_non_cb(normalizer: Phase2Normalizer) -> None:
+    row = {"timestamp": "2024/9/26", "platform": "wb",
+           "label1": 0, "label2": 0, "label3": 0, "diff": 0,
+           "content": "希望大家都平安健康，加油加油加油"}
+    rec = normalizer.normalize_chnci_row(row, incident_label="non-cyberbullying", incident_name="x")
+    assert rec is not None
+    assert rec.label["toxicity"] == "none"
+
+
+def test_chnci_split_vote_treated_as_toxic(normalizer: Phase2Normalizer) -> None:
+    """Diff > 0 means annotators disagreed; if majority CB, still toxic."""
+    row = {"timestamp": "x", "platform": "wb",
+           "label1": 1, "label2": 1, "label3": 0, "diff": 1,
+           "content": "這個世界真是糟糕透頂讓人無法理解"}
+    rec = normalizer.normalize_chnci_row(row, incident_label="cyberbullying", incident_name="x")
+    assert rec.label["toxicity"] == "toxic"
+    assert rec.metadata["annotation_quality"] in ("silver", "weak")  # disagreement
