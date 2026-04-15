@@ -2,8 +2,9 @@
 # 中文網路霸凌防治系統容器化部署
 
 services:
-  # CyberPuppy API 服務
+  # === v1 (legacy MacBERT) — keep for regression / backwards compat ===
   api:
+    profiles: ["v1", "all"]
     build:
       context: .
       dockerfile: api/Dockerfile
@@ -18,7 +19,6 @@ services:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - WORKERS=1
-      # 可從 .env 檔案加載環境變數
     env_file:
       - ./configs/docker/.env
     restart: unless-stopped
@@ -44,8 +44,56 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # === v2.2 (Qwen3-8B + LoRA + AWQ) — production target ===
+  # Run with: docker compose --profile v2_2 up -d
+  api_v2_2:
+    profiles: ["v2_2", "all"]
+    build:
+      context: .
+      dockerfile: api/Dockerfile.v2_2
+    container_name: cyberpuppy-api-v2-2
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./models:/models:ro
+      - ./logs:/app/logs
+      # mount HF cache so weights persist across container restarts
+      - ${HF_CACHE_DIR:-./.cache/huggingface}:/cache/huggingface
+    environment:
+      # Choose ONE of CP_MODEL_DIR (local) or CP_HF_REPO (HF download).
+      - CP_MODEL_DIR=${CP_MODEL_DIR:-/models/cyberpuppy_v2_2_awq}
+      - CP_HF_REPO=${CP_HF_REPO:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - PERSPECTIVE_API_KEY=${PERSPECTIVE_API_KEY:-}
+      - PYTHONUNBUFFERED=1
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+    env_file:
+      - ./configs/docker/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s        # cold model load on first start
+    networks:
+      - cyberpuppy-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # CyberPuppy LINE Bot 服務
   bot:
+    profiles: ["v1", "v2_2", "all"]
     build:
       context: .
       dockerfile: bot/Dockerfile

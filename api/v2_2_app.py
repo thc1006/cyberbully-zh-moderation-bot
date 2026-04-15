@@ -51,9 +51,29 @@ logging.basicConfig(
 log = logging.getLogger("cyberpuppy.v2_2")
 
 MODEL_DIR = os.environ.get("CP_MODEL_DIR", "models/cyberpuppy_v2_2_merged")
+HF_REPO = os.environ.get("CP_HF_REPO", "").strip()
+HEADS_HF_REPO = os.environ.get("CP_HEADS_HF_REPO", "").strip()  # optional separate heads.pt source
 MAX_TEXT_LEN = 1000
 MAX_CONTEXT_LEN = 2000
 MAX_TOKEN_LEN = 192  # matches training max_length
+
+
+def _resolve_model_dir() -> str:
+    """If CP_HF_REPO is set, snapshot-download it (cached); otherwise use CP_MODEL_DIR."""
+    if not HF_REPO:
+        return MODEL_DIR
+    from huggingface_hub import snapshot_download
+    log.info(f"Resolving HF repo {HF_REPO} (this may download on first run) ...")
+    local = snapshot_download(repo_id=HF_REPO, repo_type="model")
+    log.info(f"  cached at {local}")
+    # Heads may live in a separate adapter repo (HEADS_HF_REPO); fetch heads.pt if missing.
+    if not Path(local, "heads.pt").exists() and HEADS_HF_REPO:
+        from huggingface_hub import hf_hub_download
+        heads = hf_hub_download(repo_id=HEADS_HF_REPO, filename="heads.pt", repo_type="model")
+        import shutil
+        shutil.copy2(heads, Path(local, "heads.pt"))
+        log.info(f"  copied heads.pt from {HEADS_HF_REPO}")
+    return local
 
 ID2LABEL = {task: list(vals) for task, vals in LABELS.items()}
 
@@ -89,6 +109,9 @@ class AnalyzeResponse(BaseModel):
     text_hash: str
     model_version: str = "v2.2"
     latency_ms: float
+    # Optional Perspective second-opinion scores (None unless arbiter enabled
+    # AND local confidence below threshold). See api/arbiter_helper.py.
+    perspective: Optional[Dict[str, float]] = None
 
 
 # ---- Lifespan: load model, mark ready -----------------------------------
@@ -96,14 +119,15 @@ class AnalyzeResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     t0 = time.time()
-    log.info(f"Loading v2.2 merged model from {MODEL_DIR} ...")
+    resolved_dir = _resolve_model_dir()
+    log.info(f"Loading v2.2 merged model from {resolved_dir} ...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.bfloat16 if device.type == "cuda" and torch.cuda.is_bf16_supported() else torch.float32
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+    tokenizer = AutoTokenizer.from_pretrained(resolved_dir)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.padding_side = "left"
@@ -111,24 +135,24 @@ async def lifespan(app: FastAPI):
     # Detect AWQ — config.json will carry `quantization_config`. AWQ models
     # must be loaded with device_map (not `dtype`) and operate in fp16 path.
     import json as _json
-    cfg_path = Path(MODEL_DIR) / "config.json"
+    cfg_path = Path(resolved_dir) / "config.json"
     is_awq = False
     if cfg_path.exists():
         cfg = _json.loads(cfg_path.read_text())
         is_awq = cfg.get("quantization_config", {}).get("quant_method") == "awq"
     if is_awq:
         log.info("Detected AWQ quantized model; loading fp16 compute path.")
-        backbone = AutoModel.from_pretrained(MODEL_DIR, device_map={"": device.type},
+        backbone = AutoModel.from_pretrained(resolved_dir, device_map={"": device.type},
                                                low_cpu_mem_usage=True)
         dtype = torch.float16  # heads must match
     else:
         backbone = AutoModel.from_pretrained(
-            MODEL_DIR, dtype=dtype, low_cpu_mem_usage=True, attn_implementation="sdpa"
+            resolved_dir, dtype=dtype, low_cpu_mem_usage=True, attn_implementation="sdpa"
         )
     model = Qwen3MultiHead(backbone, hidden_size=backbone.config.hidden_size).to(
         device=device, dtype=dtype
     )
-    heads_state = torch.load(f"{MODEL_DIR}/heads.pt", map_location=device, weights_only=False)
+    heads_state = torch.load(f"{resolved_dir}/heads.pt", map_location=device, weights_only=False)
     # Heads may have been saved in bf16 but need fp16 to match AWQ compute.
     heads_cast = {k: v.to(dtype) for k, v in heads_state["heads"].items()}
     model.heads.load_state_dict(heads_cast)
@@ -235,6 +259,18 @@ async def analyze(req: AnalyzeRequest):
     log.info(f"analyze hash={text_hash} tox={heads['toxicity'].label} "
              f"bull={heads['bullying'].label} latency_ms={elapsed_ms:.1f}")
 
+    # Optional Perspective second opinion (no-op unless PERSPECTIVE_API_KEY set
+    # AND local toxicity confidence is below threshold). Best-effort, never
+    # blocks or overrides the local verdict.
+    perspective = None
+    try:
+        from api.arbiter_helper import maybe_perspective_score
+        local_conf = max(heads["toxicity"].scores.values())
+        perspective = await maybe_perspective_score(text=text,
+                                                      local_confidence=local_conf)
+    except Exception:
+        log.warning("perspective_helper_error", exc_info=True)
+
     return AnalyzeResponse(
         toxicity=heads["toxicity"],
         bullying=heads["bullying"],
@@ -242,6 +278,7 @@ async def analyze(req: AnalyzeRequest):
         emotion=heads["emotion"],
         text_hash=text_hash,
         latency_ms=round(elapsed_ms, 2),
+        perspective=perspective,
     )
 
 

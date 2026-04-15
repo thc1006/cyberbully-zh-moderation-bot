@@ -1,0 +1,53 @@
+# CyberPuppy v2.2 API — production image
+#
+# Loads weights at runtime from either:
+#   - HF repo (set CP_HF_REPO=thc1006/cyberpuppy-v2.2-awq, requires HF_TOKEN if private)
+#   - local mount (set CP_MODEL_DIR=/models/cyberpuppy_v2_2_awq)
+#
+# Image stays slim (~3 GB) by NOT baking model weights in.
+# CUDA / GPU runtime is provided by the host (use --gpus all on docker run).
+
+FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04 AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    PORT=8000 \
+    HF_HOME=/cache/huggingface \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 python3.11-dev python3-pip curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3
+
+RUN useradd -m -s /bin/bash cyberpuppy && \
+    mkdir -p /cache/huggingface && \
+    chown -R cyberpuppy:cyberpuppy /cache
+
+# Install runtime deps. Pin torch via PyTorch CUDA 12.8 wheels for Blackwell.
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu128 && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
+    pip install --no-cache-dir slowapi httpx accelerate
+
+# Source — only what /v2/analyze needs.
+COPY src/ /app/src/
+COPY api/v2_2_app.py /app/api/v2_2_app.py
+
+RUN chown -R cyberpuppy:cyberpuppy /app
+USER cyberpuppy
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -fsS http://localhost:${PORT}/healthz || exit 1
+
+# CP_MODEL_DIR overridable via -e; default tries to fetch HF repo at startup.
+ENV CP_MODEL_DIR="/models/cyberpuppy_v2_2_awq" \
+    CP_HF_REPO=""
+
+CMD ["sh", "-c", "uvicorn api.v2_2_app:app --host 0.0.0.0 --port ${PORT} --workers 1"]
