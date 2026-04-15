@@ -6,7 +6,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: api/Dockerfile
     container_name: cyberpuppy-api
     ports:
       - "8000:8000"
@@ -48,7 +48,7 @@ services:
   bot:
     build:
       context: .
-      dockerfile: Dockerfile.bot
+      dockerfile: bot/Dockerfile
     container_name: cyberpuppy-bot
     ports:
       - "8080:8080"
