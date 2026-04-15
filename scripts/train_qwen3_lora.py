@@ -29,6 +29,7 @@ from transformers import (AutoModel, AutoTokenizer, get_cosine_schedule_with_war
 from cyberpuppy.data.phase2 import LABELS
 from cyberpuppy.models.qwen3_multihead import (HEAD_DIMS, Qwen3MultiHead,
                                                 build_lora_config)
+from cyberpuppy.training.bucket_sampler import LengthBucketSampler
 
 DEFAULT_BASE = "Qwen/Qwen3-8B-Base"
 LABEL2ID = {task: {v: i for i, v in enumerate(LABELS[task])} for task in LABELS}
@@ -66,6 +67,12 @@ class JsonlClassificationDataset(Dataset):
                 self.records.append(json.loads(line))
         self.tokenizer = tokenizer
         self.max_length = max_length
+        # Pre-compute token lengths once for bucket sampler. Truncation cap
+        # keeps outliers from inflating activation budget calculations.
+        self.lengths: list[int] = [
+            min(self.max_length, len(tokenizer.encode(r["text"], add_special_tokens=False)))
+            for r in self.records
+        ]
 
     def __len__(self) -> int:
         return len(self.records)
@@ -79,7 +86,8 @@ class JsonlClassificationDataset(Dataset):
         labels = {}
         for task in HEAD_DIMS:
             v = r["label"].get(task)
-            labels[task] = LABEL2ID[task].get(v, 0) if v is not None else -1
+            # -100 = PyTorch CE ignore_index (handled per-sample by focal_ce)
+            labels[task] = LABEL2ID[task].get(v, 0) if v is not None else -100
         return {
             "input_ids": enc["input_ids"],
             "attention_mask": enc["attention_mask"],
@@ -229,14 +237,23 @@ def main() -> None:
     eval_ds = JsonlClassificationDataset(cfg.eval_path, tokenizer, cfg.max_length, cfg.max_eval)
     print(f"Train: {len(train_ds)}  Eval: {len(eval_ds)}", flush=True)
 
+    train_sampler = LengthBucketSampler(
+        train_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
+        shuffle=True, seed=cfg.seed,
+    )
+    eval_sampler = LengthBucketSampler(
+        eval_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
+        shuffle=False,
+    )
     train_loader = DataLoader(
-        train_ds, batch_size=cfg.batch_size, shuffle=True, num_workers=2,
+        train_ds, batch_sampler=train_sampler, num_workers=2,
         collate_fn=lambda b: collate(b, tokenizer.pad_token_id), pin_memory=True,
     )
     eval_loader = DataLoader(
-        eval_ds, batch_size=cfg.batch_size, shuffle=False, num_workers=2,
+        eval_ds, batch_sampler=eval_sampler, num_workers=2,
         collate_fn=lambda b: collate(b, tokenizer.pad_token_id), pin_memory=True,
     )
+    print(f"Length bucketing: ON (mega={cfg.batch_size * 50}); peak per-batch len bounded to longest in batch.", flush=True)
 
     steps_per_epoch = math.ceil(len(train_loader) / cfg.grad_accum)
     total_steps = steps_per_epoch * cfg.epochs
@@ -275,6 +292,7 @@ def main() -> None:
         tokenizer.save_pretrained(ck_dir)
 
     for epoch in range(cfg.epochs):
+        train_sampler.set_epoch(epoch)
         running = 0.0
         n_in_window = 0
         for i, batch in enumerate(train_loader):
@@ -282,14 +300,8 @@ def main() -> None:
             attn = batch["attention_mask"].to(device)
             labels = {t: v.to(device) for t, v in batch["labels"].items()}
             out = model(input_ids=input_ids, attention_mask=attn)
-            # mask -1 (missing label) by replacing with valid ignored id via cross_entropy ignore_index
-            for t in HEAD_DIMS:
-                if (labels[t] < 0).any():
-                    # any sample with -1 label for this task -> set to None (skip task)
-                    if (labels[t] >= 0).all():
-                        pass
-                    else:
-                        labels[t] = None  # type: ignore
+            # Per-sample masking: -100 is PyTorch CE ignore_index — focal_ce
+            # already handles it, no batch-level skipping needed.
             loss = model.compute_loss(out, labels) / cfg.grad_accum
             loss.backward()
             running += loss.item() * cfg.grad_accum

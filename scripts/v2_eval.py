@@ -145,23 +145,30 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--adapter", default=DEFAULT_ADAPTER)
     ap.add_argument("--base", default=DEFAULT_BASE)
-    ap.add_argument("--test", default=str(TEST_FILE))
+    ap.add_argument("--test", default=str(TEST_FILE),
+                    help="Primary test set (JSONL)")
+    ap.add_argument("--also-eval", action="append", default=[],
+                    help="Additional JSONL test sets (can pass multiple times)")
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--out", default="reports/v2_eval.json")
     args = ap.parse_args()
 
     tokenizer, model, device = load_v2(args.adapter, args.base)
 
-    print(f"\n=== Eval on {args.test} ===", flush=True)
-    test_result = eval_on_jsonl(tokenizer, model, device, Path(args.test), batch=args.batch)
-    print(f"\nElapsed: {test_result['elapsed_s']:.1f}s, throughput {test_result['throughput_sps']:.1f} samp/s", flush=True)
-    for task, m in test_result["metrics"].items():
-        print(f"\n--- {task} (n={m['n']}) ---", flush=True)
-        if m["n"] == 0:
-            continue
-        print(f"  acc={m['accuracy']:.4f}  f1_w={m['f1_weighted']:.4f}  f1_m={m['f1_macro']:.4f}", flush=True)
-        for cls, c in m["per_class"].items():
-            print(f"    {cls:<12} P={c['precision']:.4f} R={c['recall']:.4f} F1={c['f1-score']:.4f} n={int(c['support'])}", flush=True)
+    all_test_paths = [args.test] + list(args.also_eval)
+    all_results: dict = {}
+    for tp in all_test_paths:
+        print(f"\n=== Eval on {tp} ===", flush=True)
+        r = eval_on_jsonl(tokenizer, model, device, Path(tp), batch=args.batch)
+        print(f"Elapsed: {r['elapsed_s']:.1f}s, throughput {r['throughput_sps']:.1f} samp/s", flush=True)
+        for task, m in r["metrics"].items():
+            print(f"\n--- [{Path(tp).name}] {task} (n={m['n']}) ---", flush=True)
+            if m["n"] == 0:
+                continue
+            print(f"  acc={m['accuracy']:.4f}  f1_w={m['f1_weighted']:.4f}  f1_m={m['f1_macro']:.4f}", flush=True)
+            for cls, c in m["per_class"].items():
+                print(f"    {cls:<12} P={c['precision']:.4f} R={c['recall']:.4f} F1={c['f1-score']:.4f} n={int(c['support'])}", flush=True)
+        all_results[tp] = r
 
     threat_results = eval_traditional_threats(tokenizer, model, device)
 
@@ -170,8 +177,7 @@ def main() -> None:
         json.dump({
             "model": "cyberpuppy_v2_qwen3_8b",
             "adapter": args.adapter,
-            "test_set": str(args.test),
-            "test_result": test_result,
+            "test_sets": all_results,
             "traditional_threats": threat_results,
         }, f, ensure_ascii=False, indent=2)
     print(f"\nSaved: {args.out}", flush=True)

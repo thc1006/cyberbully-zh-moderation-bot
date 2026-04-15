@@ -1,0 +1,282 @@
+{
+  "model": "cyberpuppy_v2_qwen3_8b",
+  "adapter": "models/cyberpuppy_v2_1_qwen3_8b/best",
+  "test_sets": {
+    "data/processed/v2/multisource_test.jsonl": {
+      "metrics": {
+        "toxicity": {
+          "n": 10382,
+          "accuracy": 0.8073588903872086,
+          "f1_weighted": 0.8048466419884454,
+          "f1_macro": 0.641582725206976,
+          "per_class": {
+            "none": {
+              "precision": 0.874000639590662,
+              "recall": 0.8652841538705082,
+              "f1-score": 0.8696205552462015,
+              "support": 6317.0
+            },
+            "toxic": {
+              "precision": 0.7337696335078534,
+              "recall": 0.7732413793103449,
+              "f1-score": 0.7529885829415716,
+              "support": 3625.0
+            },
+            "severe": {
+              "precision": 0.36688311688311687,
+              "recall": 0.25681818181818183,
+              "f1-score": 0.30213903743315507,
+              "support": 440.0
+            }
+          }
+        },
+        "bullying": {
+          "n": 10382,
+          "accuracy": 0.839818917356964,
+          "f1_weighted": 0.83933659862223,
+          "f1_macro": 0.5559969466807467,
+          "per_class": {
+            "none": {
+              "precision": 0.8814332247557003,
+              "recall": 0.8567357923064746,
+              "f1-score": 0.8689090471221,
+              "support": 6317.0
+            },
+            "harassment": {
+              "precision": 0.7797689224239566,
+              "recall": 0.8193756194251735,
+              "f1-score": 0.7990817929201401,
+              "support": 4036.0
+            },
+            "threat": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 29.0
+            }
+          }
+        },
+        "role": {
+          "n": 10382,
+          "accuracy": 0.894817954151416,
+          "f1_weighted": 0.8921736834209981,
+          "f1_macro": 0.8197475562963349,
+          "per_class": {
+            "none": {
+              "precision": 0.9233167802286638,
+              "recall": 0.9491867505639321,
+              "f1-score": 0.9360730593607306,
+              "support": 8423.0
+            },
+            "perpetrator": {
+              "precision": 0.7515960533952408,
+              "recall": 0.6610515569167943,
+              "f1-score": 0.7034220532319392,
+              "support": 1959.0
+            },
+            "victim": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "bystander": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            }
+          }
+        },
+        "emotion": {
+          "n": 10382,
+          "accuracy": 0.8953958774802543,
+          "f1_weighted": 0.8925959530486177,
+          "f1_macro": 0.8202011069442225,
+          "per_class": {
+            "pos": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "neu": {
+              "precision": 0.9229793612360199,
+              "recall": 0.9503739760180459,
+              "f1-score": 0.936476368741226,
+              "support": 8423.0
+            },
+            "neg": {
+              "precision": 0.7554125219426565,
+              "recall": 0.6590096988259316,
+              "f1-score": 0.7039258451472192,
+              "support": 1959.0
+            }
+          }
+        }
+      },
+      "elapsed_s": 80.59951591491699,
+      "throughput_sps": 128.80970663594948
+    },
+    "data/processed/v2/cold_test.jsonl": {
+      "metrics": {
+        "toxicity": {
+          "n": 5320,
+          "accuracy": 0.8360902255639098,
+          "f1_weighted": 0.8382471064040508,
+          "f1_macro": 0.5550546502704952,
+          "per_class": {
+            "none": {
+              "precision": 0.8974619289340101,
+              "recall": 0.8251400124455507,
+              "f1-score": 0.859782784892203,
+              "support": 3214.0
+            },
+            "toxic": {
+              "precision": 0.7629566694987255,
+              "recall": 0.8528015194681862,
+              "f1-score": 0.8053811659192825,
+              "support": 2106.0
+            },
+            "severe": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            }
+          }
+        },
+        "bullying": {
+          "n": 5320,
+          "accuracy": 0.8353383458646616,
+          "f1_weighted": 0.8367760076883122,
+          "f1_macro": 0.8314306073507124,
+          "per_class": {
+            "none": {
+              "precision": 0.9008916323731139,
+              "recall": 0.8173615432482887,
+              "f1-score": 0.8570962479608483,
+              "support": 3214.0
+            },
+            "harassment": {
+              "precision": 0.7558236272878536,
+              "recall": 0.8627730294396961,
+              "f1-score": 0.8057649667405765,
+              "support": 2106.0
+            },
+            "threat": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            }
+          }
+        },
+        "role": {
+          "n": 5320,
+          "accuracy": 0.9693609022556391,
+          "f1_weighted": 0.9844421112914002,
+          "f1_macro": 0.4922210556457001,
+          "per_class": {
+            "none": {
+              "precision": 1.0,
+              "recall": 0.9693609022556391,
+              "f1-score": 0.9844421112914002,
+              "support": 5320.0
+            },
+            "perpetrator": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "victim": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "bystander": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            }
+          }
+        },
+        "emotion": {
+          "n": 5320,
+          "accuracy": 0.969172932330827,
+          "f1_weighted": 0.9843451699121802,
+          "f1_macro": 0.4921725849560901,
+          "per_class": {
+            "pos": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "neu": {
+              "precision": 1.0,
+              "recall": 0.969172932330827,
+              "f1-score": 0.9843451699121802,
+              "support": 5320.0
+            },
+            "neg": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            }
+          }
+        }
+      },
+      "elapsed_s": 43.47659134864807,
+      "throughput_sps": 122.36469867975121
+    }
+  },
+  "traditional_threats": [
+    {
+      "text": "今天天氣真好，我們去公園玩吧！",
+      "gold": "none",
+      "pred_toxicity": "none",
+      "pred_bullying": "none",
+      "ok": true
+    },
+    {
+      "text": "你這個笨蛋，滾開！",
+      "gold": "toxic",
+      "pred_toxicity": "toxic",
+      "pred_bullying": "harassment",
+      "ok": true
+    },
+    {
+      "text": "我恨你，希望你去死，沒人喜歡你",
+      "gold": "toxic",
+      "pred_toxicity": "severe",
+      "pred_bullying": "harassment",
+      "ok": true
+    },
+    {
+      "text": "謝謝你的幫忙，你真的是個很棒的人",
+      "gold": "none",
+      "pred_toxicity": "none",
+      "pred_bullying": "none",
+      "ok": true
+    },
+    {
+      "text": "再嘴一句試試看，我打死你",
+      "gold": "toxic",
+      "pred_toxicity": "severe",
+      "pred_bullying": "harassment",
+      "ok": true
+    },
+    {
+      "text": "我覺得這部電影還不錯，演員演技也很到位",
+      "gold": "none",
+      "pred_toxicity": "none",
+      "pred_bullying": "none",
+      "ok": true
+    }
+  ]
+}
