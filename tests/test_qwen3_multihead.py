@@ -239,3 +239,78 @@ def test_loss_all_samples_masked_returns_zero_for_task() -> None:
                                       task_order=list(HEAD_DIMS.keys()))
     assert torch.isfinite(loss)
     assert loss.item() > 0  # other 3 tasks still contribute
+
+
+# ---- 7. Consistency loss for adversarial training (v2.2) --------------
+
+def test_consistency_loss_zero_for_identical_logits() -> None:
+    """Clean vs cloaked versions of SAME pair_id must have low loss when
+    model is already robust (identical logits -> zero MSE)."""
+    from cyberpuppy.models.qwen3_multihead import consistency_loss
+
+    # 3 variants (base/homo/emoji) of same pair_id=0, all identical logits
+    toxicity_logits = torch.tensor([
+        [2.0, 1.0, 0.0],  # pair 0 base
+        [2.0, 1.0, 0.0],  # pair 0 homo
+        [2.0, 1.0, 0.0],  # pair 0 emoji
+    ])
+    pair_ids = torch.tensor([0, 0, 0])
+    loss = consistency_loss(toxicity_logits, pair_ids)
+    assert loss.item() < 1e-6
+
+
+def test_consistency_loss_nonzero_for_divergent_variants() -> None:
+    """Model predicts different logits for clean vs cloaked -> positive loss."""
+    from cyberpuppy.models.qwen3_multihead import consistency_loss
+
+    toxicity_logits = torch.tensor([
+        [5.0, 0.0, 0.0],  # pair 0 base: confident non-toxic
+        [0.0, 5.0, 0.0],  # pair 0 homo: confident toxic (bad! should be consistent)
+        [5.0, 0.0, 0.0],  # pair 0 emoji: non-toxic
+    ])
+    pair_ids = torch.tensor([0, 0, 0])
+    loss = consistency_loss(toxicity_logits, pair_ids)
+    assert loss.item() > 1.0  # significant mismatch
+
+
+def test_consistency_loss_ignores_unpaired_samples() -> None:
+    """pair_id=-1 means "no pair" (from non-ToxiCloakCN sources); must skip."""
+    from cyberpuppy.models.qwen3_multihead import consistency_loss
+
+    toxicity_logits = torch.tensor([
+        [5.0, 0.0, 0.0],  # lone sample (pair_id=-1)
+        [0.0, 5.0, 0.0],  # another lone (pair_id=-1)
+        [1.0, 1.0, 1.0],  # pair 7 base
+        [1.0, 1.0, 1.0],  # pair 7 homo
+    ])
+    pair_ids = torch.tensor([-1, -1, 7, 7])
+    loss = consistency_loss(toxicity_logits, pair_ids)
+    assert loss.item() < 1e-6  # only pair 7 is checked, and they match
+
+
+def test_consistency_loss_requires_at_least_two_variants_per_pair() -> None:
+    """Pair with only one sample in the batch contributes nothing."""
+    from cyberpuppy.models.qwen3_multihead import consistency_loss
+
+    toxicity_logits = torch.tensor([
+        [5.0, 0.0, 0.0],
+        [0.0, 5.0, 0.0],
+    ])
+    pair_ids = torch.tensor([3, 4])  # two different pairs, one sample each
+    loss = consistency_loss(toxicity_logits, pair_ids)
+    assert loss.item() < 1e-6
+
+
+def test_consistency_loss_backprop() -> None:
+    """Loss must be differentiable."""
+    from cyberpuppy.models.qwen3_multihead import consistency_loss
+
+    logits = torch.tensor([
+        [5.0, 0.0, 0.0],
+        [0.0, 5.0, 0.0],
+    ], requires_grad=True)
+    pair_ids = torch.tensor([1, 1])
+    loss = consistency_loss(logits, pair_ids)
+    loss.backward()
+    assert logits.grad is not None
+    assert torch.isfinite(logits.grad).all()

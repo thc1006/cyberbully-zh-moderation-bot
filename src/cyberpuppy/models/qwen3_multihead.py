@@ -157,6 +157,48 @@ def uncertainty_weighted_loss(
     return total
 
 
+def consistency_loss(
+    toxicity_logits: torch.Tensor,
+    pair_ids: torch.Tensor,
+) -> torch.Tensor:
+    """Adversarial consistency (ADR 0001 §3.7, v2.2).
+
+    For each pair_id that appears >= 2 times in the batch (ToxiCloakCN
+    base/homo/emoji triplets), forces their toxicity logits to be close:
+
+        L = mean over pairs of Var(logits within pair)
+
+    Samples with pair_id == -1 (non-ToxiCloakCN sources) are ignored.
+    Pairs with only one sample in the batch contribute nothing.
+
+    Args:
+        toxicity_logits: (B, num_classes)
+        pair_ids: (B,) int tensor. Equal values link the cloak variants.
+
+    Returns:
+        Scalar loss tensor.
+    """
+    zero = toxicity_logits.sum() * 0.0  # right device / dtype / graph
+    if pair_ids.numel() == 0:
+        return zero
+
+    unique_ids = torch.unique(pair_ids)
+    terms: list[torch.Tensor] = []
+    for pid in unique_ids.tolist():
+        if pid < 0:
+            continue
+        mask = pair_ids == pid
+        members = toxicity_logits[mask]
+        if members.shape[0] < 2:
+            continue
+        # Variance across variants of this pair. Per-class variance averaged.
+        terms.append(members.var(dim=0, unbiased=False).mean())
+
+    if not terms:
+        return zero
+    return torch.stack(terms).mean()
+
+
 def build_lora_config(
     r: int = 32,
     alpha: int = 64,

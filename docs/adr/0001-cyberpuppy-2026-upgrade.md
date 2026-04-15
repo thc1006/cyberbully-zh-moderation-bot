@@ -222,13 +222,43 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 | COLD test F1 weighted | ≥ 0.85 | 0.8327 | ⚠️ 差 1.7 點 → 待 Phase 2 多源資料補齊 |
 | 繁中威脅 recall | ≥ 5/6 = 83% | 5/6 | ✅ 達標 |
 | SCCD session F1 | ≥ 0.70 | N/A（未訓 SCCD） | — 等 Phase 2 |
-| ToxiCloakCN robustness | F1 衰退 ≤ 5% | 未測 | — 等 Phase 6 robustness 章節 |
-| p95 < 200 ms | < 200 ms | ~30-50 ms (batch 1, bf16) | ✅ 估算達標 |
+| ToxiCloakCN emoji drop | ≤ 5% | v2.1 6.52% → **v2.2 0.37%** | ✅ 達標（v2.2） |
+| ToxiCloakCN homophone drop | ≤ 5% | v2.1 10.16% → v2.2 8.51% | ⚠️ 未達，需 v2.3 |
+| p95 < 200 ms | < 200 ms | ~30-50 ms (batch 1, bf16) | ✅ 估算達標，Phase 5 實測 |
 
 #### 觀察 / 限制
 
 - role/emotion 兩頭在 COLD 資料下退化為「永遠預測 dominant class」（acc 1.0 但 F1 macro=0），因 COLD 100% 樣本標 role=none、emotion=neu → **必須由 Phase 2 SCCD/CHNCI/SemEval 補真標**
 - 訓練吞吐以 RTX 5090 / Blackwell / bf16 / no-DoRA / GC-on 為基準
+
+### Phase 3.2 — v2.1 (multisource + focal loss, 2026-04-15)
+
+- [x] Multisource 資料 60K（COLD 25,659 + SCCD 28,426 + STATE-ToxiCN 5,781）取代 COLD-only 25K
+- [x] Focal loss γ=2.0 處理 severe (6.8%) / threat (0.2%) 類別不平衡
+- [x] LengthBucketSampler 解決變長序列 OOM（三次 DoRA/batch 調試後定案）
+- [x] 49 min 訓練，best=epoch 1 toxicity F1_w=0.8510
+- COLD test: Acc 0.8312, F1_w 0.8327 (+0.8pt vs v1)
+- 繁中威脅 5/6 (vs v1 2/6)
+- role / emotion head 脫離假象（non-trivial 0.89+）
+
+### Phase 3.3 — v2.2 (adversarial training, 2026-04-16)
+
+- [x] 加入 ToxiCloakCN 對抗樣本訓練 (3,668 pair × 3 variants = 11,004 新樣本)
+- [x] `CloakAwareBatchSampler`：強制 base/homo/emoji triplet 同 batch
+- [x] `consistency_loss` (λ=0.1) 讓 clean/homo/emoji toxicity logits 對齊
+- [x] 75 min 訓練，best=epoch 1 toxicity F1_w=0.8408 (multisource dev)
+- **ToxiCloakCN heldout 魯棒性**（906 pairs 未參與訓練）：
+  - base clean: F1_w 0.8703
+  - homophone drop: v2.1 **−10.16%** → v2.2 **−8.51%** （17% 改善，仍超 DoD）
+  - emoji drop: v2.1 **−6.52%** → v2.2 **−0.37%** ✅ (94% 改善，達 DoD)
+- Consistency loss 軌跡：0.56 → 0.035（94% 降，證明 logits 對齊成功）
+- 繁中威脅 6/6 維持，clean COLD / multisource performance 持平 v2.1
+
+#### v2.2 觀察
+
+- **Emoji 魯棒性完全解決**，因 emoji 保留周邊中字 token，model 只需忽略 emoji noise
+- **Homophone 仍差**：中文同音字空間極大（~4K 常用字，數千音素同音），3,668 訓練 pair 不足涵蓋
+- v2.3 路徑：用 STATE-ToxiCN 830 詞仇恨俚語詞典做程式化 homophone augmentation + λ=0.3
 
 ### Phase 4 — GRPO 安全強化（2 週）
 

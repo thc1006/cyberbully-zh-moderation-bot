@@ -337,6 +337,87 @@ class Phase2Normalizer:
             },
         )
 
+    # ---- Source: ToxiCloakCN (EMNLP 2024) --------------------------------
+
+    _TOXICLOAK_VARIANTS = ("base", "homo", "emoji")
+
+    def normalize_toxicloak_row(
+        self,
+        content: str,
+        toxic: int,
+        pair_id: int,
+        variant: str,
+    ) -> UnifiedRecord | None:
+        """ToxiCloakCN row -> unified.
+
+        Args:
+            content: Text (may be clean, homophone-perturbed, or emoji-perturbed).
+            toxic: Binary label (0 or 1), same across all 3 variants of same pair.
+            pair_id: Row index in base_data.tsv — identical across variants.
+            variant: "base" | "homo" | "emoji".
+        """
+        if variant not in self._TOXICLOAK_VARIANTS:
+            raise ValueError(f"variant must be one of {self._TOXICLOAK_VARIANTS}, got {variant!r}")
+
+        text = self.opencc_convert(str(content or "")).strip()
+        text = self.scrub_pii(text)
+        if not self.is_valid_length(text):
+            return None
+
+        is_toxic = int(toxic) == 1
+        return UnifiedRecord(
+            text=text,
+            label={
+                "toxicity": "toxic" if is_toxic else "none",
+                "bullying": "harassment" if is_toxic else "none",
+                "role": "perpetrator" if is_toxic else "none",
+                "emotion": "neg" if is_toxic else "neu",
+                "emotion_strength": 3 if is_toxic else 0,
+            },
+            metadata={
+                "source": "toxicloak",
+                "cloak_pair_id": int(pair_id),
+                "cloak_variant": variant,
+                "text_length": len(text),
+                "is_traditional": self.target == "traditional",
+                "annotation_quality": "gold",
+            },
+        )
+
+    def process_toxicloak_tsvs(
+        self,
+        base_path: Any,
+        homo_path: Any,
+        emoji_path: Any,
+        keep_pair_ids: list[int] | None = None,
+    ) -> list[UnifiedRecord]:
+        """Read 3 aligned TSVs and yield ≤ 3× records (base + homo + emoji per pair_id).
+
+        keep_pair_ids: set of pair_ids to include (None = all). The upstream
+        caller is responsible for any shuffling/splitting — base_data.tsv is
+        sorted by label, so naive [start:end] slicing causes class imbalance.
+        """
+        from pathlib import Path
+        base_df = pd.read_csv(Path(base_path), sep="\t")
+        homo_df = pd.read_csv(Path(homo_path), sep="\t")
+        emoji_df = pd.read_csv(Path(emoji_path), sep="\t")
+        n = min(len(base_df), len(homo_df), len(emoji_df))
+        keep = set(range(n)) if keep_pair_ids is None else set(keep_pair_ids)
+
+        records: list[UnifiedRecord] = []
+        for idx in range(n):
+            if idx not in keep:
+                continue
+            toxic = int(base_df.iloc[idx]["toxic"])
+            for variant, df in [("base", base_df), ("homo", homo_df), ("emoji", emoji_df)]:
+                rec = self.normalize_toxicloak_row(
+                    content=df.iloc[idx]["content"], toxic=toxic,
+                    pair_id=idx, variant=variant,
+                )
+                if rec is not None:
+                    records.append(rec)
+        return records
+
     def process_chnci_dir(
         self,
         root: Any,

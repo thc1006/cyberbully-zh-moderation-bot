@@ -316,3 +316,59 @@ def test_chnci_split_vote_treated_as_toxic(normalizer: Phase2Normalizer) -> None
     rec = normalizer.normalize_chnci_row(row, incident_label="cyberbullying", incident_name="x")
     assert rec.label["toxicity"] == "toxic"
     assert rec.metadata["annotation_quality"] in ("silver", "weak")  # disagreement
+
+
+# ---- 11. ToxiCloakCN normalizer (EMNLP 2024) ------------------------
+
+def test_normalize_toxicloak_row_base(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_toxicloak_row(
+        content="好久都没有见过那么干净的白人班级了，一个黑乐色都没有",
+        toxic=1, pair_id=42, variant="base",
+    )
+    assert rec is not None
+    assert rec.label["toxicity"] == "toxic"
+    assert rec.label["bullying"] == "harassment"
+    assert rec.metadata["source"] == "toxicloak"
+    assert rec.metadata["cloak_pair_id"] == 42
+    assert rec.metadata["cloak_variant"] == "base"
+
+
+def test_normalize_toxicloak_row_homo(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_toxicloak_row(
+        content="好久都没有间国那么干净的拜仁班级了，一个黑了铯都没有",
+        toxic=1, pair_id=42, variant="homo",
+    )
+    assert rec.label["toxicity"] == "toxic"
+    assert rec.metadata["cloak_pair_id"] == 42
+    assert rec.metadata["cloak_variant"] == "homo"
+
+
+def test_normalize_toxicloak_row_nontoxic(normalizer: Phase2Normalizer) -> None:
+    rec = normalizer.normalize_toxicloak_row(
+        content="今天天氣真好，我們去公園散步吧",
+        toxic=0, pair_id=1, variant="base",
+    )
+    assert rec.label["toxicity"] == "none"
+    assert rec.label["bullying"] == "none"
+    assert rec.label["emotion"] == "neu"
+
+
+def test_toxicloak_pair_shares_id_across_variants(normalizer: Phase2Normalizer) -> None:
+    """base/homo/emoji of same row_index must carry identical cloak_pair_id."""
+    recs = [
+        normalizer.normalize_toxicloak_row("白人班級", toxic=1, pair_id=5, variant="base"),
+        normalizer.normalize_toxicloak_row("拜仁班級", toxic=1, pair_id=5, variant="homo"),
+        normalizer.normalize_toxicloak_row("👌人班級", toxic=1, pair_id=5, variant="emoji"),
+    ]
+    assert all(r is not None for r in recs)
+    assert len({r.metadata["cloak_pair_id"] for r in recs}) == 1
+    assert {r.metadata["cloak_variant"] for r in recs} == {"base", "homo", "emoji"}
+
+
+def test_toxicloak_invalid_variant_raises(normalizer: Phase2Normalizer) -> None:
+    with pytest.raises(ValueError, match="variant"):
+        normalizer.normalize_toxicloak_row("x" * 10, toxic=0, pair_id=1, variant="BAD")
+
+
+def test_toxicloak_short_text_dropped(normalizer: Phase2Normalizer) -> None:
+    assert normalizer.normalize_toxicloak_row("ok", toxic=1, pair_id=1, variant="base") is None

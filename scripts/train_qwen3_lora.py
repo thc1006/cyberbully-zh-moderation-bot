@@ -28,8 +28,10 @@ from transformers import (AutoModel, AutoTokenizer, get_cosine_schedule_with_war
 
 from cyberpuppy.data.phase2 import LABELS
 from cyberpuppy.models.qwen3_multihead import (HEAD_DIMS, Qwen3MultiHead,
-                                                build_lora_config)
+                                                build_lora_config,
+                                                consistency_loss)
 from cyberpuppy.training.bucket_sampler import LengthBucketSampler
+from cyberpuppy.training.cloak_aware_sampler import CloakAwareBatchSampler
 
 DEFAULT_BASE = "Qwen/Qwen3-8B-Base"
 LABEL2ID = {task: {v: i for i, v in enumerate(LABELS[task])} for task in LABELS}
@@ -88,10 +90,13 @@ class JsonlClassificationDataset(Dataset):
             v = r["label"].get(task)
             # -100 = PyTorch CE ignore_index (handled per-sample by focal_ce)
             labels[task] = LABEL2ID[task].get(v, 0) if v is not None else -100
+        # ToxiCloakCN samples carry cloak_pair_id; others get -1 (ignored by consistency loss)
+        pair_id = int(r.get("metadata", {}).get("cloak_pair_id", -1))
         return {
             "input_ids": enc["input_ids"],
             "attention_mask": enc["attention_mask"],
             "labels": labels,
+            "pair_id": pair_id,
         }
 
 
@@ -114,6 +119,9 @@ def collate(batch, pad_token_id: int):
         vals = [b["labels"][task] for b in batch]
         label_dict[task] = torch.tensor(vals, dtype=torch.long)
     out["labels"] = label_dict
+    out["pair_ids"] = torch.tensor(
+        [b.get("pair_id", -1) for b in batch], dtype=torch.long
+    )
     return out
 
 
@@ -182,6 +190,12 @@ def main() -> None:
     ap.add_argument("--dora", action="store_true", default=False,
                     help="Use DoRA (magnitude-decomposed LoRA). Costs ~2-3 GB extra VRAM due "
                          "to weight rematerialization every forward. OFF by default on 32 GB GPUs.")
+    ap.add_argument("--consistency-lambda", type=float, default=0.0,
+                    help="Weight for ToxiCloakCN adversarial consistency loss (v2.2). "
+                         "Tries to equalize toxicity logits across base/homo/emoji of same pair_id. "
+                         "0 = off (v2.1 behavior); 0.1 recommended for v2.2.")
+    ap.add_argument("--num-workers", type=int, default=8,
+                    help="DataLoader workers (RTX 5090 + NVMe = can afford 8).")
     args = ap.parse_args()
 
     cfg = TrainConfig(
@@ -231,27 +245,43 @@ def main() -> None:
     model = Qwen3MultiHead(backbone, hidden_size=backbone.config.hidden_size).to(device=device, dtype=dtype)
     model.focal_gamma = float(args.focal_gamma)
     print(f"Focal gamma: {model.focal_gamma}", flush=True)
+    print(f"Consistency λ: {args.consistency_lambda}", flush=True)
     # heads must stay in bf16 too (already from .to)
 
     train_ds = JsonlClassificationDataset(cfg.train_path, tokenizer, cfg.max_length, cfg.max_train)
     eval_ds = JsonlClassificationDataset(cfg.eval_path, tokenizer, cfg.max_length, cfg.max_eval)
     print(f"Train: {len(train_ds)}  Eval: {len(eval_ds)}", flush=True)
 
-    train_sampler = LengthBucketSampler(
-        train_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
-        shuffle=True, seed=cfg.seed,
-    )
+    # Use CloakAwareBatchSampler when adversarial consistency is active —
+    # guarantees ToxiCloakCN triplets land together so consistency_loss fires.
+    # Otherwise regular length-bucket sampling.
+    if args.consistency_lambda > 0:
+        train_sampler = CloakAwareBatchSampler(
+            train_ds.records, batch_size=cfg.batch_size, mega_batch_mult=50,
+            shuffle=True, seed=cfg.seed,
+        )
+        print(f"Sampler: CloakAware (λ={args.consistency_lambda} active) — triplets kept together", flush=True)
+    else:
+        train_sampler = LengthBucketSampler(
+            train_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
+            shuffle=True, seed=cfg.seed,
+        )
+        print("Sampler: LengthBucket (consistency off)", flush=True)
     eval_sampler = LengthBucketSampler(
         eval_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
         shuffle=False,
     )
+    # Workstation-optimized (RTX 5090 + NVMe): more workers + persistent
+    # across epochs to avoid respawn overhead.
     train_loader = DataLoader(
-        train_ds, batch_sampler=train_sampler, num_workers=2,
-        collate_fn=lambda b: collate(b, tokenizer.pad_token_id), pin_memory=True,
+        train_ds, batch_sampler=train_sampler, num_workers=args.num_workers,
+        collate_fn=lambda b: collate(b, tokenizer.pad_token_id),
+        pin_memory=True, persistent_workers=args.num_workers > 0,
     )
     eval_loader = DataLoader(
-        eval_ds, batch_sampler=eval_sampler, num_workers=2,
-        collate_fn=lambda b: collate(b, tokenizer.pad_token_id), pin_memory=True,
+        eval_ds, batch_sampler=eval_sampler, num_workers=max(2, args.num_workers // 2),
+        collate_fn=lambda b: collate(b, tokenizer.pad_token_id),
+        pin_memory=True, persistent_workers=args.num_workers > 0,
     )
     print(f"Length bucketing: ON (mega={cfg.batch_size * 50}); peak per-batch len bounded to longest in batch.", flush=True)
 
@@ -294,6 +324,8 @@ def main() -> None:
     for epoch in range(cfg.epochs):
         train_sampler.set_epoch(epoch)
         running = 0.0
+        running_cons = 0.0
+        cons_fire_count = 0
         n_in_window = 0
         for i, batch in enumerate(train_loader):
             input_ids = batch["input_ids"].to(device)
@@ -302,7 +334,19 @@ def main() -> None:
             out = model(input_ids=input_ids, attention_mask=attn)
             # Per-sample masking: -100 is PyTorch CE ignore_index — focal_ce
             # already handles it, no batch-level skipping needed.
-            loss = model.compute_loss(out, labels) / cfg.grad_accum
+            task_loss = model.compute_loss(out, labels)
+            # v2.2: adversarial consistency — force base/homo/emoji of same
+            # pair_id to have similar toxicity logits.
+            cons_loss = torch.tensor(0.0, device=task_loss.device, dtype=task_loss.dtype)
+            if args.consistency_lambda > 0:
+                pair_ids = batch["pair_ids"].to(device)
+                cons_loss = consistency_loss(out.logits["toxicity"], pair_ids)
+                loss = (task_loss + args.consistency_lambda * cons_loss) / cfg.grad_accum
+                if cons_loss.item() > 1e-6:
+                    running_cons += cons_loss.item()
+                    cons_fire_count += 1
+            else:
+                loss = task_loss / cfg.grad_accum
             loss.backward()
             running += loss.item() * cfg.grad_accum
             n_in_window += 1
@@ -315,13 +359,19 @@ def main() -> None:
                 if global_step % cfg.log_every == 0:
                     avg = running / max(1, n_in_window)
                     elapsed = time.time() - t_start
+                    cons_tag = ""
+                    if args.consistency_lambda > 0:
+                        avg_cons = running_cons / max(1, cons_fire_count)
+                        cons_tag = f" cons(avg|fired)={avg_cons:.3f}|{cons_fire_count}"
                     msg = (f"ep{epoch} step{global_step}/{total_steps} "
-                           f"loss={avg:.4f} lr={sched.get_last_lr()[0]:.2e} "
+                           f"loss={avg:.4f}{cons_tag} lr={sched.get_last_lr()[0]:.2e} "
                            f"vram={torch.cuda.memory_allocated()/1024**3:.1f}GB "
                            f"elapsed={elapsed:.0f}s")
                     print(msg, flush=True)
                     log_lines.append(msg)
                     running = 0.0
+                    running_cons = 0.0
+                    cons_fire_count = 0
                     n_in_window = 0
                 # mid-train safety checkpoint (regenerable but saves time on crash)
                 if args.save_every_steps > 0 and global_step % args.save_every_steps == 0:

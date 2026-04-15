@@ -1,0 +1,115 @@
+{
+  "train": {
+    "total": 70870,
+    "by_source": {
+      "cold": 25659,
+      "toxicloak": 11004,
+      "sccd": 28426,
+      "state_toxicn": 5781
+    },
+    "toxicity": {
+      "toxic": 25100,
+      "none": 41678,
+      "severe": 4092
+    },
+    "bullying": {
+      "harassment": 29060,
+      "none": 41678,
+      "threat": 132
+    },
+    "role": {
+      "none": 54351,
+      "perpetrator": 16519
+    },
+    "emotion": {
+      "neu": 54351,
+      "neg": 16519
+    },
+    "cloak_variants": {
+      "homo": 3668,
+      "emoji": 3668,
+      "base": 3668
+    }
+  },
+  "dev": {
+    "total": 10535,
+    "by_source": {
+      "cold": 6430,
+      "state_toxicn": 643,
+      "sccd": 3462
+    },
+    "toxicity": {
+      "toxic": 4103,
+      "none": 6062,
+      "severe": 370
+    },
+    "bullying": {
+      "harassment": 4465,
+      "none": 6062,
+      "threat": 8
+    },
+    "role": {
+      "none": 9272,
+      "perpetrator": 1263
+    },
+    "emotion": {
+      "neu": 9272,
+      "neg": 1263
+    },
+    "cloak_variants": {}
+  },
+  "test": {
+    "total": 10382,
+    "by_source": {
+      "cold": 5320,
+      "state_toxicn": 1605,
+      "sccd": 3457
+    },
+    "toxicity": {
+      "toxic": 3625,
+      "none": 6317,
+      "severe": 440
+    },
+    "bullying": {
+      "harassment": 4036,
+      "none": 6317,
+      "threat": 29
+    },
+    "role": {
+      "none": 8423,
+      "perpetrator": 1959
+    },
+    "emotion": {
+      "neu": 8423,
+      "neg": 1959
+    },
+    "cloak_variants": {}
+  },
+  "heldout": {
+    "total": 2754,
+    "by_source": {
+      "toxicloak": 2754
+    },
+    "toxicity": {
+      "toxic": 1431,
+      "none": 1323
+    },
+    "bullying": {
+      "harassment": 1431,
+      "none": 1323
+    },
+    "role": {
+      "perpetrator": 1431,
+      "none": 1323
+    },
+    "emotion": {
+      "neg": 1431,
+      "neu": 1323
+    },
+    "cloak_variants": {
+      "base": 918,
+      "homo": 918,
+      "emoji": 918
+    }
+  }
+}
