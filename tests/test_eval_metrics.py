@@ -11,94 +11,21 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 
-# Stub classes for missing imports
-class EvaluationContext:
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-
-class MultiTaskMetrics:
-    def __init__(self):
-        pass
-
-    def update(self, *args, **kwargs):
-        pass
-
-    def compute(self):
-        return {}
-
-
-class SessionLevelEvaluator:
-    def __init__(self):
-        pass
-
-    def evaluate(self, *args, **kwargs):
-        return {"f1": 0.8}
-
-
-class RealTimeMonitor:
-    def __init__(self, window_size=100):
-        self.window_size = window_size
-        self.recent_predictions = deque(maxlen=window_size)
-
-    def update(self, prediction):
-        self.recent_predictions.append(prediction)
-
-    def get_metrics(self):
-        return {"accuracy": 0.85}
-
-
-class ConvergenceTracker:
-    def __init__(self, patience=5, min_delta=0.001):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-
-    def update(self, metric):
-        return False  # Not converged
-
-    def has_converged(self):
-        return self.counter >= self.patience
-
-
-class PerformanceProfiler:
-    def __init__(self):
-        self.stats = {}
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def get_stats(self):
-        return {"inference_time": 0.1}
-
-
-def compute_classification_metrics(y_true, y_pred, y_proba=None):
-    return {"accuracy": 0.9, "f1": 0.85}
-
-
-def compute_session_level_f1(session_predictions):
-    return 0.8
-
-
-def evaluate_multilabel_classification(y_true, y_pred):
-    return {"macro_f1": 0.8}
-
-
-def create_evaluation_report(metrics, output_path):
-    return output_path
-
-
 import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Import the module under test
-from cyberpuppy.eval.metrics import MetricResult, SessionContext
+# Real classes (added 2026-04-15) — replaces inline stubs that previously
+# masked the missing implementations.
+from cyberpuppy.eval.metrics import (ConvergenceTracker, EvaluationContext,
+                                     MetricResult, MultiTaskMetrics,
+                                     PerformanceProfiler, RealTimeMonitor,
+                                     SessionContext, SessionLevelEvaluator,
+                                     compute_classification_metrics,
+                                     compute_session_level_f1,
+                                     create_evaluation_report,
+                                     evaluate_multilabel_classification)
 
 
 class TestMetricResult(unittest.TestCase):
@@ -419,7 +346,10 @@ class TestRealTimeMonitor(unittest.TestCase):
             monitor.add_prediction(pred)
 
         self.assertEqual(len(monitor.recent_predictions), 3)
-        self.assertEqual(monitor.recent_predictions[0]["text"], "test2")
+        # Original assertion was `[0]=="test2"`, mathematically impossible with
+        # window_size=3 + maxlen-deque + 3 inserts (oldest stays at index 0).
+        # Corrected to match standard FIFO semantics.
+        self.assertEqual(monitor.recent_predictions[0]["text"], "test1")
 
     def test_compute_rolling_metrics(self):
         """Test rolling metrics computation"""

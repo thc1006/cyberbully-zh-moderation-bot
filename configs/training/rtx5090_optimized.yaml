@@ -1,0 +1,57 @@
+# RTX 5090 32 GB GPU 優化配置 (Blackwell, sm_120, CUDA 12.8+)
+# 適用本工作站；GPU 充裕 → 大 batch、bf16、不啟用 gradient checkpointing
+
+model:
+  name: "hfl/chinese-macbert-base"
+  num_labels: 3
+  dropout_rate: 0.1
+  hidden_size: 768
+  max_sequence_length: 256
+
+data:
+  train_path: "data/processed/training_dataset/train.json"
+  val_path: "data/processed/training_dataset/dev.json"
+  test_path: "data/processed/training_dataset/test.json"
+  cache_dir: "data/cache"
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+  persistent_workers: true
+
+training:
+  batch_size: 64
+  auto_batch_size: false
+  gradient_accumulation_steps: 1
+  learning_rate: 5.0e-5
+  weight_decay: 0.01
+  num_epochs: 5
+  warmup_ratio: 0.1
+  lr_scheduler: "cosine"
+  bf16: true            # Blackwell 對 bf16 原生支援，比 fp16 數值更穩
+  fp16: false
+  dataloader_drop_last: false
+  torch_compile: true   # ~1.5-2x 推論加速；訓練首個 step 較慢
+
+optimization:
+  gradient_checkpointing: false   # 32 GB VRAM 不需要
+  max_grad_norm: 1.0
+  optimizer: "AdamW"
+  memory_efficient_attention: true
+  cpu_offload: false
+
+callbacks:
+  early_stopping_patience: 3
+  early_stopping_metric: "eval_f1_macro"
+  early_stopping_mode: "max"
+  save_best_only: true
+  save_top_k: 1
+  monitor_gpu_memory: true
+  tensorboard_log_dir: "logs/tensorboard"
+
+experiment:
+  name: "rtx5090_optimized"
+  output_dir: "experiments"
+  resume_from_checkpoint: null
+  seed: 42
+  log_level: "INFO"
+  save_predictions: true

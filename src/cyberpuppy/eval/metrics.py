@@ -769,5 +769,288 @@ def example_usage():
     print(f"CSV 已匯出到: {csv_path}")
 
 
+# =====================================================================
+# Phase-2 evaluation primitives (added 2026-04-15 for tests/test_eval_metrics.py)
+# =====================================================================
+
+import contextlib as _contextlib  # noqa: E402
+
+
+@dataclass
+class EvaluationContext:
+    dataset_name: str
+    model_name: str
+    config_path: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "dataset_name": self.dataset_name,
+            "model_name": self.model_name,
+            "config_path": self.config_path,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+def compute_classification_metrics(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_proba: Optional[np.ndarray] = None,
+) -> Dict[str, Any]:
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    if y_true.shape != y_pred.shape:
+        raise ValueError(f"y_true / y_pred shape mismatch: {y_true.shape} vs {y_pred.shape}")
+    if y_true.size == 0:
+        return {}
+    out: Dict[str, Any] = {
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision": float(precision_score(y_true, y_pred, average="macro", zero_division=0)),
+        "recall": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
+        "f1_score": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+    }
+    if y_proba is not None:
+        try:
+            if y_proba.ndim == 2 and y_proba.shape[1] == 2:
+                out["auc_roc"] = float(roc_auc_score(y_true, y_proba[:, 1]))
+                out["auc_pr"] = float(average_precision_score(y_true, y_proba[:, 1]))
+            else:
+                out["auc_roc"] = float(roc_auc_score(y_true, y_proba, multi_class="ovr"))
+                out["auc_pr"] = float(average_precision_score(y_true, y_proba, average="macro"))
+        except (ValueError, IndexError):
+            pass
+    return out
+
+
+def evaluate_multilabel_classification(
+    y_true: np.ndarray, y_pred: np.ndarray
+) -> Dict[str, float]:
+    from sklearn.metrics import hamming_loss
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return {
+        "hamming_loss": float(hamming_loss(y_true, y_pred)),
+        "subset_accuracy": float(accuracy_score(y_true, y_pred)),
+        "micro_f1": float(f1_score(y_true, y_pred, average="micro", zero_division=0)),
+        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+    }
+
+
+def compute_session_level_f1(session_predictions: List[Dict[str, Any]]) -> float:
+    if not session_predictions:
+        return 0.0
+    y_true = [p["label"] for p in session_predictions]
+    y_pred = [p["prediction"] for p in session_predictions]
+    return float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
+
+
+def create_evaluation_report(
+    evaluation_data: Dict[str, Any], output_path: Path
+) -> Path:
+    report = dict(evaluation_data)
+    report["generated_at"] = datetime.now().isoformat()
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    return output_path
+
+
+class MultiTaskMetrics:
+    def __init__(self) -> None:
+        self.task_metrics: Dict[str, Dict[str, Any]] = {}
+
+    def add_task_results(
+        self,
+        task_name: str,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        y_proba: Optional[np.ndarray] = None,
+    ) -> None:
+        self.task_metrics[task_name] = compute_classification_metrics(y_true, y_pred, y_proba)
+
+    def compute_overall_metrics(self) -> Dict[str, Any]:
+        if not self.task_metrics:
+            return {"macro_f1": 0.0, "micro_f1": 0.0, "task_count": 0}
+        f1s = [m.get("f1_score", 0.0) for m in self.task_metrics.values()]
+        return {
+            "macro_f1": float(np.mean(f1s)),
+            "micro_f1": float(np.mean(f1s)),  # placeholder; per-sample micro needs raw arrays
+            "task_count": len(self.task_metrics),
+        }
+
+    def get_summary_report(self) -> Dict[str, Any]:
+        return {**self.task_metrics, "overall": self.compute_overall_metrics()}
+
+
+class SessionLevelEvaluator:
+    def __init__(self) -> None:
+        self.sessions: List[SessionContext] = []
+
+    def add_session(self, session: SessionContext) -> None:
+        self.sessions.append(session)
+
+    def compute_session_level_f1(self) -> float:
+        preds: List[Dict[str, Any]] = []
+        for s in self.sessions:
+            for m in s.messages:
+                if "true_label" in m and "predicted_label" in m:
+                    preds.append({"label": m["true_label"], "prediction": m["predicted_label"]})
+        return compute_session_level_f1(preds)
+
+    def analyze_session_patterns(self) -> Dict[str, Any]:
+        if not self.sessions:
+            return {"avg_messages_per_session": 0.0, "avg_session_duration": 0.0,
+                    "escalation_patterns": []}
+        msg_counts = [len(s.messages) for s in self.sessions]
+        durations = [s.get_duration() for s in self.sessions]
+        return {
+            "avg_messages_per_session": float(np.mean(msg_counts)),
+            "avg_session_duration": float(np.mean(durations)),
+            "escalation_patterns": [],
+        }
+
+    def compute_escalation_metrics(self) -> Dict[str, Any]:
+        order = {"none": 0, "toxic": 1, "severe": 2}
+        rates = []
+        peaks = []
+        for s in self.sessions:
+            scores = [order.get(m.get("toxicity", "none"), 0) for m in s.messages]
+            if not scores:
+                continue
+            peaks.append(max(scores))
+            increases = sum(1 for a, b in zip(scores, scores[1:]) if b > a)
+            rates.append(increases / max(1, len(scores) - 1))
+        return {
+            "escalation_rate": float(np.mean(rates)) if rates else 0.0,
+            "peak_intensity": float(np.mean(peaks)) if peaks else 0.0,
+        }
+
+
+class RealTimeMonitor:
+    """Rolling window of recent predictions.
+
+    Note: deque uses maxlen=window_size with append-on-right (oldest stays at index 0).
+    """
+
+    def __init__(self, window_size: int = 100) -> None:
+        self.window_size = window_size
+        self.recent_predictions: deque = deque(maxlen=window_size)
+
+    def add_prediction(self, pred: Dict[str, Any]) -> None:
+        self.recent_predictions.append(pred)
+
+    def compute_rolling_metrics(self) -> Dict[str, Any]:
+        preds = list(self.recent_predictions)
+        if not preds:
+            return {"rolling_accuracy": 0.0, "rolling_f1": 0.0,
+                    "avg_confidence": 0.0, "prediction_count": 0}
+        y_true, y_pred, confs = [], [], []
+        for p in preds:
+            if "true_label" in p and "prediction" in p:
+                y_true.append(p["true_label"])
+                y_pred.append(p["prediction"])
+            if "confidence" in p:
+                confs.append(p["confidence"])
+        rolling_acc = float(accuracy_score(y_true, y_pred)) if y_true else 0.0
+        rolling_f1 = float(f1_score(y_true, y_pred, average="weighted", zero_division=0)) if y_true else 0.0
+        return {
+            "rolling_accuracy": rolling_acc,
+            "rolling_f1": rolling_f1,
+            "avg_confidence": float(np.mean(confs)) if confs else 0.0,
+            "prediction_count": len(preds),
+        }
+
+    def detect_anomalies(self, low_confidence_threshold: float = 0.3) -> Dict[str, Any]:
+        preds = list(self.recent_predictions)
+        if not preds:
+            return {"low_confidence_rate": 0.0, "anomalous_predictions": []}
+        low = [p for p in preds if p.get("confidence", 1.0) < low_confidence_threshold]
+        return {
+            "low_confidence_rate": len(low) / len(preds),
+            "anomalous_predictions": low,
+        }
+
+    def get_performance_summary(self) -> Dict[str, Any]:
+        return {
+            "total_predictions": len(self.recent_predictions),
+            "window_size": self.window_size,
+            "metrics": self.compute_rolling_metrics(),
+        }
+
+
+class ConvergenceTracker:
+    def __init__(self, patience: int = 5, min_delta: float = 0.001) -> None:
+        self.patience = patience
+        self.min_delta = min_delta
+        self.metric_history: List[float] = []
+
+    def add_metric(self, value: float) -> None:
+        self.metric_history.append(float(value))
+
+    def _epochs_since_best(self) -> int:
+        if not self.metric_history:
+            return 0
+        best_idx = int(np.argmax(self.metric_history))
+        return len(self.metric_history) - 1 - best_idx
+
+    def check_convergence(self) -> bool:
+        if len(self.metric_history) <= self.patience:
+            return False
+        return self._epochs_since_best() >= self.patience
+
+    def should_early_stop(self) -> bool:
+        return self.check_convergence()
+
+    def get_convergence_report(self) -> Dict[str, Any]:
+        if not self.metric_history:
+            return {"total_epochs": 0, "best_metric": None, "current_metric": None,
+                    "is_converged": False, "epochs_since_improvement": 0}
+        return {
+            "total_epochs": len(self.metric_history),
+            "best_metric": float(max(self.metric_history)),
+            "current_metric": float(self.metric_history[-1]),
+            "is_converged": self.check_convergence(),
+            "epochs_since_improvement": self._epochs_since_best(),
+        }
+
+
+class PerformanceProfiler:
+    def __init__(self) -> None:
+        self.timing_data: Dict[str, List[float]] = {}
+        self.memory_data: Dict[str, List[float]] = {}
+
+    @_contextlib.contextmanager
+    def time_operation(self, name: str):
+        start = time.time()
+        try:
+            yield
+        finally:
+            elapsed = time.time() - start
+            self.timing_data.setdefault(name, []).append(elapsed)
+
+    def record_memory_usage(self, name: str) -> None:
+        try:
+            import psutil
+            rss = psutil.Process().memory_info().rss
+        except Exception:
+            rss = 0
+        self.memory_data.setdefault(name, []).append(float(rss))
+
+    def get_performance_report(self) -> Dict[str, Any]:
+        timing_stats = {
+            name: {
+                "count": len(times),
+                "total": float(sum(times)),
+                "mean": float(np.mean(times)),
+                "min": float(min(times)),
+                "max": float(max(times)),
+            }
+            for name, times in self.timing_data.items()
+        }
+        return {"timing_stats": timing_stats, "memory_stats": dict(self.memory_data)}
+
+
 if __name__ == "__main__":
     example_usage()

@@ -80,10 +80,29 @@ class ModelLoader:
         self.models_dir = Path(models_dir)
         self.cache = ModelCache()
         self.device = self._detect_device()
+        self.dtype = self._detect_dtype()
         self.detector = None
         self._warmup_complete = False
 
-        logger.info(f"ModelLoader initialized with device: {self.device}")
+        if self.device == "cuda":
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            torch.backends.cudnn.benchmark = True
+
+        logger.info(
+            f"ModelLoader initialized with device: {self.device}  dtype: {self.dtype}"
+        )
+
+    def _detect_dtype(self) -> "torch.dtype":
+        """Pick bf16 on Ampere+ (sm_80+) — Blackwell RTX 5090 included."""
+        if self.device != "cuda":
+            return torch.float32
+        try:
+            if torch.cuda.is_bf16_supported():
+                return torch.bfloat16
+            return torch.float16
+        except Exception:
+            return torch.float32
 
     def _detect_device(self) -> str:
         """Detect optimal computation device."""
@@ -175,7 +194,7 @@ class ModelLoader:
                 state_dict = checkpoint
 
             model.load_state_dict(state_dict, strict=False)
-            model = model.to(self.device)
+            model = model.to(device=self.device, dtype=self.dtype)
             model.eval()
 
             load_time = time.time() - start_time

@@ -5,6 +5,13 @@
 claude_code-gemini-mcp/
 memory/
 
+# Phase 2/3 artefacts (regenerable / too large for repo without LFS)
+data/external/
+data/processed/v2/
+models/cyberpuppy_v2_qwen3_8b/
+models/v2_smoke/
+.venv/
+
 # Built application files
 *.apk
 *.aab
