@@ -26,6 +26,7 @@ Key Features:
 
 import json
 import logging
+import pickle
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path

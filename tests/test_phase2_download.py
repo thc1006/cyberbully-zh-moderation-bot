@@ -13,6 +13,8 @@ from cyberpuppy.data.phase2_download import (DatasetSpec, DownloadManifest,
                                               Phase2Downloader,
                                               load_default_specs)
 
+pytestmark = pytest.mark.unit
+
 
 # ---- 1. Default specs ----------------------------------------------------
 

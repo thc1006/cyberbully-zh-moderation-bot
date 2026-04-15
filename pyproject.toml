@@ -133,6 +133,9 @@ addopts = [
     # Windows: Handle Unicode output in tests
     "--tb=short",
     "-v",
+    # Skip dirs that require optional deps not in CI base env
+    "--ignore=tests/integration",          # needs `docker` package
+    "--ignore=tests/test_property_based.py",  # needs full hypothesis stack
 ]
 # Windows: Set encoding for test execution (use environment variables)
 markers = [

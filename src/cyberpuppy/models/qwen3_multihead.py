@@ -58,6 +58,7 @@ class Qwen3MultiHead(nn.Module):
         })
 
         self.use_uncertainty_weighting = use_uncertainty_weighting
+        self.focal_gamma = 0.0  # set by Trainer; default plain CE
         if use_uncertainty_weighting:
             # log_var per task; precision = exp(-log_var); init to 0 -> precision=1
             self.log_var = nn.Parameter(torch.zeros(len(self.head_dims)))
@@ -94,8 +95,36 @@ class Qwen3MultiHead(nn.Module):
         labels: Dict[str, Optional[torch.Tensor]],
     ) -> torch.Tensor:
         return uncertainty_weighted_loss(
-            outputs.logits, labels, self.log_var, task_order=list(self.head_dims.keys())
+            outputs.logits, labels, self.log_var,
+            task_order=list(self.head_dims.keys()),
+            focal_gamma=self.focal_gamma,
         )
+
+
+def _focal_ce(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    gamma: float,
+    ignore_index: int = -100,
+) -> torch.Tensor:
+    """Cross-entropy with optional focal modulation (1-p_t)^gamma.
+
+    gamma=0 -> plain CE. ignore_index masks out per-sample labels.
+    Returns mean over non-ignored samples; if all are ignored, returns 0.
+    """
+    valid = target != ignore_index
+    if not valid.any():
+        return logits.sum() * 0.0  # zero, but on right device/dtype, allowing graph
+    logits_v = logits[valid]
+    target_v = target[valid]
+    if gamma <= 0:
+        return F.cross_entropy(logits_v, target_v)
+    log_probs = F.log_softmax(logits_v, dim=-1)
+    log_pt = log_probs.gather(-1, target_v.unsqueeze(-1)).squeeze(-1)
+    pt = log_pt.exp()
+    focal_factor = (1.0 - pt).pow(gamma)
+    loss = -(focal_factor * log_pt)
+    return loss.mean()
 
 
 def uncertainty_weighted_loss(
@@ -103,25 +132,27 @@ def uncertainty_weighted_loss(
     labels: Dict[str, Optional[torch.Tensor]],
     log_var: torch.Tensor,
     task_order: Iterable[str],
+    focal_gamma: float = 0.0,
 ) -> torch.Tensor:
-    """Kendall et al. multi-task uncertainty weighting.
+    """Kendall et al. multi-task uncertainty weighting + optional focal loss.
 
-    L = sum_t  precision_t * CE_t + log(var_t) / 2
+    L = sum_t  precision_t * (focal_)CE_t + 0.5 * log_var_t
     where precision_t = exp(-log_var_t).
 
-    Tasks whose label is None are skipped (silver/missing labels).
+    Tasks whose label is None are skipped entirely.
+    Per-sample labels equal to -100 are ignored (PyTorch CE convention).
+    If a task's label tensor is all -100, that task contributes 0 to the loss.
     """
     total: Optional[torch.Tensor] = None
     for idx, task in enumerate(task_order):
         target = labels.get(task)
         if target is None:
             continue
-        ce = F.cross_entropy(logits[task], target)
+        ce = _focal_ce(logits[task], target, gamma=focal_gamma)
         precision = torch.exp(-log_var[idx])
         term = precision * ce + 0.5 * log_var[idx]
         total = term if total is None else total + term
     if total is None:
-        # No labels supplied; return a zero tensor that still tracks log_var if needed.
         total = log_var.sum() * 0.0
     return total
 

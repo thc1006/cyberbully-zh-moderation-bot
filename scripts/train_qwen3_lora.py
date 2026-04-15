@@ -153,7 +153,15 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--grad-accum", type=int, default=2)
-    ap.add_argument("--lr", type=float, default=3e-5)
+    ap.add_argument("--lr", type=float, default=5e-5,
+                    help="LoRA peak LR; v2.0 used 3e-5, v2.1 default 5e-5 for larger data")
+    ap.add_argument("--focal-gamma", type=float, default=2.0,
+                    help="Focal-loss gamma per Lin et al.; 0 -> plain CE, "
+                         "2.0 default for severe class imbalance (severe 6.8%%, threat 0.2%%)")
+    ap.add_argument("--save-every-steps", type=int, default=500,
+                    help="Save mid-train checkpoint every N optim steps (0=disable)")
+    ap.add_argument("--eval-every-steps", type=int, default=0,
+                    help="Run dev eval every N optim steps (0=epoch-end only)")
     ap.add_argument("--max-length", type=int, default=256)
     ap.add_argument("--lora-r", type=int, default=32)
     ap.add_argument("--lora-alpha", type=int, default=64)
@@ -213,6 +221,8 @@ def main() -> None:
         print("Gradient checkpointing: OFF", flush=True)
 
     model = Qwen3MultiHead(backbone, hidden_size=backbone.config.hidden_size).to(device=device, dtype=dtype)
+    model.focal_gamma = float(args.focal_gamma)
+    print(f"Focal gamma: {model.focal_gamma}", flush=True)
     # heads must stay in bf16 too (already from .to)
 
     train_ds = JsonlClassificationDataset(cfg.train_path, tokenizer, cfg.max_length, cfg.max_train)
@@ -249,6 +259,20 @@ def main() -> None:
     best_f1 = -1.0
     global_step = 0
     t_start = time.time()
+
+    def _save(tag: str, eval_metrics: dict | None = None) -> None:
+        ck_dir = Path(cfg.output_dir) / tag
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        backbone.save_pretrained(ck_dir / "lora")
+        torch.save({
+            "heads": model.heads.state_dict(),
+            "log_var": model.log_var.detach().cpu(),
+            "head_dims": dict(model.head_dims),
+            "focal_gamma": model.focal_gamma,
+            "step": global_step,
+            "eval_metrics": eval_metrics,
+        }, ck_dir / "heads.pt")
+        tokenizer.save_pretrained(ck_dir)
 
     for epoch in range(cfg.epochs):
         running = 0.0
@@ -287,41 +311,33 @@ def main() -> None:
                     log_lines.append(msg)
                     running = 0.0
                     n_in_window = 0
+                # mid-train safety checkpoint (regenerable but saves time on crash)
+                if args.save_every_steps > 0 and global_step % args.save_every_steps == 0:
+                    _save("checkpoint_step")
+                    print(f"  [save] checkpoint_step at step {global_step}", flush=True)
+                # mid-train eval (optional)
+                if args.eval_every_steps > 0 and global_step % args.eval_every_steps == 0:
+                    mid = evaluate(model, eval_loader, device)
+                    print(f"  [mid-eval step {global_step}] {mid}", flush=True)
+                    log_lines.append(f"mid-eval step {global_step}: {mid}")
 
         # eval at end of epoch
         eval_metrics = evaluate(model, eval_loader, device)
         print(f"== Epoch {epoch} eval == {eval_metrics}", flush=True)
         log_lines.append(f"epoch{epoch} eval: {eval_metrics}")
 
-        # save adapter + heads if best
-        tox_f1 = eval_metrics.get("toxicity", {}).get("f1_weighted", 0.0)
-        if tox_f1 > best_f1:
-            best_f1 = tox_f1
-            ck_dir = Path(cfg.output_dir) / "best"
-            ck_dir.mkdir(parents=True, exist_ok=True)
-            backbone.save_pretrained(ck_dir / "lora")
-            torch.save({
-                "heads": model.heads.state_dict(),
-                "log_var": model.log_var.detach().cpu(),
-                "head_dims": dict(model.head_dims),
-                "epoch": epoch,
-                "eval_metrics": eval_metrics,
-            }, ck_dir / "heads.pt")
-            tokenizer.save_pretrained(ck_dir)
-            print(f"Saved best (toxicity F1={tox_f1:.4f}) -> {ck_dir}", flush=True)
+        # save adapter + heads if best (track macro F1 of toxicity for severe-class fairness)
+        tox = eval_metrics.get("toxicity", {})
+        score = tox.get("f1_weighted", 0.0)
+        if score > best_f1:
+            best_f1 = score
+            _save("best", eval_metrics)
+            print(f"Saved best (toxicity F1_w={score:.4f}) -> {Path(cfg.output_dir) / 'best'}", flush=True)
 
     # always save final
-    final_dir = Path(cfg.output_dir) / "final"
-    final_dir.mkdir(parents=True, exist_ok=True)
-    backbone.save_pretrained(final_dir / "lora")
-    torch.save({
-        "heads": model.heads.state_dict(),
-        "log_var": model.log_var.detach().cpu(),
-        "head_dims": dict(model.head_dims),
-    }, final_dir / "heads.pt")
-    tokenizer.save_pretrained(final_dir)
+    _save("final")
     Path(cfg.output_dir, "train_log.txt").write_text("\n".join(log_lines), encoding="utf-8")
-    print(f"\nDone. Best toxicity F1={best_f1:.4f}. Final adapter -> {final_dir}", flush=True)
+    print(f"\nDone. Best toxicity F1_w={best_f1:.4f}. Final adapter -> {Path(cfg.output_dir) / 'final'}", flush=True)
 
 
 if __name__ == "__main__":

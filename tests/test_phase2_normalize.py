@@ -6,6 +6,8 @@ import pytest
 
 from cyberpuppy.data.phase2 import (LABELS, Phase2Normalizer, UnifiedRecord)
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def normalizer() -> Phase2Normalizer:
