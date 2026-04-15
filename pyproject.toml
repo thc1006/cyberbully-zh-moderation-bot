@@ -9,8 +9,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cyberpuppy"
-version = "0.1.0"
-description = "Chinese cyberbullying detection and moderation bot with explainable AI"
+version = "0.2.0"
+description = "Chinese cyberbullying detection & moderation — v2.1 Qwen3-8B + LoRA multi-task (ADR 0001)"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
@@ -19,7 +19,7 @@ authors = [
 ]
 keywords = ["cyberbullying", "chinese-nlp", "toxicity-detection", "emotion-analysis", "line-bot"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -52,6 +52,10 @@ dependencies = [
     "shap>=0.44.0,<1.0.0",
     "numba>=0.58.0",
     "cloudpickle>=3.0.0",
+
+    # v2.1+ LoRA inference (load adapter_model.safetensors)
+    "peft>=0.19.0,<1.0.0",
+    "accelerate>=1.0.0,<2.0.0",
 
     # API & Bot
     "fastapi>=0.104.0",
@@ -99,6 +103,15 @@ ckip = [
 
 perspective = [
     "google-api-python-client>=2.100.0",
+]
+
+# Training / fine-tuning stack (not needed for inference-only deploy).
+# Pulls in 8-bit optimizer + TRL for future RLHF / GRPO work.
+training = [
+    "peft>=0.19.0,<1.0.0",
+    "accelerate>=1.0.0,<2.0.0",
+    "bitsandbytes>=0.45.0",
+    "trl>=1.0.0,<2.0.0",
 ]
 
 [project.scripts]

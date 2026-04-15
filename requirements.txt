@@ -36,6 +36,12 @@ plotly>=5.18.0
 torch>=2.1.0,<3.0.0
 scikit-learn>=1.3.0,<2.0.0
 
+# v2.1+ LoRA inference stack (ADR 0001 Phase 3).
+# peft loads the adapter_model.safetensors; accelerate handles device_map.
+# bitsandbytes is NOT here — it's training-only; see [training] optional extra.
+peft>=0.19.0,<1.0.0
+accelerate>=1.0.0,<2.0.0
+
 # NLP Tools (optional but recommended)
 # ckiptagger>=0.2.1  # 中研院斷詞工具（需要較大空間）
 
