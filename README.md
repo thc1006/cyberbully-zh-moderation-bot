@@ -6,7 +6,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
 
-[English Version](README_EN.md) | [專案狀態](PROJECT_STATUS.md) | [API 文件](http://localhost:8000/docs)
+[English Version](README_EN.md) | [ADR 0001 (v2.1)](docs/adr/0001-cyberpuppy-2026-upgrade.md) | [API 文件](http://localhost:8000/docs)
 
 > 🌟 **專為中文環境打造的先進 AI 內容審核系統，提供即時毒性偵測、網路霸凌防治與情緒分析，並具備可解釋 AI 功能**
 
@@ -85,7 +85,7 @@ python scripts/download_datasets.py --all
 # 生產級模型已內建 (bullying_a100_best)
 
 # GPU 設定（選用但建議）
-python test_gpu.py  # 驗證 CUDA 可用性
+python scripts/check_gpu.py  # 驗證 CUDA 可用性
 ```
 
 ### 🚀 啟動服務

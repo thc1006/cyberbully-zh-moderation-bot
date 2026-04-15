@@ -136,7 +136,7 @@ python test_api_final.py
 
 - **Email**: hctsai@linux.com
 - **GitHub Issues**: [問題回報](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
-- **專案狀態**: [PROJECT_STATUS.md](../PROJECT_STATUS.md)
+- **專案狀態**: [ADR 0001 (v2.1)](adr/0001-cyberpuppy-2026-upgrade.md) — 取代 legacy `PROJECT_STATUS.md`（已歸檔於 `docs/archive/`）
 
 ## 📜 授權
 

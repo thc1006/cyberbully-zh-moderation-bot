@@ -29,7 +29,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 創建並運行以下測試腳本：
 
 ```python
-# test_gpu.py
+# scripts/check_gpu.py
 import torch
 print("PyTorch version:", torch.__version__)
 print("CUDA available:", torch.cuda.is_available())
@@ -48,7 +48,7 @@ else:
 
 運行測試：
 ```bash
-python test_gpu.py
+python scripts/check_gpu.py
 ```
 
 ## 🔧 如果仍然無法偵測 GPU

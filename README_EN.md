@@ -6,7 +6,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
 
-[中文版本](README.md) | [Project Status](PROJECT_STATUS.md) | [API Documentation](http://localhost:8000/docs)
+[中文版本](README.md) | [ADR 0001 (v2.1)](docs/adr/0001-cyberpuppy-2026-upgrade.md) | [API Documentation](http://localhost:8000/docs)
 
 > 🌟 **State-of-the-art Chinese NLP solution for real-time toxicity detection, cyberbullying prevention, and sentiment analysis with explainable AI capabilities**
 
@@ -84,7 +84,7 @@ python scripts/download_datasets.py --all
 # Production model included (bullying_a100_best)
 
 # GPU Setup (optional but recommended)
-python test_gpu.py  # Verify CUDA availability
+python scripts/check_gpu.py  # Verify CUDA availability
 ```
 
 ### 🚀 Launch Services
