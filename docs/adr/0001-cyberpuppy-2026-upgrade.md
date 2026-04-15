@@ -145,15 +145,27 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 | **T3 私有 adapter** | 學校自有對話資料微調 LoRA adapter（資料留校） | CyberPuppy 工程支援 | 1-2 週 |
 | **T4 領域擴充** | 新增頭（如自殘/物質濫用），全 backbone fine-tune | CyberPuppy team | 4-8 週 |
 
-### 3.8 商業模式（決定）
+### 3.8 商業模式（2026-04-16 修訂：三層授權）
 
-- **核心模型權重與程式碼維持 Apache-2.0**：學校與廠商可自行下載、自部署、自修改
-- **付費服務（CyberPuppy 團隊提供）**：
-  - 整合與部署諮詢（按專案計費）
-  - T3/T4 客製化訓練
-  - SLA 維護與安全更新
-  - PDPO 影響評估報告協助
-- 不採雙授權、不採 enterprise-only weights — 維持社群信任、降低 PadLearn 等廠商試水溫成本
+經 2026-04-15/16 深度授權調研後修訂（見同目錄 `0001-research-brief.md` 附加章節與 `MODEL_LICENSE` / `DATA_LICENSE_NOTICE.md`）：
+
+- **程式碼 / 文件**（`src/`, `scripts/`, `tests/`, `api/`, `bot/`, `docs/` …）：**Apache 2.0**
+- **Model weights / adapters / 量化 artefact**：**CC BY-NC-SA 4.0**
+  - 原因：訓練資料含 ToxiCN（CC BY-NC-ND）、STATE-ToxiCN（CC BY-NC）、SCCD / CHNCI / ToxiCloakCN（無正式授權但明示 "research only"）
+  - 繼承最嚴上游之 NonCommercial 限制才是 good-faith 做法
+- **訓練資料**：不 redistribute；由 `scripts/phase2_build_*.py` 從上游下載重建
+
+**付費服務（CyberPuppy 團隊提供）**：
+- 整合與部署諮詢（按專案計費）
+- **商業變體客製訓練**（T3/T4，**用 Apache-2.0 資料 + 客戶自有資料重訓，產出商業可用 weights**）
+- SLA 維護與安全更新
+- PDPO 影響評估報告協助
+
+**這是標準 open-core 模式**（類比 Red Hat / HuggingFace）：公開 NC weights 作為 reference / 研究 showcase，收入來自「能為客戶建乾淨 commercial variant」的工程能力。
+
+**與 PadLearn 對接要點**：
+- PadLearn 若作內部 R&D、benchmark、非付費試點 → 可直接用 CC BY-NC-SA 4.0 weights
+- PadLearn 若作付費產品（向學校 / 家長收費）→ 需簽商業變體客製合約
 
 ## 4. 階段性執行計畫
 

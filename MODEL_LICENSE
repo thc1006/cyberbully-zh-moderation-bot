@@ -1,0 +1,82 @@
+CyberPuppy — Model Weights License
+====================================
+
+Scope
+-----
+This license governs **only the trained model weights / adapters** released
+under the CyberPuppy project name, including but not limited to:
+
+  - LoRA adapters         (e.g. `models/cyberpuppy_v2_*_qwen3_8b/best/lora/`)
+  - Merged full models    (e.g. `models/cyberpuppy_v2_2_merged/`)
+  - Quantized variants    (e.g. `models/cyberpuppy_v2_2_awq/`)
+  - Classification heads  (`heads.pt`)
+  - Any Hugging Face repo `thc1006/cyberpuppy-v2.*-*`
+
+Source code, documentation, and configuration files in this repository are
+governed separately by the Apache License 2.0 (see `LICENSE`).
+
+Training data is NOT redistributed; see `DATA_LICENSE_NOTICE.md`.
+
+License
+-------
+The model weights listed above are released under the
+
+    Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+    (CC BY-NC-SA 4.0)
+
+    Canonical text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+Summary of what this means:
+
+  - Attribution: credit the CyberPuppy project and cite the upstream datasets
+    listed below.
+  - NonCommercial: do not use for commercial advantage or monetary
+    compensation; academic research, educational, and harm-reduction use
+    are welcome.
+  - ShareAlike: derivatives must carry a compatible license (CC BY-NC-SA 4.0
+    or equivalent).
+
+Why non-commercial
+------------------
+The weights were fine-tuned on a combination of academic datasets whose
+upstream licenses include NonCommercial and/or research-only clauses. To
+propagate those restrictions in good faith, CyberPuppy weights inherit the
+most restrictive upstream term (NonCommercial). Commercial users who want
+a clean commercial variant should retrain on Apache-2.0-only sources
+(e.g. COLD alone plus their own permissioned data); the CyberPuppy team
+offers this as a paid consulting service — see `docs/adr/0001-cyberpuppy-2026-upgrade.md` §3.8.
+
+Upstream datasets and their licenses
+------------------------------------
+| Dataset                    | Upstream license                                   | Source |
+|----------------------------|----------------------------------------------------|--------|
+| COLD (thu-coai)            | Apache 2.0                                         | https://github.com/thu-coai/COLDataset |
+| ToxiCN (DUT-lujunyu)       | CC BY-NC-ND 4.0                                    | https://github.com/DUT-lujunyu/ToxiCN |
+| STATE-ToxiCN (ACL'25)      | CC BY-NC 4.0 (per paper); "research only" (README) | https://github.com/shenmeyemeifashengguo/STATE-ToxiCN |
+| ToxiCloakCN (EMNLP'24)     | No formal license; derivative of ToxiCN            | https://github.com/Social-AI-Studio/ToxiCloakCN |
+| SCCD (COLING'25)           | No formal license; "academic research only"        | https://github.com/STAIR-BUPT/SCCD |
+| CHNCI (arXiv 2505.20654)   | No formal license declared                         | https://github.com/zhuyiYZU/CHNCI |
+
+Fine-tuning as "use" vs "derivative work"
+-----------------------------------------
+Following Creative Commons' May 2025 guidance "Using CC-licensed Works for
+AI Training", CyberPuppy takes the interpretation that trained weights are
+a "use" of the underlying datasets rather than a literal derivative work,
+but nonetheless propagates the NonCommercial restriction because doing so
+best respects the authors' stated intent. The ToxiCN NoDerivatives clause
+is relaxed to ShareAlike (CC BY-NC-SA) to enable collaborative research
+downstream; users requiring strict ND-compliance should not rely on
+publicly-released CyberPuppy weights.
+
+Takedown / dispute
+------------------
+If you are an author of any upstream dataset listed above and object to
+this release, please open a discussion on the relevant Hugging Face repo
+or email hctsai1006@cs.nctu.edu.tw. The artefacts will be removed or
+relicensed within 7 days pending resolution.
+
+Citations
+---------
+Please cite the underlying datasets in any publication or deployment that
+uses CyberPuppy weights. Full BibTeX entries are available in each
+dataset's upstream repository.

@@ -69,15 +69,22 @@
 | T3 | 學校私有對話資料微調 LoRA adapter（資料留校） | 1-2 週 |
 | T4 | 新增分類頭（如自殘／物質濫用），全 backbone fine-tune | 4-8 週 |
 
-### 3. 商業授權與技術支援
+### 3. 商業授權與技術支援（三層授權）
 
-- **核心模型權重與程式碼維持 Apache-2.0**：學校與廠商可自行下載、自部署、自修改，沒有授權費用
+為尊重上游資料集（ToxiCN、STATE-ToxiCN、SCCD 等學術資料）作者意圖，我們採分層授權：
+
+- **程式碼 / 文件 / 配置**：**Apache 2.0**（學校與廠商可自由使用、修改）
+- **公開 model weights**：**CC BY-NC-SA 4.0**（學術研究、教育、非付費試點可直接使用）
 - **付費服務**（CyberPuppy 團隊提供）：
+  - **商業變體客製訓練**（這是貴方場景最需要的）：以 Apache-2.0 資料（COLD）+ 貴方自有學校資料（家長同意後）重訓產出**商業可用 model**，不受 CC BY-NC-SA 限制
   - 整合與部署諮詢
-  - T3 / T4 客製化訓練
   - SLA 維護與安全更新
   - 協助 PDPO 影響評估
-- 不採雙授權、不採 enterprise-only weights —— 我們希望讓 PadLearn 能以最低成本先做 PoC，確認價值後再決定服務範圍
+
+**對 PadLearn 實務意義**：
+- 若貴方**內部 benchmark / 非付費試點**（如研究型學校 pilot）→ 可直接用 CC 版 weights 做 PoC，0 費用
+- 若貴方進入**付費商業產品階段** → 需簽 T3/T4 客製訓練服務，我方產出乾淨授權之 commercial variant
+- 這是 open-core 標準做法（類比 Red Hat / HuggingFace：公開 reference weights + 賣專業服務）
 
 ## 四、HK 政策面的兩處事實校正
 

@@ -272,9 +272,19 @@ black src/ --check
 mypy src/
 ```
 
-## 📜 授權條款
+## 📜 授權條款（三層）
 
-Apache License 2.0 - 詳見 [LICENSE](LICENSE)
+CyberPuppy 採分層授權，依 artefact 類型分開宣告：
+
+| 範疇 | 授權 | 詳見 |
+|---|---|---|
+| **程式碼 / 文件 / 配置** (`src/`, `scripts/`, `tests/`, `api/`, `bot/`, `configs/`, `docs/`) | **Apache License 2.0** | [`LICENSE`](LICENSE) |
+| **Model weights / LoRA adapters / 量化 artefact** | **CC BY-NC-SA 4.0**（非商業、需署名、衍生品同授權） | [`MODEL_LICENSE`](MODEL_LICENSE) |
+| **訓練資料** (`data/processed/v2/*`) | **不 redistribute**，由腳本從上游下載重建 | [`DATA_LICENSE_NOTICE.md`](DATA_LICENSE_NOTICE.md) |
+
+**為何 model weights 採 non-commercial**：訓練資料含 ToxiCN (CC BY-NC-ND)、STATE-ToxiCN (CC BY-NC)、SCCD、ToxiCloakCN、CHNCI 等研究資料集，為尊重上游作者意圖，衍生 model weights 繼承最嚴上游之 NonCommercial 限制。
+
+**商業使用**：若需商業授權之 model，我方提供客製化訓練服務（以 Apache-2.0 資料 + 客戶自有資料重訓），詳見 [ADR §3.8](docs/adr/0001-cyberpuppy-2026-upgrade.md)。
 
 ## 🌟 致謝
 

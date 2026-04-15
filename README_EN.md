@@ -271,9 +271,19 @@ black src/ --check
 mypy src/
 ```
 
-## 📜 License
+## 📜 License (three-layer)
 
-Apache License 2.0 - see [LICENSE](LICENSE) for details.
+CyberPuppy uses artefact-specific licensing:
+
+| Scope | License | Details |
+|---|---|---|
+| **Code / docs / configs** (`src/`, `scripts/`, `tests/`, `api/`, `bot/`, `configs/`, `docs/`) | **Apache License 2.0** | [`LICENSE`](LICENSE) |
+| **Model weights / LoRA adapters / quantized artefacts** | **CC BY-NC-SA 4.0** (non-commercial, attribution, share-alike) | [`MODEL_LICENSE`](MODEL_LICENSE) |
+| **Training data** (`data/processed/v2/*`) | **Not redistributed** — regenerate from upstream via scripts | [`DATA_LICENSE_NOTICE.md`](DATA_LICENSE_NOTICE.md) |
+
+**Why weights are non-commercial**: training data includes ToxiCN (CC BY-NC-ND), STATE-ToxiCN (CC BY-NC), SCCD, ToxiCloakCN, and CHNCI, several of which restrict commercial use. To honor upstream authors' intent, CyberPuppy weights inherit the most restrictive upstream NonCommercial term.
+
+**Commercial use**: if you require a commercially-licensed variant, the CyberPuppy team offers paid custom training (using Apache-2.0-only sources plus your own permissioned data). See [ADR §3.8](docs/adr/0001-cyberpuppy-2026-upgrade.md).
 
 ## 🌟 Acknowledgments
 
