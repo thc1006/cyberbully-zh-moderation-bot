@@ -14,7 +14,10 @@ Output: models/cyberpuppy_v2_2_awq/
 """
 from __future__ import annotations
 
-# --- Monkey-patch: transformers 4.57 renamed PytorchGELUTanh -> GELUTanh ---
+# Designed to run under .venv-quant (transformers 4.51.3 + autoawq 0.2.9),
+# NOT under main .venv (transformers 4.57) — autoawq 0.2.9's Catcher class
+# incompatible with Qwen3 hybrid attention API introduced in 4.52+.
+# Keep a monkey-patch fallback for the legacy GELU rename just in case.
 import transformers.activations as _act
 if not hasattr(_act, "PytorchGELUTanh"):
     _act.PytorchGELUTanh = _act.GELUTanh  # type: ignore[attr-defined]

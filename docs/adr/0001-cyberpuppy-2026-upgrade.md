@@ -271,13 +271,25 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 - [x] **LoRA merge** (`scripts/merge_lora.py`)：fp32 merge 後再降 bf16，避免小幅 LoRA delta 被 bf16 截去
   - 與 PEFT v2.2 在 106 樣本上 **100% 預測一致**；COLD first-100 F1_w 兩者皆 0.8896
   - 產出 `models/cyberpuppy_v2_2_merged/` (16 GB bf16, 4-shard safetensors)
-- [ ] ~~AWQ 4-bit 量化~~ **Pivot to bf16 only**：autoawq 0.2.9 × transformers 4.57 incompatible（Catcher class 缺 `attention_type` — Qwen3 hybrid attention 新 API 未 patch）。autoawq 上游已標 deprecated，生產應遷移 `llm-compressor` (vLLM 官方)。bf16 latency 已達 DoD，不需急 AWQ。
+- [x] **AWQ 4-bit 量化 — 雙 venv 隔離策略成功**（2026-04-16 追加）
+  - 初試用主 `.venv` (transformers 4.57) 失敗：`Catcher.attention_type` 缺（Qwen3 hybrid attention 新 API 未 patch）
+  - 研究發現：autoawq 0.2.9 官方測試組合為 torch 2.6 + **transformers 4.51.3**
+  - 解法：建 **`.venv-quant/` 隔離環境**（transformers 4.51.3 + autoawq）專跑量化，主 `.venv` 維持 4.57 不動
+  - 量化耗時 ~3.8 min（36 層）；產出 `models/cyberpuppy_v2_2_awq/` **5.69 GB（原 16 GB，2.8× 縮）**
+  - **COLD test F1 drop 僅 0.22%（0.8381 → 0.8362）**，遠低於 DoD 2% 門檻 ✅
+  - 載入時需 1 行 monkey-patch（`PytorchGELUTanh` → `GELUTanh`），已納入 `api/v2_2_app.py`
+  - 長期路徑：遷移至 vLLM 官方 `llm-compressor`（0.8.0+ 已支援 Qwen3）
 - [x] **Latency benchmark** (`scripts/benchmark_latency.py`)：warmup 20 + cuda.synchronize()
-  - RTX 5090 bf16 merged, p95 latency：
-    - 短句 (~20 tok): batch=1 **17 ms** / batch=16 26 ms (619 samp/s)
-    - 中句 (~100 tok): batch=1 **22 ms** / batch=16 68 ms (237 samp/s)
-    - 長句 (~200 tok): batch=1 **34 ms** / batch=16 182 ms (88 samp/s)
-  - **全部 p95 < 200 ms，DoD §9 達標**
+  - RTX 5090 bf16 vs AWQ，p95 latency @ batch=1：
+
+    | Input | **bf16 (14 GB)** | **AWQ (4.5 GB)** |
+    |---|---|---|
+    | short (~20 tok) | 17 ms | 19 ms |
+    | medium (~100 tok) | 22 ms | 20 ms |
+    | long (~200 tok) | 34 ms | 34 ms |
+
+  - **全部 p95 < 200 ms，DoD §9 達標** ✅
+  - AWQ 在本 workload（classification 單次 forward）**沒有速度加成**（INT4→fp16 dequant 抵銷 kernel 優化）；真價值在 **3× 記憶體縮小**，讓 RTX 4090 24 GB 等機種也能部署
 - [x] **FastAPI v2.2** (`api/v2_2_app.py`)：`POST /v2/analyze` + `/healthz` 503-until-ready
   - Startup: 2.2 sec（有 3 句 warmup）
   - Inference lock 保證 single-GPU 序列化（MVP 無 dynamic batching）

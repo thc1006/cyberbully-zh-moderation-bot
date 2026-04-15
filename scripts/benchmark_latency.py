@@ -13,7 +13,8 @@ Usage:
 """
 from __future__ import annotations
 
-# Monkey-patch for AWQ import compatibility
+# Monkey-patch for AWQ import compatibility under transformers ≥4.52
+# (PytorchGELUTanh renamed to GELUTanh; autoawq 0.2.9 still uses the old name).
 import transformers.activations as _act
 if not hasattr(_act, "PytorchGELUTanh"):
     _act.PytorchGELUTanh = _act.GELUTanh  # type: ignore[attr-defined]

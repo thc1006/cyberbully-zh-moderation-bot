@@ -14,6 +14,14 @@ Run:
 """
 from __future__ import annotations
 
+# Monkey-patch for optional AWQ support under transformers ≥4.52.
+# autoawq 0.2.9 (official — deprecated but only Qwen3-capable option for now)
+# imports `PytorchGELUTanh` which was renamed to `GELUTanh`. Patch before any
+# transformers import to be safe.
+import transformers.activations as _act
+if not hasattr(_act, "PytorchGELUTanh"):
+    _act.PytorchGELUTanh = _act.GELUTanh  # type: ignore[attr-defined]
+
 import asyncio
 import hashlib
 import logging
@@ -100,14 +108,30 @@ async def lifespan(app: FastAPI):
         tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.padding_side = "left"
 
-    backbone = AutoModel.from_pretrained(
-        MODEL_DIR, dtype=dtype, low_cpu_mem_usage=True, attn_implementation="sdpa"
-    )
+    # Detect AWQ — config.json will carry `quantization_config`. AWQ models
+    # must be loaded with device_map (not `dtype`) and operate in fp16 path.
+    import json as _json
+    cfg_path = Path(MODEL_DIR) / "config.json"
+    is_awq = False
+    if cfg_path.exists():
+        cfg = _json.loads(cfg_path.read_text())
+        is_awq = cfg.get("quantization_config", {}).get("quant_method") == "awq"
+    if is_awq:
+        log.info("Detected AWQ quantized model; loading fp16 compute path.")
+        backbone = AutoModel.from_pretrained(MODEL_DIR, device_map={"": device.type},
+                                               low_cpu_mem_usage=True)
+        dtype = torch.float16  # heads must match
+    else:
+        backbone = AutoModel.from_pretrained(
+            MODEL_DIR, dtype=dtype, low_cpu_mem_usage=True, attn_implementation="sdpa"
+        )
     model = Qwen3MultiHead(backbone, hidden_size=backbone.config.hidden_size).to(
         device=device, dtype=dtype
     )
     heads_state = torch.load(f"{MODEL_DIR}/heads.pt", map_location=device, weights_only=False)
-    model.heads.load_state_dict(heads_state["heads"])
+    # Heads may have been saved in bf16 but need fp16 to match AWQ compute.
+    heads_cast = {k: v.to(dtype) for k, v in heads_state["heads"].items()}
+    model.heads.load_state_dict(heads_cast)
     model.eval()
 
     # Warmup: 3 forward passes to compile kernels
