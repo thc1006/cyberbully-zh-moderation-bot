@@ -3,8 +3,27 @@ name: CI Pipeline
 on:
   push:
     branches: [ main, develop ]
+    # Skip CI for documentation / metadata-only changes (saves ~10 min wall time + ~50 min compute per skip).
+    # Code/test/CI/dep changes still trigger normally.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'reports/**'
+      - 'memory/**'
+      - 'MEMORY.md'
+      - 'LICENSE'
+      - 'MODEL_LICENSE'
+      - 'DATA_LICENSE_NOTICE.md'
+      - '.gitignore'
+      - 'models/**/README.md*'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'reports/**'
+      - 'memory/**'
+      - '.gitignore'
 
 # 避免同分支重複跑（新 run 會取消舊 run）
 concurrency:

@@ -3,8 +3,24 @@ name: Coverage Analysis and Monitoring
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'reports/**'
+      - 'memory/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'MODEL_LICENSE'
+      - 'DATA_LICENSE_NOTICE.md'
+      - 'models/**/README.md*'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'reports/**'
+      - 'memory/**'
+      - '.gitignore'
   schedule:
     # Run coverage analysis daily at 2 AM UTC
     - cron: '0 2 * * *'
