@@ -272,6 +272,45 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 - **Homophone 仍差**：中文同音字空間極大（~4K 常用字，數千音素同音），3,668 訓練 pair 不足涵蓋
 - v2.3 路徑：用 STATE-ToxiCN 830 詞仇恨俚語詞典做程式化 homophone augmentation + λ=0.3
 
+### Phase 3.4 — v2.3 (lexicon-augmented homophone training, 2026-04-16)
+
+**結論：lexicon-aug 假設失敗，v2.3 並未達到 homophone 改善目標。v2.2 仍為生產主模型。**
+
+- [x] STATE-ToxiCN 829 詞仇恨俚語詞典 → 程式化 homophone augmentation（`src/cyberpuppy/data/homophone_aug.py`，pypinyin 同音字替換）
+- [x] +5,253 `(base, homo_lexicon)` pair 加入訓練（v2.2 70,870 → v2.3 81,376）
+- [x] `CloakAwareBatchSampler` 擴充支援 2-variant pair（pre-launch audit 抓到的 critical bug）
+- [x] consistency λ 從 0.1 → 0.3（強化對抗對齊權重）
+- [x] 95 min 訓練（2 epoch），best=ep1 toxicity F1_w=0.8406 (multisource dev)
+
+#### v2.3 vs v2.2 對照（2026-04-16 實測，`reports/v2_3_comprehensive_eval.json`）
+
+| Eval | v2.2 | v2.3 | Δ |
+|---|---|---|---|
+| COLD test toxicity F1_w | **0.8378** | 0.8355 | −0.23pt ⚠️ |
+| COLD test bullying F1_w | 0.8365 | 0.8311 | −0.54pt ⚠️ |
+| Multisource toxicity F1_w | 0.8085 | 0.8094 | +0.09pt ≈ |
+| Multisource bullying F1_w | 0.8431 | 0.8404 | −0.27pt ≈ |
+| ToxiCloakCN heldout base F1_w | 0.8703 | 0.8632 | −0.71pt 略退 |
+| **ToxiCloakCN homo drop** | **−8.51%** | **−9.23%** | ❌ 反向 |
+| ToxiCloakCN emoji drop | −0.37% | −0.10% | ✅ 維持 |
+| 6 繁中威脅 | 6/6 | 6/6 | ✅ 維持 |
+
+#### v2.3 失敗根因分析
+
+1. **詞典覆蓋過窄**：STATE-ToxiCN 829 詞為仇恨俚語特化，與 ToxiCloakCN heldout 採用的廣譜 homophone 攻擊策略不同分布
+2. **同音字選擇過「規律」**：pypinyin 取第一候選字，缺乏 ToxiCloakCN 對抗集那種「視覺相近 + 意義跳脫」的人為設計感
+3. **λ=0.3 過強**：把整體 logits 強拉向 cloak 一致性，clean COLD/bullying 兩任務被連帶損失 0.2–0.5pt（無對應收益）
+4. **5,253 pair 樣本量仍不足**：homo 攻擊空間爆炸（4K 字 × 數千音素），需要 10× 以上規模或更聰明的 curriculum
+
+#### v2.3 處置決議
+
+- **不替換生產模型**：v2.2 仍為 `api/v2_2_app.py` 默認 model
+- **保留為研究 artefact**：可選擇推 HF 私有/公開（gated）作為負面結果文獻記錄；不更新 LINE Bot 路徑
+- **下一步建議**：
+  - **短期**：放棄 lexicon-aug，改試 ToxiCloakCN 同分布的「真實 homo 樣本擴增」（用 GPT-4 或 Qwen3-Guard 生成 ToxiCloakCN-style homophone）
+  - **中期**：研究 character-level 對抗訓練或 pinyin-aware tokenizer 的 robustness 加值
+  - **長期**：放回 Phase 4 GRPO，把 homophone robustness 設為 reward 而非數據擴增
+
 ### Phase 4 — GRPO 安全強化（2 週）
 
 - [ ] 設計 reward：F1 + 校準 + 拒答正確率 + 跨分佈一致性

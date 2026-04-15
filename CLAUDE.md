@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Last updated: **2026-04-16** (v2.2 deployed, three-layer licensing, ADR 0001 Phase 5 complete)
+> Last updated: **2026-04-16** (v2.2 deployed, three-layer licensing, ADR 0001 Phase 5 complete; v2.3 lexicon-aug homophone attempt evaluated — failed to meet target, v2.2 remains production)
 
 ## 專案宗旨
 
@@ -31,7 +31,7 @@ CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸
 | 對抗 robustness | drop% |
 |---|---|
 | ToxiCloakCN emoji | **−0.37%** ✅（v2.1 為 −6.52%） |
-| ToxiCloakCN homophone | −8.51% ⚠️（v2.1 為 −10.16%）— v2.3 待解 |
+| ToxiCloakCN homophone | −8.51% ⚠️（v2.1 為 −10.16%）— v2.3 lexicon-aug 嘗試失敗（−9.23%，反而略退），路徑改尋它 |
 
 | 繁體中文威脅 6 句 | 6/6 ✅ |
 | Latency p95 (RTX 5090, bf16, batch=1) | short 17 ms / med 22 ms / long 34 ms ✅ DoD <200ms |
@@ -222,7 +222,7 @@ PYTHONPATH=src python scripts/benchmark_latency.py --flavor bf16
 
 ## 已知限制 / 待解
 
-1. **homophone robustness 未達 DoD**（−8.51% vs ≤ −5%）→ v2.3 規劃用 STATE-ToxiCN 830 詞俚語詞典 + λ=0.3
+1. **homophone robustness 仍未達 DoD**（v2.2 −8.51% vs ≤ −5%；**v2.3 lexicon-aug 嘗試失敗 −9.23%**，詳見 ADR Phase 3.4）→ 下一步改試「同分布 homo 樣本擴增」或 character-level 對抗訓練
 2. **Docker 部署未實測**（v2.2 image 未 build）
 3. **LINE Bot 真實環境驗證**（需 LINE Channel credentials）
 4. **CHNCI 未納入訓練**（220K 樣本中只用 0；試點時可加）
