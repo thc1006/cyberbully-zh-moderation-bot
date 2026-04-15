@@ -224,7 +224,7 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 | SCCD session F1 | ≥ 0.70 | N/A（未訓 SCCD） | — 等 Phase 2 |
 | ToxiCloakCN emoji drop | ≤ 5% | v2.1 6.52% → **v2.2 0.37%** | ✅ 達標（v2.2） |
 | ToxiCloakCN homophone drop | ≤ 5% | v2.1 10.16% → v2.2 8.51% | ⚠️ 未達，需 v2.3 |
-| p95 < 200 ms | < 200 ms | ~30-50 ms (batch 1, bf16) | ✅ 估算達標，Phase 5 實測 |
+| p95 < 200 ms | < 200 ms | **17 ms 短 / 22 ms 中 / 34 ms 長** (bf16 batch=1, RTX 5090, Phase 5 實測) | ✅✅ 大幅達標 |
 
 #### 觀察 / 限制
 
@@ -266,12 +266,25 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 - [ ] GRPO 訓練（Unsloth 或 trl 0.16+）；參考 Qwen3-8B-SafeRL pipeline
 - [ ] 對抗測試（ToxiCloakCN, 自製繁中對抗集）
 
-### Phase 5 — 量化與部署（1 週）
+### Phase 5 — 量化與部署（**2026-04-16 執行 MVP**）
 
-- [ ] AWQ 量化 → 比較 W4A16/Marlin 與 bf16 在 ToxiCloakCN 的 F1 衰退（< 1% 才 ship）
-- [ ] vLLM serving，配 OpenAI 兼容 API
-- [ ] 重寫 `api/model_loader.py` 改走 OpenAI client → vLLM endpoint
-- [ ] 延遲與吞吐 benchmark，目標 p95 < 200 ms
+- [x] **LoRA merge** (`scripts/merge_lora.py`)：fp32 merge 後再降 bf16，避免小幅 LoRA delta 被 bf16 截去
+  - 與 PEFT v2.2 在 106 樣本上 **100% 預測一致**；COLD first-100 F1_w 兩者皆 0.8896
+  - 產出 `models/cyberpuppy_v2_2_merged/` (16 GB bf16, 4-shard safetensors)
+- [ ] ~~AWQ 4-bit 量化~~ **Pivot to bf16 only**：autoawq 0.2.9 × transformers 4.57 incompatible（Catcher class 缺 `attention_type` — Qwen3 hybrid attention 新 API 未 patch）。autoawq 上游已標 deprecated，生產應遷移 `llm-compressor` (vLLM 官方)。bf16 latency 已達 DoD，不需急 AWQ。
+- [x] **Latency benchmark** (`scripts/benchmark_latency.py`)：warmup 20 + cuda.synchronize()
+  - RTX 5090 bf16 merged, p95 latency：
+    - 短句 (~20 tok): batch=1 **17 ms** / batch=16 26 ms (619 samp/s)
+    - 中句 (~100 tok): batch=1 **22 ms** / batch=16 68 ms (237 samp/s)
+    - 長句 (~200 tok): batch=1 **34 ms** / batch=16 182 ms (88 samp/s)
+  - **全部 p95 < 200 ms，DoD §9 達標**
+- [x] **FastAPI v2.2** (`api/v2_2_app.py`)：`POST /v2/analyze` + `/healthz` 503-until-ready
+  - Startup: 2.2 sec（有 3 句 warmup）
+  - Inference lock 保證 single-GPU 序列化（MVP 無 dynamic batching）
+  - 隱私：SHA-256 hash text，日誌不存原文（PDPO §64 對齊）
+- [x] **End-to-end HTTP smoke**：6 繁中句透過 `curl` 打 `/v2/analyze`
+  - 6/6 全對；server-side latency 18 ms p50（首 request 45 ms warmup）
+  - "打死你" → `tox=severe bull=harassment emo=neg`
 
 ### Phase 6 — HK 在地化驗證（持續）
 
