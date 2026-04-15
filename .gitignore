@@ -9,7 +9,13 @@ memory/
 data/external/
 data/processed/v2/
 models/cyberpuppy_v2_qwen3_8b/
+models/cyberpuppy_v2_1_qwen3_8b/
+models/cyberpuppy_v2_2_qwen3_8b/
+models/cyberpuppy_v2_2_merged/
+models/cyberpuppy_v2_2_awq/
+models/cyberpuppy_v2_3_qwen3_8b/
 models/v2_smoke/
+models/v2_1_smoke/
 .venv/
 
 # Built application files
