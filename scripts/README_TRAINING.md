@@ -1,17 +1,21 @@
 # CyberPuppy 本地訓練指南
 
-本地 Windows RTX 3050 優化的訓練啟動器，提供用戶友好的互動式界面。
+> **2026-04 更新**：主線訓練已遷移至 `scripts/train_qwen3_lora.py`（Qwen3-8B LoRA + 多源 + focal loss，RTX 5090 bf16）。
+> 本文件記錄 legacy `scripts/train_local.py` 工作流，保留作參考；Windows batch launcher 已移除。
 
-## 🚀 快速開始
+## 🚀 快速開始（主線，v2.1+）
 
-### 方法一：使用批次檔案 (推薦)
-```cmd
-# 雙擊執行或在命令列執行
-train_local.bat
+```bash
+python scripts/train_qwen3_lora.py \
+  --train data/processed/v2/multisource_train.jsonl \
+  --eval  data/processed/v2/multisource_dev.jsonl \
+  --epochs 3 --batch 8 --grad-accum 4 --max-length 192 \
+  --focal-gamma 2.0 --output models/cyberpuppy_v2_1_qwen3_8b
 ```
 
-### 方法二：直接使用 Python
-```cmd
+## Legacy 快速訓練（RTX 3050 / 開發機）
+
+```bash
 python scripts/train_local.py
 ```
 
@@ -100,9 +104,9 @@ colorama>=0.4.5  # Windows 彩色輸出
 
 ```
 cyberbully-zh-moderation-bot/
-├── train_local.bat              # Windows 啟動器
 ├── scripts/
-│   ├── train_local.py          # 主要訓練腳本
+│   ├── train_qwen3_lora.py     # 主線訓練（v2.1+，Qwen3-8B LoRA）
+│   ├── train_local.py          # Legacy 訓練腳本
 │   ├── check_requirements.py   # 環境檢查
 │   └── README_TRAINING.md      # 本文檔
 ├── configs/                    # 配置檔案
@@ -120,8 +124,9 @@ cyberbully-zh-moderation-bot/
    ```
 
 2. **啟動訓練**
-   ```cmd
-   train_local.bat
+   ```bash
+   python scripts/train_qwen3_lora.py --help   # 主線
+   python scripts/train_local.py               # legacy
    ```
 
 3. **選擇配置**

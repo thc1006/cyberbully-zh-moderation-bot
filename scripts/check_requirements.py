@@ -161,8 +161,8 @@ def main():
     if all(checks):
         print("✅ 所有檢查通過，可以開始訓練！")
         print("\n執行訓練：")
-        print("  Windows: train_local.bat")
-        print("  Python:  python scripts/train_local.py")
+        print("  python scripts/train_qwen3_lora.py  # v2.1 多源 LoRA（RTX 5090）")
+        print("  python scripts/train_local.py       # legacy 本地快速跑")
     else:
         print("❌ 部分檢查未通過，請先解決上述問題")
         print("\n安裝必要套件：")
