@@ -80,7 +80,9 @@ def test_downloader_no_network_in_dry_run(downloader: Phase2Downloader) -> None:
                        source="thu-coai/cold", license="apache-2.0")
     result = downloader.fetch(spec)
     assert result["status"] == "planned"
-    assert result["target_path"].endswith("/data/raw/cold")
+    # Use Path comparison — works on both POSIX (/) and Windows (\) separators.
+    assert Path(result["target_path"]).name == "cold"
+    assert Path(result["target_path"]).parent.name == "raw"
     # No directory should be created in dry-run
     assert not Path(result["target_path"]).exists()
 

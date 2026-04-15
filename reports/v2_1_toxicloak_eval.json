@@ -1,0 +1,34 @@
+{
+  "model": "cyberpuppy_v2_1_qwen3_8b",
+  "adapter": "models/cyberpuppy_v2_1_qwen3_8b/best",
+  "dod_target": "F1 drop ≤ 5% per ADR 0001 §9",
+  "results": [
+    {
+      "variant": "base_clean",
+      "n": 4586,
+      "accuracy": 0.8552115133013519,
+      "f1_weighted": 0.8551824275827812,
+      "f1_macro": 0.8551815186540759,
+      "f1_toxic": 0.8572656921754084,
+      "elapsed_s": 62.05651354789734
+    },
+    {
+      "variant": "homophone_full",
+      "n": 4586,
+      "accuracy": 0.768425643262102,
+      "f1_weighted": 0.7683087796562322,
+      "f1_macro": 0.7683064882129799,
+      "f1_toxic": 0.7735607675906183,
+      "elapsed_s": 63.09142255783081
+    },
+    {
+      "variant": "emoji_full",
+      "n": 4586,
+      "accuracy": 0.8002616659398168,
+      "f1_weighted": 0.7994541735527635,
+      "f1_macro": 0.7994486046397493,
+      "f1_toxic": 0.8122181221812218,
+      "elapsed_s": 65.22705626487732
+    }
+  ]
+}
