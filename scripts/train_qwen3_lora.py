@@ -194,8 +194,8 @@ def main() -> None:
                     help="Weight for ToxiCloakCN adversarial consistency loss (v2.2). "
                          "Tries to equalize toxicity logits across base/homo/emoji of same pair_id. "
                          "0 = off (v2.1 behavior); 0.1 recommended for v2.2.")
-    ap.add_argument("--num-workers", type=int, default=8,
-                    help="DataLoader workers (RTX 5090 + NVMe = can afford 8).")
+    ap.add_argument("--num-workers", type=int, default=12,
+                    help="DataLoader workers (RTX 5090 24 cores + NVMe; default 12).")
     args = ap.parse_args()
 
     cfg = TrainConfig(
@@ -271,17 +271,22 @@ def main() -> None:
         eval_ds.lengths, batch_size=cfg.batch_size, mega_batch_mult=50,
         shuffle=False,
     )
-    # Workstation-optimized (RTX 5090 + NVMe): more workers + persistent
-    # across epochs to avoid respawn overhead.
+    # Workstation-optimized (RTX 5090 32 GB + NVMe + 24 cores):
+    #   - persistent_workers: avoid per-epoch respawn overhead
+    #   - prefetch_factor=4: pre-load 4 batches/worker (NVMe is fast enough)
+    #   - pin_memory: async H2D transfer
+    nw = args.num_workers
     train_loader = DataLoader(
-        train_ds, batch_sampler=train_sampler, num_workers=args.num_workers,
+        train_ds, batch_sampler=train_sampler, num_workers=nw,
         collate_fn=lambda b: collate(b, tokenizer.pad_token_id),
-        pin_memory=True, persistent_workers=args.num_workers > 0,
+        pin_memory=True, persistent_workers=nw > 0,
+        prefetch_factor=4 if nw > 0 else None,
     )
     eval_loader = DataLoader(
-        eval_ds, batch_sampler=eval_sampler, num_workers=max(2, args.num_workers // 2),
+        eval_ds, batch_sampler=eval_sampler, num_workers=max(2, nw // 2),
         collate_fn=lambda b: collate(b, tokenizer.pad_token_id),
-        pin_memory=True, persistent_workers=args.num_workers > 0,
+        pin_memory=True, persistent_workers=nw > 0,
+        prefetch_factor=4 if nw > 0 else None,
     )
     print(f"Length bucketing: ON (mega={cfg.batch_size * 50}); peak per-batch len bounded to longest in batch.", flush=True)
 
@@ -330,6 +335,12 @@ def main() -> None:
             "eval_metrics": eval_metrics,
         }, ck_dir / "heads.pt")
         tokenizer.save_pretrained(ck_dir)
+
+    if device.type == "cuda":
+        vram_gb = torch.cuda.memory_allocated() / 1024**3
+        vram_total = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        headroom = (1 - vram_gb / vram_total) * 100
+        print(f"Pre-train VRAM: {vram_gb:.1f}/{vram_total:.1f} GB ({headroom:.0f}% headroom)", flush=True)
 
     for epoch in range(cfg.epochs):
         train_sampler.set_epoch(epoch)
@@ -392,6 +403,10 @@ def main() -> None:
                     mid = evaluate(model, eval_loader, device)
                     print(f"  [mid-eval step {global_step}] {mid}", flush=True)
                     log_lines.append(f"mid-eval step {global_step}: {mid}")
+
+        # Free fragmented CUDA memory before eval (prevents OOM on long sequences)
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
         # eval at end of epoch
         eval_metrics = evaluate(model, eval_loader, device)
