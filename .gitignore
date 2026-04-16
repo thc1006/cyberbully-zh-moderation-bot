@@ -228,3 +228,8 @@ logs/
 *.log
 data/raw/cold/
 CLAUDE.md
+models/cyberpuppy_v2_3_1_qwen3_8b/
+models/cyberpuppy_v2_5_lambda0_5_qwen3_8b/
+models/cyberpuppy_v2_5_lambda0_7_qwen3_8b/
+models/cyberpuppy_v2_5_lambda1_0_qwen3_8b/
+models/cyberpuppy_v2_4_qwen3_8b/

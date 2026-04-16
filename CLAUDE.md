@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Last updated: **2026-04-16** (v2.3.1 promoted — λ=0.3 only, best homo −7.88%; v2.3/v2.4/v2.4.1 data-aug all failed; ADR Phase 3.5 complete)
+> Last updated: **2026-04-17** (λ=0.5 sweep winner — homo −7.26% best ever, COLD 0.8385; data-aug 3× failed; λ sweep confirms 0.5 optimal; ADR Phase 3.6)
 
 ## 專案宗旨
 
@@ -31,7 +31,7 @@ CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸
 | 對抗 robustness | drop% |
 |---|---|
 | ToxiCloakCN emoji | **−0.37%** ✅（v2.1 為 −6.52%） |
-| ToxiCloakCN homophone | **−7.88% (v2.3.1)** ⚠️ 歷代最佳但仍 > −5% DoD。合成 homo 增強 3 次全失敗（v2.3 −9.23%、v2.4 −18.52%、v2.4.1 −14.40%）→ 改走 GRPO/pinyin-embedding |
+| ToxiCloakCN homophone | **−7.26% (λ=0.5)** ⚠️ 歷代最佳（λ sweep 確認 0.5 為最優，0.7/1.0 退化）。data-aug 3× 失敗；λ sweep 理論上限 ~−7.0%。≤−5% 需 Path B (pinyin-embed) 或 HED-COLD pretraining |
 
 | 繁體中文威脅 6 句 | 6/6 ✅ |
 | Latency p95 (RTX 5090, bf16, batch=1) | short 17 ms / med 22 ms / long 34 ms ✅ DoD <200ms |

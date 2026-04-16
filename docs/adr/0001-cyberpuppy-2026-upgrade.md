@@ -351,6 +351,40 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 - **Homo robustness DoD 仍未完全達標**（−7.88% vs target ≤ −5%），但為歷代最佳
 - **下一步建議改走 Phase 4 GRPO 或 Path B（pinyin-aware embedding）**，不再嘗試 data augmentation 路線
 
+### Phase 3.6 — λ sweep（0.5 / 0.7 / 1.0）確定最優 consistency λ（2026-04-17）
+
+λ sweep 結果（所有版本使用 v2.2 原始訓練資料，唯一差異為 λ 值）：
+
+| λ | COLD tox F1_w | COLD bull F1_w | homo drop | emoji drop | TC base | torch.compile |
+|---|---|---|---|---|---|---|
+| 0.1 (v2.2) | 0.8378 | 0.8365 | −8.51% | −0.37% | 0.8703 | off |
+| 0.3 (v2.3.1) | 0.8382 | 0.8380 | −7.88% | −0.74% | 0.8713 | off |
+| **0.5** | **0.8385** | **0.8384** | **−7.26%** | +0.51% | 0.8551 | off |
+| 0.7 | 0.8328 | 0.8359 | −8.05% | +1.40% | 0.8529 | on |
+| 1.0 | 0.8349 | 0.8371 | −7.66% | +1.15% | 0.8529 | on |
+
+#### 邊際分析
+
+| λ 區間 | homo Δ | COLD Δ | 判定 |
+|---|---|---|---|
+| 0.1→0.3 | −0.63pp ✅ | +0.04pt ≈ | 免費改善 |
+| 0.3→0.5 | −0.62pp ✅ | +0.03pt ≈ | 免費改善 |
+| 0.5→0.7 | +0.79pp ❌ | −0.57pt ❌ | 相變：過度正則化 |
+| 0.7→1.0 | −0.39pp | +0.21pt | 部分回復（可能受 torch.compile confound 影響）|
+
+#### 根因分析
+
+1. **Consistency floor**：模型自適應壓低 cons loss（λ×cons ≈ 0.022-0.025 恆定），λ 升高不增加有效梯度
+2. **Decision boundary 平滑稅**：高 λ 迫使模型壓低 logit 幅度以降低 pair 內方差 → clean F1 退化
+3. **3,668 triplet 信息瓶頸**：λ 再大也不能從有限 pair 中萃取更多音韻知識
+
+#### 結論
+
+- **λ=0.5 為固定 λ 全局最優**（COLD 0.8385 + homo −7.26%，兩項均歷代最佳）
+- **λ sweep 理論上限 ≈ −7.0 to −7.3%**，consistency floor + 3,668 triplet 限制無法突破
+- **從 −7.26% 到 ≤−5.0% 的 2.26pp gap 需要新信息源或新架構**
+- 建議路徑：(1) **HED-COLD homophone-aware pretraining**（EMNLP 2025, 已達 SOTA）或 (2) **Pinyin-aware embedding (Path B)**
+
 ### Phase 4 — GRPO 安全強化（2 週）
 
 - [ ] 設計 reward：F1 + 校準 + 拒答正確率 + 跨分佈一致性

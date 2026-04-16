@@ -292,6 +292,16 @@ def main() -> None:
 
     trainable = [p for p in model.parameters() if p.requires_grad]
     print(f"Trainable params: {sum(p.numel() for p in trainable)/1e6:.2f} M", flush=True)
+
+    # RTX 5090 Blackwell optimization: torch.compile for ~15-25% training speedup.
+    # First step is slow (compile overhead), pays back over 60+ min runs.
+    # Graceful fallback if LoRA+GC combo isn't compile-compatible.
+    try:
+        model = torch.compile(model, mode="default")
+        print("torch.compile: enabled (mode=default)", flush=True)
+    except Exception as e:
+        print(f"torch.compile: skipped ({e})", flush=True)
+
     try:
         import bitsandbytes as bnb
         optim = bnb.optim.AdamW8bit(trainable, lr=cfg.lr, weight_decay=cfg.weight_decay)
