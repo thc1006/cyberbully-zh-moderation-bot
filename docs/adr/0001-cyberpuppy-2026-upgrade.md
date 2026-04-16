@@ -307,9 +307,49 @@ PadLearn 想把 CyberPuppy 嵌入學生對話安全模組，必要條件是：**
 - **不替換生產模型**：v2.2 仍為 `api/v2_2_app.py` 默認 model
 - **保留為研究 artefact**：可選擇推 HF 私有/公開（gated）作為負面結果文獻記錄；不更新 LINE Bot 路徑
 - **下一步建議**：
-  - **短期**：放棄 lexicon-aug，改試 ToxiCloakCN 同分布的「真實 homo 樣本擴增」（用 GPT-4 或 Qwen3-Guard 生成 ToxiCloakCN-style homophone）
+  - ~~**短期**：放棄 lexicon-aug，改試 ToxiCloakCN 同分布的「真實 homo 樣本擴增」~~ **已實驗（v2.4/v2.4.1），同樣失敗 — 見 Phase 3.5**
   - **中期**：研究 character-level 對抗訓練或 pinyin-aware tokenizer 的 robustness 加值
   - **長期**：放回 Phase 4 GRPO，把 homophone robustness 設為 reward 而非數據擴增
+
+### Phase 3.5 — v2.4 JioNLP同分佈增強 + v2.3.1 λ-only ablation (2026-04-16)
+
+**結論：合成 homophone 資料增強（無論來源）一致損害 homo robustness。純 λ 調參（v2.3.1）才是最佳策略。**
+
+#### Q-6 ablation: λ=0.3 隔離實驗（v2.3.1 = v2.2 data + λ=0.3）
+
+- [x] 用完全同 v2.2 訓練資料，唯一改變 consistency λ 0.1→0.3
+- **結果：v2.3.1 在多數指標與 v2.2 持平或略勝，ToxiCloakCN homo drop 從 −8.51% 改善至 −7.88%**
+- **結論：λ=0.3 本身完全無害，甚至略有幫助。v2.3 的退化 100% 來自 lexicon-aug OOD 資料**
+
+#### v2.4: JioNLP 同分佈增強嘗試（失敗）
+
+用 ToxiCloakCN 作者同工具（JioNLP `homophone_substitution`，paper §3.1.2）增強 v2.2 toxic 樣本：
+
+- **v2.4 (23K pairs, 原始記錄移除)**：homo drop −18.52%（catastrophic）— 根因：clean bucket toxic 比例從 39.7% 降至 0.9%
+- **v2.4.1 (10K pairs, 原始記錄保留)**：homo drop −14.40%（仍遠差於 v2.2）
+
+#### 5 版 head-to-head 總表
+
+| Version | COLD tox | COLD bull | Multi tox | homo drop | emoji drop | TC base |
+|---|---|---|---|---|---|---|
+| v2.2 (λ=0.1) | 0.8378 | 0.8365 | 0.8085 | −8.51% | −0.37% | 0.8703 |
+| v2.3 (lex-aug) | 0.8355 | 0.8311 | 0.8094 | −9.23% ❌ | −0.10% | 0.8632 |
+| **v2.3.1 (λ=0.3 only)** | **0.8382** | **0.8380** | 0.8083 | **−7.88%** ✅ | −0.74% | **0.8713** |
+| v2.4 (JioNLP 23K) | 0.8316 | 0.8281 | 0.8060 | −18.52% ❌❌ | −2.78% | 0.8657 |
+| v2.4.1 (JioNLP 10K) | 0.8258 | 0.8258 | 0.8054 | −14.40% ❌ | −2.46% | 0.8767 |
+
+#### 研究發現（深層洞察）
+
+1. **合成 homophone 資料增強一致損害 homo robustness**（v2.3 −9.23%, v2.4 −18.52%, v2.4.1 −14.40%），無論用 lexicon-based pypinyin 還是 ToxiCloakCN 同工具 JioNLP
+2. **根因**：合成 homo pair 與 ToxiCloakCN heldout 仍為不同分佈——即使工具相同，合成環境（input content、perturbation ratio、character pool interaction）使模型學到「錯的不變性」，反而干擾原有的 ToxiCloakCN triplet 信號
+3. **唯一有效路徑**：直接提升 consistency λ（0.1→0.3），在現有 ToxiCloakCN triplet 上施加更強的對齊壓力，不引入新資料
+4. **clean bucket 平衡是關鍵守則**：v2.4 將 toxic 記錄移出 clean bucket（39.7%→0.9%）導致 catastrophic failure；即使修復（v2.4.1）仍差於不加資料的 v2.3.1
+
+#### v2.3.1 處置決議
+
+- **v2.3.1 取代 v2.2 成為生產候選**：COLD F1 0.8382（≥ 0.83 DoD ✅）、homo −7.88%（改善 v2.2 的 −8.51%，但仍 > −5% DoD ⚠️）
+- **Homo robustness DoD 仍未完全達標**（−7.88% vs target ≤ −5%），但為歷代最佳
+- **下一步建議改走 Phase 4 GRPO 或 Path B（pinyin-aware embedding）**，不再嘗試 data augmentation 路線
 
 ### Phase 4 — GRPO 安全強化（2 週）
 

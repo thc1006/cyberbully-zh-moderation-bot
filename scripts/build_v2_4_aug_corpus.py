@@ -122,8 +122,9 @@ def main():
                     for pr in pair_records:
                         fout.write(json.dumps(pr.to_dict(), ensure_ascii=False) + "\n")
                         n_out_records += 1
-                    # Don't ALSO emit the original (it's been replaced by the paired base)
-                    continue
+                    # ALSO emit the original record unchanged in clean bucket.
+                    # v2.4 bug: skipping it here emptied clean bucket of toxic
+                    # signal (39.7% → 0.9%), causing -18.52% homo drop.
                 else:
                     n_aug_failed += 1
                     # Fall through to pass-through

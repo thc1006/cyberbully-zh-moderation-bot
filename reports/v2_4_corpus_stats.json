@@ -2,14 +2,14 @@
   "src": "data/processed/v2/v2_2_train.jsonl",
   "out": "data/processed/v2/v2_4_train.jsonl",
   "homo_ratio": 0.3,
-  "max_pairs_cap": 30000,
-  "elapsed_s": 38.71132469177246,
+  "max_pairs_cap": 10000,
+  "elapsed_s": 18.608736276626587,
   "n_in_records": 70870,
-  "n_out_records": 94270,
-  "n_passthrough": 47470,
-  "n_aug_attempted": 23741,
-  "n_aug_success": 23400,
-  "n_aug_failed": 341,
+  "n_out_records": 90870,
+  "n_passthrough": 70870,
+  "n_aug_attempted": 10144,
+  "n_aug_success": 10000,
+  "n_aug_failed": 144,
   "n_skipped_not_toxic": 41678,
   "n_skipped_already_paired": 5451,
   "n_skipped_source": 0,
@@ -20,8 +20,8 @@
     "state_toxicn": 5781
   },
   "augmented_src_distribution": {
-    "cold": 12632,
-    "sccd": 7270,
-    "state_toxicn": 3498
+    "cold": 5343,
+    "sccd": 3149,
+    "state_toxicn": 1508
   }
 }
