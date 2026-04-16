@@ -1,0 +1,135 @@
+{
+  "model": "cyberpuppy_v2_3_qwen3_8b",
+  "adapter": "models/cyberpuppy_v3_0_pinyin_qwen3_8b/best",
+  "results": {
+    "cold_test": {
+      "name": "COLD test",
+      "elapsed_s": 97.4108498096466,
+      "throughput_sps": 54.6140395078779,
+      "metrics": {
+        "toxicity": {
+          "n": 5320,
+          "accuracy": 0.8349624060150376,
+          "f1_weighted": 0.8369429102667655,
+          "f1_macro": 0.554008133950086
+        },
+        "bullying": {
+          "n": 5320,
+          "accuracy": 0.837218045112782,
+          "f1_weighted": 0.838448970604971,
+          "f1_macro": 0.8327661979160315
+        },
+        "role": {
+          "n": 5320,
+          "accuracy": 0.956015037593985,
+          "f1_weighted": 0.9775129732846435,
+          "f1_macro": 0.48875648664232174
+        },
+        "emotion": {
+          "n": 5320,
+          "accuracy": 0.9590225563909774,
+          "f1_weighted": 0.9790827096526579,
+          "f1_macro": 0.48954135482632893
+        }
+      }
+    },
+    "multisource_test": {
+      "name": "multisource test",
+      "elapsed_s": 175.47562074661255,
+      "throughput_sps": 59.16491393976401,
+      "metrics": {
+        "toxicity": {
+          "n": 10382,
+          "accuracy": 0.8080331342708534,
+          "f1_weighted": 0.8046132929373263,
+          "f1_macro": 0.6340320691107965
+        },
+        "bullying": {
+          "n": 10382,
+          "accuracy": 0.8420342901175111,
+          "f1_weighted": 0.8415255184393178,
+          "f1_macro": 0.5575738768219681
+        },
+        "role": {
+          "n": 10382,
+          "accuracy": 0.8871123097669043,
+          "f1_weighted": 0.8849659238852391,
+          "f1_macro": 0.808733845099066
+        },
+        "emotion": {
+          "n": 10382,
+          "accuracy": 0.8876902330957427,
+          "f1_weighted": 0.8852776793244628,
+          "f1_macro": 0.8088328382580298
+        }
+      }
+    },
+    "toxicloak_heldout": {
+      "base": {
+        "n": 918,
+        "accuracy": 0.8333333333333334,
+        "f1_weighted": 0.8331545454004273,
+        "f1_toxic": 0.8424304840370752,
+        "elapsed_s": 16.70388436317444
+      },
+      "homo": {
+        "n": 918,
+        "accuracy": 0.7777777777777778,
+        "f1_weighted": 0.7773507533854663,
+        "f1_toxic": 0.7918367346938775,
+        "elapsed_s": 16.693690299987793
+      },
+      "emoji": {
+        "n": 918,
+        "accuracy": 0.8213507625272332,
+        "f1_weighted": 0.8210441869770632,
+        "f1_toxic": 0.8323108384458078,
+        "elapsed_s": 16.691359996795654
+      }
+    },
+    "traditional_threats": [
+      {
+        "text": "今天天氣真好，我們去公園玩吧！",
+        "gold": "none",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "none",
+        "ok": false
+      },
+      {
+        "text": "你這個笨蛋，滾開！",
+        "gold": "toxic",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "harassment",
+        "ok": true
+      },
+      {
+        "text": "我恨你，希望你去死，沒人喜歡你",
+        "gold": "toxic",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "harassment",
+        "ok": true
+      },
+      {
+        "text": "謝謝你的幫忙，你真的是個很棒的人",
+        "gold": "none",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "harassment",
+        "ok": false
+      },
+      {
+        "text": "再嘴一句試試看，我打死你",
+        "gold": "toxic",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "harassment",
+        "ok": true
+      },
+      {
+        "text": "我覺得這部電影還不錯，演員演技也很到位",
+        "gold": "none",
+        "pred_toxicity": "toxic",
+        "pred_bullying": "harassment",
+        "ok": false
+      }
+    ]
+  }
+}
