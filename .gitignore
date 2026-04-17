@@ -236,3 +236,5 @@ models/cyberpuppy_v2_4_qwen3_8b/
 models/cyberpuppy_v3_0_pinyin_qwen3_8b/
 models/cyberpuppy_v4_dual_qwen3_8b/
 models/pinyin_classifier_rbt4/
+models/cyberpuppy_v5_bilingual_qwen3_8b/
+models/cyberpuppy_v5_pinyin_lora/
