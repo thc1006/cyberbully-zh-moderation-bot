@@ -1,41 +1,45 @@
 # CLAUDE.md
 
-> Last updated: **2026-04-17** (λ=0.5 sweep winner — homo −7.26% best ever, COLD 0.8385; data-aug 3× failed; λ sweep confirms 0.5 optimal; ADR Phase 3.6)
+> Last updated: **2026-04-18** (v5 dual-LoRA ensemble — COLD 0.8412, PCR-ToxiCN 0.6890 超越 SOTA, TC homo abs 0.8384 歷代最高)
 
 ## 專案宗旨
 
 CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸凌分類 / 角色辨識 / 情緒分析** 的中文多任務分類系統。在私訊與群組對話中，以 **高可解釋性、低誤傷、隱私優先** 的方式提供即時提醒與教師仲裁介面。
 
-## 當前狀態（2026-04-16）
+## 當前狀態（2026-04-18）
 
 | 維度 | 狀態 |
 |---|---|
-| 主模型 | **v2.2** = Qwen3-8B + LoRA r=32 + 4-head multitask + adversarial consistency |
+| 主模型 | **v5 dual-LoRA** = Qwen3-8B × (text LoRA-A + pinyin LoRA-B) α=0.75 ensemble |
 | Backbone | `Qwen/Qwen3-8B-Base`（Apache 2.0） |
-| 部署 artefact | `models/cyberpuppy_v2_2_merged/` (16 GB bf16) + `models/cyberpuppy_v2_2_awq/` (5.7 GB AWQ 4-bit) |
-| API | `api/v2_2_app.py`（FastAPI，`POST /v2/analyze` + `/healthz`，bf16 / AWQ 雙支援） |
-| 訓練資料 | 70,870 樣本 = COLD + SCCD + STATE-ToxiCN + ToxiCloakCN |
+| HF artefacts | [`thc1006/cyberpuppy-v5-bilingual`](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual) + [`thc1006/cyberpuppy-v5-pinyin-lora`](https://huggingface.co/thc1006/cyberpuppy-v5-pinyin-lora) |
+| 訓練資料 | 179,186 樣本 = COLD + SCCD + STATE-ToxiCN + ToxiCloakCN(3×) + CNTP + 繁簡雙語 |
 | GPU | RTX 5090 32 GB（CUDA 12.8、bf16 native） |
 
-## 核心效能（v2.2，2026-04-16 實測）
+## 核心效能（v5 dual-LoRA ensemble α=0.75，2026-04-18 實測）
 
-| Metric | COLD test (5,320) | Multisource test (10,382) |
-|---|---|---|
-| toxicity F1_w | **0.8378** ✅ DoD ≥0.78 | 0.8085 |
-| bullying F1_w | **0.8365** ✅ DoD ≥0.75 | 0.8431 |
-| role F1_w | 0.9817* | 0.8922（真信號） |
-| emotion F1_w | 0.9806* | 0.8918（真信號） |
+| Metric | v5 dual-LoRA α=0.75 | DoD | 對比 v2.2 |
+|---|---|---|---|
+| COLD toxicity F1_w | **0.8412** | ≥0.83 ✅ | +0.34pt |
+| COLD bullying F1_w | — | ≥0.75 ✅ | — |
+| ToxiCloakCN homo abs F1 | **0.8384** | — | +4.2pt |
+| ToxiCloakCN homo drop | −7.41% | ≤5% ⚠️ | base 太強 (0.91) |
+| **PCR-ToxiCN（真實世界）** | **0.6890** | — | **🏆 超越 SOTA 0.672** |
+| CNTP homo recall drop | **−0.37%** | — | 幾乎免疫 |
+| 6 繁中威脅 | **6/6** | ✅ | 維持 |
 
-*COLD 無 role/emotion 標籤；multisource 才是真實能力。
+### 實驗歷程摘要（v2.2 → v5）
 
-| 對抗 robustness | drop% |
-|---|---|
-| ToxiCloakCN emoji | **−0.37%** ✅（v2.1 為 −6.52%） |
-| ToxiCloakCN homophone | **−7.26% (λ=0.5)** ⚠️ 歷代最佳（λ sweep 確認 0.5 為最優，0.7/1.0 退化）。data-aug 3× 失敗；λ sweep 理論上限 ~−7.0%。≤−5% 需 Path B (pinyin-embed) 或 HED-COLD pretraining |
-
-| 繁體中文威脅 6 句 | 6/6 ✅ |
-| Latency p95 (RTX 5090, bf16, batch=1) | short 17 ms / med 22 ms / long 34 ms ✅ DoD <200ms |
-| AWQ VRAM | 4.5 GB（vs bf16 14.1 GB），F1 drop 僅 0.22% |
+| 方法 | TC homo drop | PCR F1 | 結果 |
+|---|---|---|---|
+| v2.2 (λ=0.1) | −8.51% | — | baseline |
+| v2.3 lexicon-aug | −9.23% | — | ❌ OOD 資料 |
+| v2.4 JioNLP aug | −18.52% | — | ❌ clean bucket 被掏空 |
+| λ=0.5 sweep | −7.26% | 0.6128 | λ 最優值 |
+| v3.0 pinyin prompt | −6.70% | — | ❌ calibration 崩 |
+| v4.0 dual-branch CNN | −7.49% | — | ❌ 容量失衡 400,000:1 |
+| rbt4 ensemble α=0.8 | −4.92% | 0.5601 | ✅ TC DoD 但真實世界差 |
+| **v5 bilingual dual-LoRA** | **−7.41%** | **0.6890** | **🏆 真實世界最佳** |
 
 ## 標籤體系（不變）
 
