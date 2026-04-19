@@ -300,10 +300,13 @@ def main() -> None:
 
     # torch.compile: disabled for max_length≥384 (inductor attention kernels
     # allocate L²-scaled workspace that OOMs on 32 GB at L=384). Safe at L≤192.
+    # suppress_errors: if compile crashes (e.g., DoRA dynamic-shape guards),
+    # fall back to eager mode instead of crashing the entire training run.
+    torch._dynamo.config.suppress_errors = True
     if cfg.max_length <= 256:
         try:
             model = torch.compile(model, mode="default")
-            print("torch.compile: enabled (mode=default)", flush=True)
+            print("torch.compile: enabled (mode=default, suppress_errors=True)", flush=True)
         except Exception as e:
             print(f"torch.compile: skipped ({e})", flush=True)
     else:
@@ -411,7 +414,12 @@ def main() -> None:
             torch.cuda.empty_cache()
 
         # eval at end of epoch
+        # Reset torch.compile cache before eval to avoid DoRA dynamic-shape
+        # assertion crash when switching train→eval→train modes (symbol guard
+        # invalidation on s52). Costs ~1-2 min recompile but prevents crash.
+        torch._dynamo.reset()
         eval_metrics = evaluate(model, eval_loader, device)
+        torch._dynamo.reset()  # also reset after eval before next epoch's train
         print(f"== Epoch {epoch} eval == {eval_metrics}", flush=True)
         log_lines.append(f"epoch{epoch} eval: {eval_metrics}")
 
