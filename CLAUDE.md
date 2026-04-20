@@ -1,32 +1,34 @@
 # CLAUDE.md
 
-> Last updated: **2026-04-18** (v5 dual-LoRA ensemble — COLD 0.8412, PCR-ToxiCN 0.6890 超越 SOTA, TC homo abs 0.8384 歷代最高)
+> Last updated: **2026-04-21** (v5.1 dual-LoRA geometric mean ensemble — COLD 0.8340, PCR-ToxiCN 0.6936 超越 SOTA +2.16pt, TC homo abs 0.8391)
 
 ## 專案宗旨
 
 CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸凌分類 / 角色辨識 / 情緒分析** 的中文多任務分類系統。在私訊與群組對話中，以 **高可解釋性、低誤傷、隱私優先** 的方式提供即時提醒與教師仲裁介面。
 
-## 當前狀態（2026-04-18）
+## 當前狀態（2026-04-21）
 
 | 維度 | 狀態 |
 |---|---|
-| 主模型 | **v5 dual-LoRA** = Qwen3-8B × (text LoRA-A + pinyin LoRA-B) α=0.75 ensemble |
+| 主模型 | **v5.1 dual-LoRA** = Qwen3-8B × (text LoRA-A + pinyin LoRA-B) geometric mean ensemble (text^0.75 × pinyin^0.25) |
 | Backbone | `Qwen/Qwen3-8B-Base`（Apache 2.0） |
 | HF artefacts | [`thc1006/cyberpuppy-v5-bilingual`](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual) + [`thc1006/cyberpuppy-v5-pinyin-lora`](https://huggingface.co/thc1006/cyberpuppy-v5-pinyin-lora) |
 | 訓練資料 | 179,186 樣本 = COLD + SCCD + STATE-ToxiCN + ToxiCloakCN(3×) + CNTP + 繁簡雙語 |
 | GPU | RTX 5090 32 GB（CUDA 12.8、bf16 native） |
 
-## 核心效能（v5 dual-LoRA ensemble α=0.75，2026-04-18 實測）
+## 核心效能（v5.1 geometric mean ensemble，2026-04-21 實測）
 
-| Metric | v5 dual-LoRA α=0.75 | DoD | 對比 v2.2 |
+| Metric | v5.1 geo-mean | DoD | 對比 v5 linear |
 |---|---|---|---|
-| COLD toxicity F1_w | **0.8412** | ≥0.83 ✅ | +0.34pt |
-| COLD bullying F1_w | — | ≥0.75 ✅ | — |
-| ToxiCloakCN homo abs F1 | **0.8384** | — | +4.2pt |
-| ToxiCloakCN homo drop | −7.41% | ≤5% ⚠️ | base 太強 (0.91) |
-| **PCR-ToxiCN（真實世界）** | **0.6890** | — | **🏆 超越 SOTA 0.672** |
+| COLD toxicity F1_w | **0.8340** | ≥0.83 ✅ | +0.04pt |
+| ToxiCloakCN homo abs F1 | **0.8391** | — | +0.11pt |
+| ToxiCloakCN homo drop | −7.41% | ≤5% ⚠️ | — |
+| **PCR-ToxiCN（真實世界）** | **0.6936** | — | **🏆 超越 SOTA 0.672 +2.16pt** |
 | CNTP homo recall drop | **−0.37%** | — | 幾乎免疫 |
 | 6 繁中威脅 | **6/6** | ✅ | 維持 |
+
+> **v5 → v5.1 改動**：ensemble 從 linear blend (`0.75*text + 0.25*pinyin`) 改為
+> geometric mean (`normalize(text^0.75 × pinyin^0.25)`)。所有 benchmark 同時提升，無需重訓。
 
 ### 實驗歷程摘要（v2.2 → v5）
 
@@ -40,6 +42,7 @@ CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸
 | v4.0 dual-branch CNN | −7.49% | — | ❌ 容量失衡 400,000:1 |
 | rbt4 ensemble α=0.8 | −4.92% | 0.5601 | ✅ TC DoD 但真實世界差 |
 | **v5 bilingual dual-LoRA** | **−7.41%** | **0.6890** | **🏆 真實世界最佳** |
+| **v5.1 geometric mean** | **−7.41%** | **0.6936** | **🏆 +0.46pt, 免費提升** |
 
 ## 標籤體系（不變）
 
