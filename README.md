@@ -1,316 +1,217 @@
-# 🛡️ CyberPuppy - 中文網路霸凌防治與內容審核系統
+# CyberPuppy — 中文網路霸凌偵測與內容審核系統
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![CUDA 12.4](https://img.shields.io/badge/CUDA-12.4-green.svg)](https://developer.nvidia.com/cuda-downloads)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Models-yellow)](https://huggingface.co/hfl/chinese-macbert-base)
+[![License: Apache-2.0](https://img.shields.io/badge/Code-Apache%202.0-blue.svg)](LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/Weights-CC%20BY--NC--SA%204.0-lightgrey.svg)](MODEL_LICENSE)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Models-CyberPuppy%20v5-yellow)](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual)
 
-[English Version](README_EN.md) | [ADR 0001 (v2.1)](docs/adr/0001-cyberpuppy-2026-upgrade.md) | [API 文件](http://localhost:8000/docs)
+[English](#english) | [ADR](docs/adr/0001-cyberpuppy-2026-upgrade.md) | [HF Models](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual)
 
-> 🌟 **專為中文環境打造的先進 AI 內容審核系統，提供即時毒性偵測、網路霸凌防治與情緒分析，並具備可解釋 AI 功能**
-
-## 🎯 為什麼選擇 CyberPuppy？
-
-CyberPuppy 是目前最完整的**開源中文內容審核解決方案**，專門針對中文社群的文化特性與語言習慣設計。採用尖端的 Transformer 模型，並整合業界領先的可解釋性工具，為中文數位生態系統提供 AI 安全防護。
-
-### 🚀 核心特色
-
-- **🧠 多任務深度學習**：同時執行毒性偵測、霸凌識別、情緒分析與角色分類
-- **📊 可解釋 AI (XAI)**：整合 SHAP 與 Integrated Gradients，提供透明可解釋的預測結果
-- **⚡ GPU 加速運算**：針對 NVIDIA GPU (CUDA 12.4+) 優化，效能提升 5-10 倍
-- **🔐 隱私優先架構**：零原文記錄，使用 SHA-256 雜湊確保完全隱私保護
-- **🌐 生產就緒 API**：高效能 FastAPI，回應時間 <200ms
-- **💬 LINE Bot 整合**：企業級聊天機器人，支援 HMAC-SHA256 webhook 驗證
-- **🎯 中文最佳化**：專為繁體與簡體中文設計，支援 OpenCC 轉換
-- **🔄 即時處理**：可處理 100+ 並發請求，具備自動擴展能力
-
-## 📈 效能指標
-
-| 指標 | 實測值 | 目標值 | 狀態 |
-|------|--------|--------|------|
-| **毒性偵測 F1** | - | 0.78 | ⚠️ 等待訓練 |
-| **霸凌偵測 F1** | 0.826 | 0.75 | ✅ 達標 |
-| **情緒分析 F1** | 1.00* | 0.85 | ✅ 超越目標 |
-| **回應時間** | <200ms | 500ms | ✅ 達標 |
-| **GPU 加速** | 5-10x | - | ✅ 實測驗證 |
-
-*註：情緒分析在小樣本測試中表現完美，需更大規模驗證
-**生產級模型**: bullying_a100_best 已部署 (F1=0.826, Accuracy=0.824)
-
-## 🛠️ 技術架構
-
-### 核心 AI/ML
-- **🤗 Transformers**：MacBERT、RoBERTa-wwm-ext 中文模型
-- **⚡ PyTorch 2.6**：GPU 加速深度學習
-- **🔍 可解釋性**：Captum (IG)、SHAP 模型解釋工具
-
-### 基礎設施
-- **🚀 FastAPI**：非同步 REST API 框架
-- **🐳 Docker**：容器化微服務架構
-- **📊 Redis**：高效能快取層
-- **🔄 Nginx**：負載平衡與反向代理
-
-### 中文 NLP 工具
-- **📝 OpenCC**：繁簡中文轉換
-- **✂️ CKIP**：進階中文分詞
-- **🏷️ NTUSD**：情感詞典整合
-
-## 🚀 快速開始
-
-### 系統需求
-
-```bash
-# 系統需求
-- Python 3.9+ (建議 3.11+，支援到 3.13)
-- CUDA 12.4+ (GPU 加速選用)
-- 8GB+ RAM (建議 16GB)
-- 4GB+ GPU VRAM (選用)
-- 磁碟空間: 5GB+ (包含模型和資料集)
-```
-
-### 安裝步驟
-
-```bash
-# 複製儲存庫
-git clone https://github.com/thc1006/cyberbully-zh-moderation-bot.git
-cd cyberbully-zh-moderation-bot
-
-# 安裝相依套件
-pip install -r requirements.txt
-
-# 下載必要資料集
-python scripts/download_datasets.py --all
-
-# 生產級模型已內建 (bullying_a100_best)
-
-# GPU 設定（選用但建議）
-python scripts/check_gpu.py  # 驗證 CUDA 可用性
-```
-
-### 🚀 啟動服務
-
-```bash
-# 啟動 API 伺服器 (http://localhost:8000)
-python api/app.py
-
-# 或使用便利腳本
-./scripts/start_local.sh  # Linux/Mac
-scripts\start_local.bat    # Windows
-
-# API 文件位於 http://localhost:8000/docs
-```
-
-## 📡 API 使用範例
-
-### 基礎文字分析
-
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/analyze",
-    json={
-        "text": "你這個笨蛋，滾開！",
-        "context": "optional_conversation_context",
-        "thread_id": "session_123"
-    }
-)
-
-result = response.json()
-print(f"毒性等級: {result['toxicity']['level']}")
-print(f"情緒標籤: {result['emotion']['label']}")
-print(f"信心指數: {result['explanations']['confidence']}")
-```
-
-### 進階回應結構
-
-```json
-{
-  "toxicity": {
-    "level": "toxic",
-    "confidence": 0.89,
-    "probability": {
-      "none": 0.08,
-      "toxic": 0.73,
-      "severe": 0.19
-    }
-  },
-  "bullying": {
-    "level": "harassment",
-    "confidence": 0.82
-  },
-  "emotion": {
-    "label": "negative",
-    "strength": 4,
-    "scores": {
-      "positive": 0.05,
-      "neutral": 0.15,
-      "negative": 0.80
-    }
-  },
-  "explanations": {
-    "method": "integrated_gradients",
-    "important_words": [
-      {"word": "笨蛋", "importance": 0.85},
-      {"word": "滾開", "importance": 0.72}
-    ],
-    "confidence": 0.89
-  },
-  "metadata": {
-    "text_hash": "a1b2c3d4e5f6789",
-    "processing_time_ms": 145,
-    "model_version": "1.0.0",
-    "timestamp": "2025-09-25T10:30:00Z"
-  }
-}
-```
-
-## 🤖 LINE Bot 整合
-
-### 設定步驟
-
-1. 在 [LINE Developers Console](https://developers.line.biz/) 建立 LINE Bot
-2. 設定環境變數：
-
-```bash
-# .env 檔案
-LINE_CHANNEL_SECRET=your_channel_secret
-LINE_CHANNEL_ACCESS_TOKEN=your_access_token
-CYBERPUPPY_API_URL=http://localhost:8000
-```
-
-3. 設定 webhook URL：`https://your-domain.com/webhook`
-
-### 功能特色
-- ✅ HMAC-SHA256 簽章驗證
-- ✅ 自動威脅等級評估
-- ✅ 情境感知回應生成
-- ✅ 隱私保護記錄
-
-## 🐳 Docker 部署
-
-```yaml
-# docker-compose.yml
-docker-compose up -d
-
-# 生產環境部署（含負載平衡）
-docker-compose --profile production up -d
-
-# 服務擴展
-docker-compose up --scale api=3 -d
-```
-
-## 📊 資料集與模型
-
-### 預訓練模型 (2.4GB)
-- **MacBERT-base**：中文遮蔽語言模型
-- **RoBERTa-wwm**：全詞遮蔽模型
-- **自訂微調**：毒性與情緒分類器
-
-### 訓練資料集
-- **COLD**：中文冒犯語言資料集
-- **ChnSentiCorp**：中文情感語料庫
-- **DMSC v2**：豆瓣電影評論 (387MB)
-- **NTUSD**：臺灣情感詞典
-- **SCCD**：會話級網路霸凌（手動）
-
-## 🔒 安全與隱私
-
-- **零知識記錄**：不儲存原始文字
-- **SHA-256 雜湊**：所有文字識別碼雜湊處理
-- **流量限制**：透過 SlowAPI 防止 DDoS
-- **輸入驗證**：嚴格文字清理
-- **Webhook 安全**：HMAC-SHA256 驗證
-- **API 認證**：支援選用 JWT
-
-## 📈 監控與觀測
-
-- **健康檢查**：`/health` 端點
-- **指標收集**：處理時間、模型信心度
-- **錯誤追蹤**：結構化日誌與上下文
-- **效能監控**：即時延遲監控
-
-## 🎯 使用案例
-
-### 社群媒體平台
-- 即時留言審核
-- 自動內容標記
-- 使用者安全警示
-
-### 教育機構
-- 學生聊天監控
-- 霸凌預防系統
-- 心理健康支援觸發
-
-### 遊戲社群
-- 遊戲內聊天審核
-- 毒性玩家偵測
-- 社群健康指標
-
-### 客戶服務
-- 客服輔助工具
-- 升級觸發機制
-- 情緒追蹤
-
-## 🤝 貢獻指南
-
-歡迎貢獻！請參閱 [CONTRIBUTING.md](CONTRIBUTING.md) 了解詳情。
-
-### 開發環境設定
-
-```bash
-# 安裝開發相依套件
-pip install -r requirements-dev.txt
-
-# 執行測試
-pytest --cov=cyberpuppy
-
-# 程式碼品質檢查
-flake8 src/
-black src/ --check
-mypy src/
-```
-
-## 📜 授權條款（三層）
-
-CyberPuppy 採分層授權，依 artefact 類型分開宣告：
-
-| 範疇 | 授權 | 詳見 |
-|---|---|---|
-| **程式碼 / 文件 / 配置** (`src/`, `scripts/`, `tests/`, `api/`, `bot/`, `configs/`, `docs/`) | **Apache License 2.0** | [`LICENSE`](LICENSE) |
-| **Model weights / LoRA adapters / 量化 artefact** | **CC BY-NC-SA 4.0**（非商業、需署名、衍生品同授權） | [`MODEL_LICENSE`](MODEL_LICENSE) |
-| **訓練資料** (`data/processed/v2/*`) | **不 redistribute**，由腳本從上游下載重建 | [`DATA_LICENSE_NOTICE.md`](DATA_LICENSE_NOTICE.md) |
-
-**為何 model weights 採 non-commercial**：訓練資料含 ToxiCN (CC BY-NC-ND)、STATE-ToxiCN (CC BY-NC)、SCCD、ToxiCloakCN、CHNCI 等研究資料集，為尊重上游作者意圖，衍生 model weights 繼承最嚴上游之 NonCommercial 限制。
-
-**商業使用**：若需商業授權之 model，我方提供客製化訓練服務（以 Apache-2.0 資料 + 客戶自有資料重訓），詳見 [ADR §3.8](docs/adr/0001-cyberpuppy-2026-upgrade.md)。
-
-## 🌟 致謝
-
-- Hugging Face 提供 transformer 模型
-- THU-COAI 提供 COLD 資料集
-- LINE Corporation 提供訊息 API
-- Google 提供 Perspective API 整合
-
-## 📞 支援與聯絡
-
-- 📧 **電子郵件**：hctsai@linux.com
-- 🐛 **問題回報**：[GitHub Issues](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
-
-
-
-## 📊 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=thc1006/cyberbully-zh-moderation-bot&type=Date)](https://star-history.com/#thc1006/cyberbully-zh-moderation-bot&Date)
+> **中文社群最強開源毒性偵測系統** — 超越 PCR-ToxiCN 發表 SOTA，具備諧音攻擊防禦能力
 
 ---
 
-<div align="center">
-  <b>⭐ 在 GitHub 上給我們一顆星 — 這是我們最大的動力！</b><br>
-  <sub>為更安全的中文網路環境而努力 ❤️</sub>
-</div>
+## 效能
 
-## 🔍 SEO 關鍵字
+| Benchmark | CyberPuppy v5 | 對比 |
+|---|---|---|
+| **COLD toxicity F1** | **0.8336** | DoD 0.83 ✅ |
+| **PCR-ToxiCN (真實世界)** | **0.6890** | **超越 SOTA 0.672** |
+| **ToxiCloakCN homo F1** | **0.8380** | 諧音攻擊防禦 |
+| **CNTP homo recall drop** | **-0.37%** | 幾乎免疫 |
+| **6 繁中威脅句** | **6/6** | 零漏報 |
 
-中文內容審核, 網路霸凌偵測, 毒性檢測, 情緒分析, 可解釋人工智慧, 中文自然語言處理, Chinese content moderation, cyberbullying detection, toxicity detection, sentiment analysis, explainable AI, Chinese NLP, LINE Bot, FastAPI, PyTorch, BERT, MacBERT, RoBERTa, transformer models, GPU acceleration, CUDA, deep learning, machine learning, AI safety, content filtering, chat moderation, real-time analysis, privacy-preserving AI, open source
+## 架構
+
+```
+使用者輸入
+  │
+  ├─► LoRA-A (文字)：Qwen3-8B + LoRA r=32 → 4-head 分類
+  │      ↓ softmax
+  │      0.75 ×
+  │            ├─► 最終預測（toxicity / bullying / role / emotion）
+  │      0.25 ×
+  │      ↑ softmax
+  └─► LoRA-B (拼音)：Qwen3-8B + LoRA r=32 → 4-head 分類
+         └─ 輸入 = pypinyin 轉換（諧音字 → 相同拼音 → 相同預測）
+```
+
+**為何有效**：攻擊者用「勾史」替代「狗屎」，文字模型可能被騙，但拼音模型看到的都是 "gou shi" → 識破攻擊。
+
+## 快速開始
+
+### 安裝
+
+```bash
+git clone https://github.com/thc1006/cyberbully-zh-moderation-bot.git
+cd cyberbully-zh-moderation-bot
+
+# 建議使用 uv（快速）
+uv venv --python 3.11 .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### 推論（需 GPU，~32GB VRAM for dual-LoRA）
+
+```python
+import torch
+from peft import PeftModel
+from transformers import AutoModel, AutoTokenizer
+from huggingface_hub import hf_hub_download
+from pypinyin import pinyin, Style
+import re
+
+device = torch.device("cuda")
+dtype = torch.bfloat16
+
+tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-8B-Base")
+
+# LoRA-A（文字）
+base_a = AutoModel.from_pretrained("Qwen/Qwen3-8B-Base", torch_dtype=dtype, device_map=device)
+model_a = PeftModel.from_pretrained(base_a, "thc1006/cyberpuppy-v5-bilingual")
+heads_a = torch.load(hf_hub_download("thc1006/cyberpuppy-v5-bilingual", "heads.pt"),
+                     map_location=device, weights_only=False)
+
+# LoRA-B（拼音）
+base_b = AutoModel.from_pretrained("Qwen/Qwen3-8B-Base", torch_dtype=dtype, device_map=device)
+model_b = PeftModel.from_pretrained(base_b, "thc1006/cyberpuppy-v5-pinyin-lora")
+heads_b = torch.load(hf_hub_download("thc1006/cyberpuppy-v5-pinyin-lora", "heads.pt"),
+                     map_location=device, weights_only=False)
+
+# 拼音轉換
+_HAN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+def to_pinyin(text):
+    return " ".join(
+        pinyin(ch, style=Style.NORMAL)[0][0] if _HAN.match(ch) else ch
+        for ch in text if ch.strip()
+    )
+
+# ���類
+text = "勾史一個"  # = 狗屎一個
+enc_t = tok(text, return_tensors="pt", truncation=True, max_length=192).to(device)
+enc_p = tok(to_pinyin(text), return_tensors="pt", truncation=True, max_length=192).to(device)
+
+with torch.inference_mode():
+    h_t = model_a(**enc_t).last_hidden_state[:, -1]
+    h_p = model_b(**enc_p).last_hidden_state[:, -1]
+    logits_t = heads_a["heads"]["toxicity"](h_t.float())
+    logits_p = heads_b["heads"]["toxicity"](h_p.float())
+
+probs = 0.75 * logits_t.softmax(-1) + 0.25 * logits_p.softmax(-1)
+labels = ["none", "toxic", "severe"]
+print(f"{text} → {labels[probs.argmax(-1).item()]}")  # toxic
+```
+
+### API 部署
+
+```bash
+# 啟動 FastAPI server
+CP_MODEL_DIR=models/cyberpuppy_v5_bilingual_qwen3_8b \
+  uvicorn api.v2_2_app:app --host 0.0.0.0 --port 8000
+
+# POST /v2/analyze
+curl -X POST http://localhost:8000/v2/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text": "你這個笨蛋"}'
+```
+
+## 標籤體系
+
+| 任務 | 標籤 | 用途 |
+|---|---|---|
+| toxicity | `none` / `toxic` / `severe` | 毒性偵測 |
+| bullying | `none` / `harassment` / `threat` | 霸凌分類 |
+| role | `none` / `perpetrator` / `victim` / `bystander` | 角色辨識 |
+| emotion | `pos` / `neu` / `neg` | 情緒分析 |
+
+## 訓練資料
+
+179,186 筆樣本，涵蓋 6 個中文毒性/霸凌資料集：
+
+| 來源 | 數量 | 用途 |
+|---|---|---|
+| COLD (繁體) | 25,659 | 基礎毒性 |
+| SCCD (繁體) | 28,426 | 對話級霸凌 |
+| STATE-ToxiCN (繁體) | 5,781 | 仇恨俚語 |
+| ToxiCloakCN × 3 (繁體) | 33,012 | 對抗一致性 |
+| 簡體副本 | 70,870 | 雙語覆蓋 |
+| CNTP | 15,438 | 真實擾動對 |
+
+## 對抗攻擊防禦
+
+| 攻擊類型 | 範例 | 防禦狀態 |
+|---|---|---|
+| 諧音替換 | 勾���→狗屎, 四調→死掉 | ✅ 拼音 LoRA 完全免疫 |
+| ��字替換 | 4了→死了, 13→逼 | ✅ 雙語訓練覆蓋 |
+| 字母替換 | 装X→装逼, NMSL | ✅ CNTP 對抗訓練 |
+| 創意暗語 | 密碼→你媽 | ⚠️ 部分覆蓋 |
+| 英文諧音 | funny mud pee | ⚠️ 有限覆蓋 |
+
+## 限制
+
+1. **僅支援中文** — 英文輸入不在訓練分佈內
+2. **需要 GPU** — dual-LoRA 推論需 ~30GB VRAM（單 LoRA ~16GB）
+3. **最大長度 192 tokens** — 超長文本會被截斷
+4. **對話上下文** — 僅分析單句，不理解對話脈絡
+5. **新型混淆** — 未見過的創意攻擊可能逃避偵測
+6. **不能取代人工** — 設計為輔助工具，需人工最終審核
+7. **文化偏差** — 主要基於台灣/香港標註規範
+
+## 專案結構
+
+```
+├── src/cyberpuppy/          # 核心 Python 套件
+│   ├─��� models/              # Qwen3MultiHead, dual-LoRA logic
+│   ├── data/                # 資料處理 pipeline
+│   ├── eval/                # 評測 metrics
+│   ├── explain/             # XAI (IG, SHAP)
+│   ├── safety/              # 分級回覆策略
+│   └── training/            # sampler, callbacks
+├── scripts/                 # 訓練、評測、部���腳本
+├── api/                     # FastAPI serving
+├── bot/                     # LINE Bot
+├── tests/                   # pytest 單元測試
+└── docs/adr/                # Architecture Decision Records
+```
+
+## 授權（三層）
+
+| 範疇 | 授權 | 檔案 |
+|---|---|---|
+| 程式碼 / 文件 / 配置 | **Apache 2.0** | [LICENSE](LICENSE) |
+| Model weights / LoRA | **CC BY-NC-SA 4.0** | [MODEL_LICENSE](MODEL_LICENSE) |
+| 訓練資料 | 不再分發（腳本重建） | [DATA_LICENSE_NOTICE.md](DATA_LICENSE_NOTICE.md) |
+
+**商業授權**：提供客製化訓練服務（Apache 2.0 資料 + 客戶��有資料重訓）。���見 [ADR](docs/adr/0001-cyberpuppy-2026-upgrade.md)。
+
+## 相關連結
+
+- [HF Model: v5-bilingual (LoRA-A)](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual)
+- [HF Model: v5-pinyin-lora (LoRA-B)](https://huggingface.co/thc1006/cyberpuppy-v5-pinyin-lora)
+- [Architecture Decision Record](docs/adr/0001-cyberpuppy-2026-upgrade.md)
+- [Research Brief (28 sources)](docs/adr/0001-research-brief.md)
+
+## 致謝
+
+- [Qwen Team](https://github.com/QwenLM) — Qwen3-8B base model
+- [THU-COAI](https://github.com/thu-coai) — COLD dataset
+- [ToxiCN authors](https://github.com/Holence/ToxiCN) — STATE-ToxiCN, ToxiCloakCN
+- [UTSNLPGroup](https://huggingface.co/datasets/UTSNLPGroup/PCR-ToxiCN) — PCR-ToxiCN benchmark
+
+## 聯絡
+
+- **作者**: Hung-Che Tsai (hctsai1006@cs.nctu.edu.tw)
+- **Issues**: [GitHub Issues](https://github.com/thc1006/cyberbully-zh-moderation-bot/issues)
+
+---
+
+<a name="english"></a>
+
+## English Summary
+
+CyberPuppy v5 is a **state-of-the-art Chinese toxicity detection system** using a dual-LoRA ensemble on Qwen3-8B. It defends against homophone substitution attacks (where toxic characters are replaced with same-pronunciation alternatives) by combining a text LoRA with a pinyin LoRA — since homophones produce identical pinyin, the attack is neutralized by construction.
+
+**Key results**: Exceeds published SOTA on PCR-ToxiCN (real-world RedNote posts): F1 0.6890 vs prior best 0.672. Achieves 97.2% prediction invariance against homophone attacks.
+
+See [Hugging Face model card](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual) for full details and usage instructions.
