@@ -196,6 +196,11 @@ def main() -> None:
                          "0 = off (v2.1 behavior); 0.1 recommended for v2.2.")
     ap.add_argument("--num-workers", type=int, default=12,
                     help="DataLoader workers (RTX 5090 24 cores + NVMe; default 12).")
+    ap.add_argument("--resume-from", type=str, default=None,
+                    help="Path to checkpoint dir to resume from (e.g., "
+                         "models/cyberpuppy_v6_text_lora/checkpoint_step). "
+                         "Loads: LoRA adapter, heads, optimizer, scheduler, "
+                         "global_step, best_f1, RNG state.")
     args = ap.parse_args()
 
     cfg = TrainConfig(
@@ -228,9 +233,16 @@ def main() -> None:
     )
     print(f"  loaded in {time.time()-t0:.1f}s", flush=True)
 
-    lora_cfg = build_lora_config(r=cfg.lora_r, alpha=cfg.lora_alpha, use_dora=args.dora)
-    print(f"LoRA: r={cfg.lora_r} alpha={cfg.lora_alpha} dora={args.dora}", flush=True)
-    backbone = get_peft_model(backbone, lora_cfg)
+    if args.resume_from:
+        # Load LoRA adapter weights from checkpoint dir
+        from peft import PeftModel
+        lora_path = Path(args.resume_from) / "lora"
+        print(f"Resuming LoRA from {lora_path}", flush=True)
+        backbone = PeftModel.from_pretrained(backbone, str(lora_path), is_trainable=True)
+    else:
+        lora_cfg = build_lora_config(r=cfg.lora_r, alpha=cfg.lora_alpha, use_dora=args.dora)
+        print(f"LoRA: r={cfg.lora_r} alpha={cfg.lora_alpha} dora={args.dora}", flush=True)
+        backbone = get_peft_model(backbone, lora_cfg)
     backbone.print_trainable_parameters()
 
     if args.gradient_checkpointing:
@@ -246,6 +258,15 @@ def main() -> None:
     model.focal_gamma = float(args.focal_gamma)
     print(f"Focal gamma: {model.focal_gamma}", flush=True)
     print(f"Consistency λ: {args.consistency_lambda}", flush=True)
+
+    if args.resume_from:
+        heads_path = Path(args.resume_from) / "heads.pt"
+        if heads_path.exists():
+            st = torch.load(heads_path, map_location=device, weights_only=False)
+            model.heads.load_state_dict(st["heads"])
+            if "log_var" in st:
+                model.log_var.data = st["log_var"].to(device=device, dtype=dtype)
+            print(f"Resumed heads from {heads_path}", flush=True)
     # heads must stay in bf16 too (already from .to)
 
     train_ds = JsonlClassificationDataset(cfg.train_path, tokenizer, cfg.max_length, cfg.max_train)
@@ -325,6 +346,7 @@ def main() -> None:
     log_lines: list = []
     best_f1 = -1.0
     global_step = 0
+    epoch = 0  # current epoch, made accessible to _save_resume
     t_start = time.time()
 
     def _save(tag: str, eval_metrics: dict | None = None) -> None:
@@ -341,13 +363,80 @@ def main() -> None:
         }, ck_dir / "heads.pt")
         tokenizer.save_pretrained(ck_dir)
 
+    def _save_resume(tag: str) -> None:
+        """Save full training state for resume (optimizer, scheduler, RNG)."""
+        ck_dir = Path(cfg.output_dir) / tag
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        torch.save({
+            "optimizer": optim.state_dict(),
+            "scheduler": sched.state_dict(),
+            "global_step": global_step,
+            "epoch": epoch,
+            "best_f1": best_f1,
+            "torch_rng": torch.get_rng_state(),
+            "cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            "cfg": cfg.__dict__,
+        }, ck_dir / "resume_state.pt")
+
+    def _load_resume(resume_dir: str) -> int:
+        """Load training state from checkpoint. Returns starting epoch.
+
+        If resume_state.pt exists (new checkpoint): full resume with optimizer,
+        scheduler, RNG, global_step.
+        If only heads.pt exists (old checkpoint): load LoRA+heads only, infer
+        epoch from heads.pt step count, fresh optimizer.
+        """
+        nonlocal global_step, best_f1
+        resume_path = Path(resume_dir) / "resume_state.pt"
+        heads_path = Path(resume_dir) / "heads.pt"
+
+        if resume_path.exists():
+            state = torch.load(resume_path, map_location=device, weights_only=False)
+            optim.load_state_dict(state["optimizer"])
+            sched.load_state_dict(state["scheduler"])
+            torch.set_rng_state(state["torch_rng"].cpu() if state["torch_rng"].is_cuda else state["torch_rng"])
+            if state.get("cuda_rng") and torch.cuda.is_available():
+                torch.cuda.set_rng_state_all([t.cpu() for t in state["cuda_rng"]])
+            global_step = state["global_step"]
+            best_f1 = state["best_f1"]
+            start_epoch = state["epoch"]
+            print(f"  [resume] FULL resume from {resume_path}: step={global_step}, "
+                  f"epoch={start_epoch}, best_f1={best_f1:.4f}", flush=True)
+            return start_epoch
+
+        if heads_path.exists():
+            # Old checkpoint: LoRA+heads loaded in main flow, infer epoch from step
+            st = torch.load(heads_path, map_location="cpu", weights_only=False)
+            saved_step = st.get("step", 0)
+            # Scheduler needs fast-forward to match step (cosine decay)
+            for _ in range(saved_step):
+                sched.step()
+            global_step = saved_step
+            eval_metrics = st.get("eval_metrics")
+            if eval_metrics and "toxicity" in eval_metrics:
+                best_f1 = eval_metrics["toxicity"].get("f1_weighted", -1.0)
+            # Infer epoch from step / steps_per_epoch
+            start_epoch = saved_step // max(1, steps_per_epoch)
+            print(f"  [resume] PARTIAL resume (old checkpoint, no optimizer): "
+                  f"step={global_step}, inferred epoch={start_epoch}, "
+                  f"best_f1={best_f1:.4f}. Optimizer restarted fresh.", flush=True)
+            return start_epoch
+
+        print(f"  [resume] Nothing to resume at {resume_dir}; starting fresh.", flush=True)
+        return 0
+
+    # Apply resume state (optimizer, scheduler, step, best_f1) now that they exist
+    start_epoch = 0
+    if args.resume_from:
+        start_epoch = _load_resume(args.resume_from)
+
     if device.type == "cuda":
         vram_gb = torch.cuda.memory_allocated() / 1024**3
         vram_total = torch.cuda.get_device_properties(0).total_memory / 1024**3
         headroom = (1 - vram_gb / vram_total) * 100
         print(f"Pre-train VRAM: {vram_gb:.1f}/{vram_total:.1f} GB ({headroom:.0f}% headroom)", flush=True)
 
-    for epoch in range(cfg.epochs):
+    for epoch in range(start_epoch, cfg.epochs):
         train_sampler.set_epoch(epoch)
         running = 0.0
         running_cons = 0.0
@@ -402,7 +491,8 @@ def main() -> None:
                 # mid-train safety checkpoint (regenerable but saves time on crash)
                 if args.save_every_steps > 0 and global_step % args.save_every_steps == 0:
                     _save("checkpoint_step")
-                    print(f"  [save] checkpoint_step at step {global_step}", flush=True)
+                    _save_resume("checkpoint_step")
+                    print(f"  [save] checkpoint_step at step {global_step} (+resume state)", flush=True)
                 # mid-train eval (optional)
                 if args.eval_every_steps > 0 and global_step % args.eval_every_steps == 0:
                     mid = evaluate(model, eval_loader, device)
@@ -429,7 +519,12 @@ def main() -> None:
         if score > best_f1:
             best_f1 = score
             _save("best", eval_metrics)
+            _save_resume("best")
             print(f"Saved best (toxicity F1_w={score:.4f}) -> {Path(cfg.output_dir) / 'best'}", flush=True)
+
+        # Always save end-of-epoch resume point (separate from best)
+        _save("epoch_end")
+        _save_resume("epoch_end")
 
     # always save final
     _save("final")

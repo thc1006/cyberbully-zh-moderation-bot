@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Last updated: **2026-04-21** (v5.1.1 dual-LoRA optimal inference — COLD 0.8302, PCR-ToxiCN **0.7162** 超越 SOTA +4.42pt, TC homo abs **0.8496**)
+> Last updated: **2026-04-26** (v6.0 dual-LoRA r=64 — COLD **0.8321**, PCR-ToxiCN 0.7119 (SOTA +3.99pt), TC homo abs 0.8510, HED-COLD **0.9317** breakthrough)
 
 ## 專案宗旨
 
@@ -10,28 +10,33 @@ CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸
 
 | 維度 | 狀態 |
 |---|---|
-| 主模型 | **v5.1.1 dual-LoRA** = Qwen3-8B × (text LoRA-A + pinyin LoRA-B) optimal inference: geo-mean α=0.5 + pinyin override 0.7 + thresh 0.48 |
+| 主模型 | **v6.0 dual-LoRA** = Qwen3-8B × (text LoRA-A r=64 + pinyin LoRA-B r=64) inference: geo-mean α=0.60 + thresh 0.52 (no override) |
 | Backbone | `Qwen/Qwen3-8B-Base`（Apache 2.0） |
-| HF artefacts | [`thc1006/cyberpuppy-v5-bilingual`](https://huggingface.co/thc1006/cyberpuppy-v5-bilingual) + [`thc1006/cyberpuppy-v5-pinyin-lora`](https://huggingface.co/thc1006/cyberpuppy-v5-pinyin-lora) |
+| HF artefacts | [`thc1006/cyberpuppy-v6-bilingual`](https://huggingface.co/thc1006/cyberpuppy-v6-bilingual) + [`thc1006/cyberpuppy-v6-pinyin-lora`](https://huggingface.co/thc1006/cyberpuppy-v6-pinyin-lora)（v5 仍保留作為 PCR 優先選項） |
 | 訓練資料 | 179,186 樣本 = COLD + SCCD + STATE-ToxiCN + ToxiCloakCN(3×) + CNTP + 繁簡雙語 |
 | GPU | RTX 5090 32 GB（CUDA 12.8、bf16 native） |
 
-## 核心效能（v5.1.1 optimal inference，2026-04-21 實測）
+## 核心效能（v6.0 dual-LoRA，2026-04-26 實測）
 
-| Metric | v5.1.1 | DoD | 對比 v5.1 |
+| Metric | v6.0 | DoD | 對比 v5.1.1 |
 |---|---|---|---|
-| COLD toxicity F1_w | **0.8302** | ≥0.83 ✅ | -0.24pt (trade-off) |
-| ToxiCloakCN homo abs F1 | **0.8496** | — | **+1.64pt** |
-| ToxiCloakCN homo drop | ~−5% | ≤5% ⚠️ | 大幅改善 |
-| **PCR-ToxiCN（真實世界）** | **0.7162** | — | **🏆 超越 SOTA 0.672 +4.42pt** |
-| CNTP homo recall drop | **−0.37%** | — | 幾乎免疫 |
+| COLD toxicity F1_w | **0.8321** | ≥0.83 ✅ | **+0.19pt** ✓ |
+| ToxiCloakCN homo abs F1 | **0.8510** | — | +0.14pt ✓ |
+| **HED-COLD（同音擾動）** | **0.9317** | — | **+1.91pt 突破** ✓✓ |
+| **PCR-ToxiCN（真實世界）** | 0.7119 | — | -0.43pt（仍超 SOTA +3.99pt）|
 | 6 繁中威脅 | **6/6** | ✅ | 維持 |
+| **平均 F1** | **0.8317** | — | **+0.45pt** |
 
-> **v5.1 → v5.1.1 改動**（純推論優化，零重訓）：
-> 1. α=0.75 → **α=0.5**（等權 text/pinyin，不再壓制拼音信號）
-> 2. **Pinyin override**：拼音 toxic > 0.7 直接判 toxic（救回「大廈避風=大傻逼」類攻擊）
-> 3. Decision threshold：0.50 → **0.48**
-> 4. 關鍵洞察：α=0.75 壓制了 34/116 PCR FN 中拼音正確識別的攻擊
+> **v5.1.1 → v6.0 改動**（重訓兩個 LoRA）：
+> 1. LoRA rank: 32 → **64**（容量翻倍）
+> 2. LoRA alpha: 64 → **128**
+> 3. Epochs: 3 → **5**（best 仍在 epoch 1-2，但 final checkpoint 用於 ensemble）
+> 4. Pinyin LoRA 加入 **consistency loss λ=0.5**（v5.1 是 λ=0）
+> 5. 推論 α: 0.5 → **0.60**（v6 text 更強，可承受較高權重）
+> 6. **不再用 pinyin override**（v6 pinyin 已強，override 反而 double-count）
+> 7. Decision threshold: 0.48 → **0.52**
+
+> **何時選 v5.1.1？** PCR 優先（0.7162 vs v6 的 0.7119）。v5.1.1 仍在 HF 保留。
 
 ### 實驗歷程摘要（v2.2 → v5）
 
@@ -47,6 +52,7 @@ CyberPuppy 是以「網路霸凌防治」為核心，結合 **毒性偵測 / 霸
 | **v5 bilingual dual-LoRA** | **−7.41%** | **0.6890** | **🏆 真實世界最佳** |
 | **v5.1 geometric mean** | **−7.41%** | **0.6936** | **🏆 +0.46pt, 免費提升** |
 | **v5.1.1 optimal inference** | **~−5%** | **0.7162** | **🏆🏆 +2.72pt, α=0.5+override** |
+| **v6.0 dual-LoRA r=64** | **~−5%** | **0.7119** | **🏆 HED-COLD +1.91pt 突破, COLD 反升** |
 
 ## 標籤體系（不變）
 
