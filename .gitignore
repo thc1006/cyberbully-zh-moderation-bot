@@ -128,11 +128,10 @@ models/macbert_base_demo/
 models/toxicity_only_demo/
 models/working_toxicity_model/pytorch_model.bin
 
-# Exception: Allow bullying_a100_best model (our production model)
-!models/bullying_a100_best/pytorch_model.bin
-!models/bullying_a100_best/best_model.pt
-!models/bullying_a100_best/*.bin
-!models/bullying_a100_best/*.pt
+# NOTE: bullying_a100_best large weights (best_model.pt / pytorch_model.bin, ~409MB each)
+# were purged from git history on 2026-06-01 to fix Git LFS bloat (882MB -> ~100MB).
+# They are now ignored like every other model checkpoint. Download them from
+# HuggingFace / GitHub Release instead — see models/bullying_a100_best/README.md.
 
 # Large datasets (can be downloaded via scripts)
 data/raw/dmsc/DMSC.csv
